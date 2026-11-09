@@ -350,25 +350,25 @@ Migracja tylko dodaje tabele, więc nie ma danych do przenoszenia; `downgrade` u
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Modele zgadzają się z migracją (alembic check)
-- [x] 1.3 Migracja cofa się i wraca
+- [x] 1.1 Wszystkie bramki backendu przechodzą — e747b7a
+- [x] 1.2 Modele zgadzają się z migracją (alembic check) — e747b7a
+- [x] 1.3 Migracja cofa się i wraca — e747b7a
 
 #### Manual
 
-- [x] 1.4 Tabele trace_runs i trace_steps z CHECK i indeksami w lokalnej bazie
+- [x] 1.4 Tabele trace_runs i trace_steps z CHECK i indeksami w lokalnej bazie — e747b7a
 
 ### Phase 2: Wycena i rejestrator kroków
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
-- [ ] 2.2 Testy wyceny przechodzą
-- [ ] 2.3 Testy rejestratora na Postgresie przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.2 Testy wyceny przechodzą
+- [x] 2.3 Testy rejestratora na Postgresie przechodzą
 
 #### Manual
 
-- [ ] 2.4 Przegląd API rejestratora z przykładem użycia
+- [x] 2.4 Przegląd API rejestratora z przykładem użycia
 
 ### Phase 3: Sumy, endpoint i dowód na środowisku
 
