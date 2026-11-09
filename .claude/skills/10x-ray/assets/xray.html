@@ -1,0 +1,1228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>10x-ray</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap"
+    />
+    <script id="xray-data" type="application/json">
+      __XRAY_DATA__
+    </script>
+    <style>
+      /* Tokens mirror the 10xHub cosmic visual system. Space is dark in both
+   color schemes, as on the hub; without the font (offline) display text
+   falls back to system-ui. */
+      :root {
+        --bg: #070a14;
+        --surface: #0c1122;
+        --surface2: #101731;
+        --line: rgba(148, 163, 255, 0.16);
+        --line-soft: rgba(148, 163, 255, 0.09);
+        --txt: #dce2f5;
+        --muted: #8a93b8;
+        --dim: #7d88ad;
+        --indigo: #7c8cff;
+        --acc: #7c8cff; /* overridden per step, like the hub's sectors */
+        --ask: #f0a64a;
+        --ok: #4ade9b;
+        --fail: #ff4f6e;
+        --disp: "Chakra Petch", system-ui, sans-serif;
+        --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--txt);
+        font: 16px/1.65 var(--body);
+        overflow-x: hidden;
+      }
+      #stars {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .nebula {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(60rem 40rem at 85% -10%, rgba(124, 140, 255, 0.1), transparent 60%),
+          radial-gradient(50rem 36rem at -10% 45%, rgba(167, 139, 250, 0.07), transparent 60%),
+          radial-gradient(46rem 32rem at 110% 90%, rgba(76, 201, 240, 0.05), transparent 60%);
+      }
+      header,
+      main,
+      .jump {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── HUD header ─────────────────────────────────────────────── */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: color-mix(in srgb, var(--bg) 82%, transparent);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .head {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 16px 20px 14px;
+      }
+      .eyebrow {
+        font: 600 0.72rem var(--disp);
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--indigo);
+      }
+      .row1 {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+      .skill {
+        font: 700 1.5rem/1.2 var(--disp);
+        letter-spacing: 0.01em;
+        color: #fff;
+        text-shadow: 0 0 24px rgba(124, 140, 255, 0.45);
+      }
+      .args {
+        color: var(--muted);
+        font: 0.82rem var(--mono);
+        letter-spacing: 0.04em;
+        overflow-wrap: anywhere;
+      }
+      .status {
+        margin-left: auto;
+        font: 0.66rem var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        padding: 5px 11px;
+        border: 1px solid currentColor;
+        color: var(--indigo);
+        box-shadow: 0 0 14px color-mix(in srgb, currentColor 30%, transparent);
+      }
+      .status.ask {
+        color: var(--ask);
+      }
+      .status.done {
+        color: var(--ok);
+      }
+      .status.fail {
+        color: var(--fail);
+      }
+      .row2 {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 12px;
+        font: 0.7rem var(--mono);
+        letter-spacing: 0.12em;
+        color: var(--dim);
+        text-transform: uppercase;
+      }
+      .meter {
+        flex: 1;
+        height: 3px;
+        background: var(--line-soft);
+        overflow: visible;
+      }
+      .meter > i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--indigo);
+        box-shadow: 0 0 12px var(--indigo);
+        transition: width 0.6s ease;
+      }
+
+      /* ── layout ─────────────────────────────────────────────────── */
+      main {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 32px 20px 120px;
+      }
+      .intro {
+        margin-bottom: 28px;
+      }
+      .intro p {
+        margin: 0;
+        max-width: 62ch;
+        font-size: 1.04rem;
+      }
+      .intro small {
+        display: block;
+        margin-top: 10px;
+        font: 0.68rem var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      /* ── step cards: hub sectors with HUD corner brackets ───────── */
+      .card {
+        position: relative;
+        padding: 18px 22px 18px;
+        background: color-mix(in srgb, var(--surface) 72%, transparent);
+        border: 1px solid var(--line-soft);
+        transition:
+          border-color 0.3s,
+          box-shadow 0.3s;
+        animation: in 0.45s ease both;
+      }
+      .card::before,
+      .card::after {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        pointer-events: none;
+      }
+      .card::before {
+        top: -1px;
+        left: -1px;
+        border-top: 1px solid var(--acc);
+        border-left: 1px solid var(--acc);
+      }
+      .card::after {
+        bottom: -1px;
+        right: -1px;
+        border-bottom: 1px solid var(--acc);
+        border-right: 1px solid var(--acc);
+      }
+      .card > .glow {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          36rem 16rem at 8% 0%,
+          color-mix(in srgb, var(--acc) 8%, transparent),
+          transparent 70%
+        );
+      }
+      @keyframes in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+      .card.active {
+        border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+        box-shadow: 0 0 22px color-mix(in srgb, var(--acc) 20%, transparent);
+      }
+      .card.waiting {
+        --acc: var(--ask);
+        border-color: color-mix(in srgb, var(--ask) 60%, transparent);
+        box-shadow: 0 0 22px color-mix(in srgb, var(--ask) 22%, transparent);
+      }
+
+      /* ── metro line: one station per top-level step, drawn as the run reaches it ── */
+      .stop {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+      }
+      .stop > .card {
+        margin-bottom: 30px;
+      }
+      .stop > .card > .card-top .no {
+        display: none;
+      }
+      .rail {
+        position: relative;
+      }
+      .rail::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        transform: translateX(-50%);
+        background: color-mix(in srgb, var(--acc) 60%, transparent);
+        box-shadow: 0 0 10px color-mix(in srgb, var(--acc) 45%, transparent);
+      }
+      #list > .stop:first-child .rail::before {
+        top: 23px;
+      }
+      .stop.terminus .rail::before {
+        bottom: auto;
+        height: 23px;
+      }
+      #list > .stop:first-child.terminus .rail::before {
+        display: none;
+      }
+      .station {
+        position: absolute;
+        left: 50%;
+        top: 8px;
+        transform: translateX(-50%);
+        z-index: 1;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        border: 2px solid var(--acc);
+        color: var(--acc);
+        font: 700 0.74rem var(--disp);
+        letter-spacing: 0.02em;
+        box-shadow: 0 0 14px color-mix(in srgb, var(--acc) 35%, transparent);
+      }
+      .stop.passed .station {
+        background: var(--acc);
+        color: var(--bg);
+      }
+      .stop.active .station,
+      .stop.waiting .station {
+        animation: ring 1.6s ease-out infinite;
+      }
+      .stop.waiting {
+        --acc: var(--ask);
+      }
+      @keyframes ring {
+        0% {
+          box-shadow:
+            0 0 0 0 color-mix(in srgb, var(--acc) 55%, transparent),
+            0 0 14px color-mix(in srgb, var(--acc) 35%, transparent);
+        }
+        100% {
+          box-shadow:
+            0 0 0 14px transparent,
+            0 0 14px color-mix(in srgb, var(--acc) 35%, transparent);
+        }
+      }
+      .st-time {
+        position: absolute;
+        top: 44px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1;
+        padding: 1px 3px;
+        background: var(--bg);
+        font: 0.56rem var(--mono);
+        letter-spacing: 0.04em;
+        color: var(--dim);
+      }
+      .st-time:empty {
+        display: none;
+      }
+      .stop.ahead-row {
+        --acc: var(--dim);
+      }
+      .stop.ahead-row .rail::before {
+        bottom: auto;
+        height: 23px;
+        box-shadow: none;
+        background: repeating-linear-gradient(to bottom, var(--line) 0 5px, transparent 5px 10px);
+      }
+      .ahead-row .station {
+        border-style: dashed;
+        border-color: var(--line);
+        color: var(--dim);
+        box-shadow: none;
+        font-size: 0.64rem;
+      }
+
+      .card-top {
+        position: relative;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .no {
+        font: 700 0.78rem var(--disp);
+        letter-spacing: 0.18em;
+        color: var(--acc);
+        border: 1px solid color-mix(in srgb, var(--acc) 55%, transparent);
+        padding: 2px 9px;
+        box-shadow: 0 0 16px color-mix(in srgb, var(--acc) 22%, transparent);
+      }
+      .badge {
+        font: 600 0.72rem var(--disp);
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--acc);
+      }
+      .iters {
+        display: inline-flex;
+        gap: 4px;
+      }
+      .iters span {
+        font: 0.62rem var(--mono);
+        letter-spacing: 0.08em;
+        color: var(--acc);
+        border: 1px solid color-mix(in srgb, var(--acc) 40%, transparent);
+        padding: 0 5px;
+      }
+      .card-top .t {
+        margin-left: auto;
+        font: 0.66rem var(--mono);
+        letter-spacing: 0.12em;
+        color: var(--dim);
+      }
+      .pulse {
+        display: none;
+        width: 7px;
+        height: 7px;
+        background: var(--acc);
+        box-shadow: 0 0 10px var(--acc);
+        transform: rotate(45deg);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      .active > .card-top .pulse,
+      .waiting > .card-top .pulse {
+        display: block;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.2;
+        }
+      }
+      .title {
+        position: relative;
+        margin-top: 12px;
+        font: 700 1.3rem/1.25 var(--disp);
+        letter-spacing: 0.01em;
+        text-wrap: balance;
+      }
+      .concept {
+        position: relative;
+        margin-top: 14px;
+        padding: 12px 16px;
+        border: 1px dashed color-mix(in srgb, var(--acc) 40%, transparent);
+        color: var(--txt);
+        font-size: 0.95rem;
+      }
+      .concept .k {
+        display: block;
+        margin-bottom: 4px;
+        font: 700 0.66rem var(--disp);
+        letter-spacing: 0.22em;
+        color: var(--acc);
+      }
+      .lesson p {
+        margin: 0 0 8px;
+      }
+      .lesson p:last-child {
+        margin-bottom: 0;
+      }
+      .concept .when {
+        display: block;
+        margin-top: 6px;
+        font: 0.66rem var(--mono);
+        letter-spacing: 0.08em;
+        color: var(--dim);
+      }
+      .now {
+        position: relative;
+        margin-top: 14px;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+      .now:empty {
+        display: none;
+      }
+      .now::before {
+        content: "▸ ";
+        color: var(--acc);
+      }
+      .now-detail {
+        position: relative;
+        color: var(--muted);
+        font-size: 0.92rem;
+        overflow-wrap: anywhere;
+      }
+
+      .notes {
+        position: relative;
+        list-style: none;
+        margin: 12px 0 0;
+        padding: 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .notes:empty {
+        display: none;
+      }
+      .notes li {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 10px;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--line-soft);
+        overflow-wrap: anywhere;
+        font-size: 0.94rem;
+      }
+      .notes .k {
+        font: 0.62rem var(--mono);
+        letter-spacing: 0.14em;
+        color: var(--dim);
+        padding-top: 4px;
+      }
+      .notes .d {
+        display: block;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      .notes .k.result,
+      .notes .k.decide,
+      .notes .k.delegate,
+      .notes .k.check {
+        color: var(--acc);
+      }
+      .notes .k.warn,
+      .notes .k.answer {
+        color: var(--ask);
+      }
+      .notes .k.edit,
+      .notes .k.resume {
+        color: var(--ok);
+      }
+
+      details.trace {
+        position: relative;
+        margin-top: 12px;
+        font: 0.7rem var(--mono);
+        letter-spacing: 0.04em;
+        color: var(--dim);
+      }
+      details.trace summary {
+        cursor: pointer;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      details.trace summary:hover,
+      details.trace summary:focus-visible {
+        color: var(--acc);
+        outline: none;
+      }
+      details.trace ol {
+        margin: 8px 0 0;
+        padding: 0 0 0 10px;
+        list-style: none;
+        border-left: 1px solid var(--line-soft);
+      }
+      details.trace li {
+        padding: 2px 0;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      .lanes {
+        position: relative;
+        margin-top: 16px;
+        display: grid;
+        gap: 12px;
+      }
+      .lanes:empty {
+        display: none;
+      }
+      .lanes .card {
+        padding: 12px 16px 14px;
+        background: color-mix(in srgb, var(--surface2) 60%, transparent);
+        animation-duration: 0.35s;
+      }
+      .lanes .title {
+        font-size: 1.02rem;
+        margin-top: 8px;
+      }
+      .lanes .concept {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+      }
+
+      .ask {
+        position: relative;
+        margin-top: 16px;
+        padding: 12px 16px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 4px 14px;
+        align-items: center;
+        background: color-mix(in srgb, var(--ask) 6%, transparent);
+        border: 1px solid color-mix(in srgb, var(--ask) 45%, transparent);
+      }
+      .ask-icon {
+        grid-row: span 2;
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--ask);
+        color: var(--ask);
+        font: 700 1rem var(--disp);
+        transform: rotate(45deg);
+      }
+      .ask-icon span {
+        transform: rotate(-45deg);
+      }
+      .ask-h {
+        font: 700 0.66rem var(--disp);
+        letter-spacing: 0.22em;
+        color: var(--ask);
+      }
+      .ask-tool {
+        font: 0.82rem var(--mono);
+        color: var(--txt);
+        overflow-wrap: anywhere;
+      }
+      .ask-tool b {
+        color: var(--ask);
+        font-weight: 600;
+      }
+      .chips {
+        grid-column: 2;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        font: 0.6rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ask);
+        border: 1px solid color-mix(in srgb, var(--ask) 60%, transparent);
+        padding: 1px 6px;
+      }
+      .ask.answered {
+        --ask: var(--ok);
+        background: transparent;
+        border-style: dashed;
+      }
+      .ahead {
+        align-self: start;
+        margin-top: 4px;
+        text-align: left;
+        font: 0.66rem var(--mono);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--dim);
+        border: 1px dashed var(--line);
+        padding: 14px;
+      }
+
+      /* ── anatomy ────────────────────────────────────────────────── */
+      .anatomy {
+        margin-top: 48px;
+      }
+      .anatomy .eyebrow {
+        display: block;
+      }
+      .anatomy h2 {
+        font: 700 1.6rem/1.2 var(--disp);
+        margin: 6px 0 8px;
+      }
+      .anatomy .sum {
+        font: 0.66rem var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin-bottom: 16px;
+      }
+      .an {
+        border: 1px solid var(--line-soft);
+        background: color-mix(in srgb, var(--surface) 72%, transparent);
+      }
+      .an-row {
+        display: grid;
+        grid-template-columns: 52px 140px 1fr 56px;
+        gap: 12px;
+        padding: 12px 16px;
+        border-top: 1px solid var(--line-soft);
+      }
+      .an-row:first-child {
+        border-top: 0;
+      }
+      .an-row.child {
+        padding-left: 40px;
+        background: color-mix(in srgb, var(--surface2) 50%, transparent);
+      }
+      .an-row .n {
+        font: 700 0.82rem var(--disp);
+        letter-spacing: 0.12em;
+        color: var(--acc);
+      }
+      .an-row .p {
+        font: 600 0.66rem var(--disp);
+        letter-spacing: 0.2em;
+        color: var(--acc);
+        padding-top: 3px;
+      }
+      .an-row .m {
+        font: 0.8rem var(--mono);
+        text-align: right;
+        color: var(--acc);
+      }
+      .an-row .ttl {
+        font-weight: 600;
+      }
+      .an-row .c {
+        font-size: 0.86rem;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .an-row.skipped .n,
+      .an-row.skipped .p,
+      .an-row.skipped .m,
+      .an-row.skipped .ttl {
+        color: var(--dim);
+      }
+      .an-row.skipped .ttl {
+        font-weight: 500;
+      }
+      @media (max-width: 600px) {
+        .an-row {
+          grid-template-columns: 40px 1fr 40px;
+        }
+        .an-row .p {
+          grid-column: 2;
+          grid-row: 1;
+        }
+        .an-row .body {
+          grid-column: 2;
+        }
+        .notes li {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        .skill {
+          font-size: 1.25rem;
+        }
+        .stop {
+          grid-template-columns: 44px minmax(0, 1fr);
+        }
+        .station {
+          width: 26px;
+          height: 26px;
+          font-size: 0.66rem;
+        }
+        .st-time {
+          display: none;
+        }
+      }
+
+      .jump {
+        position: fixed;
+        bottom: 22px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 4;
+        font: 0.66rem var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        background: color-mix(in srgb, var(--surface) 92%, transparent);
+        color: var(--indigo);
+        border: 1px solid var(--indigo);
+        box-shadow: 0 0 16px color-mix(in srgb, var(--indigo) 30%, transparent);
+        padding: 9px 16px;
+        cursor: pointer;
+        display: none;
+      }
+      .jump.show {
+        display: block;
+      }
+      :focus-visible {
+        outline: 1px solid var(--acc);
+        outline-offset: 3px;
+      }
+
+      .static .card,
+      .static .lanes .card {
+        animation: none;
+      }
+      .static .meter > i {
+        transition: none;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        .card,
+        .pulse,
+        .station {
+          animation: none !important;
+        }
+        .meter > i {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stars" aria-hidden="true"></canvas>
+    <div class="nebula" aria-hidden="true"></div>
+    <header>
+      <div class="head">
+        <div class="eyebrow">10x-ray</div>
+        <div class="row1">
+          <span class="skill" id="skill">/skill</span>
+          <span class="args" id="args"></span>
+          <span class="status" id="status">connecting</span>
+        </div>
+        <div class="row2">
+          <div class="meter"><i id="overall"></i></div>
+          <span id="stepno">step –</span>
+          <span id="clock">00:00</span>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="intro" id="intro"></section>
+      <div id="list"></div>
+      <div class="stop ahead-row" id="aheadRow">
+        <div class="rail"><div class="station" id="aheadSt"></div></div>
+        <div class="ahead" id="ahead"></div>
+      </div>
+      <section class="anatomy" id="anatomy" hidden></section>
+    </main>
+    <button class="jump" id="jump" type="button">↓ new activity</button>
+    <script>
+      (() => {
+        const data = JSON.parse(document.getElementById("xray-data").textContent);
+        const { kinds: KINDS, patterns: PATTERNS, glyphs: GLYPHS, map } = data;
+        // Labels come in the language of the conversation (init --lang).
+        const plural = new Intl.PluralRules(data.lang);
+        const noun = (key, n) => data.nouns[key][plural.select(n)] ?? data.nouns[key].other;
+        const say = (key, vars = {}) =>
+          data.ui[key].replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+        document.documentElement.lang = data.lang;
+        const NOTABLE = new Set(data.notable);
+        // One 10xHub universe color per pattern, the way each hub sector has its own --acc.
+        const ACCENT = {
+          input: "#7aa2ff",
+          context: "#4cc9f0",
+          decompose: "#a78bfa",
+          gate: "#f0a64a",
+          "fan-out": "#3ddad0",
+          loop: "#ffd166",
+          branch: "#f472b6",
+          synthesize: "#7c8cff",
+          artifact: "#4ade9b",
+          verify: "#4ade9b",
+          handoff: "#7c8cff",
+          step: "#7d88ad",
+        };
+        const $ = (id) => document.getElementById(id);
+        const el = (tag, cls, text) => {
+          const n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          return n;
+        };
+        const clock = (ms) => {
+          const s = Math.max(0, Math.round(ms / 1000));
+          return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+        };
+
+        // Map index: step numbers like 3 and 3.1, top-level ancestor lookup.
+        const byId = new Map(map.nodes.map((n) => [n.id, n]));
+        const tops = map.nodes.filter((n) => !n.parent);
+        const num = new Map();
+        tops.forEach((n, i) => num.set(n.id, String(i + 1)));
+        for (const n of map.nodes) {
+          if (n.parent)
+            num.set(
+              n.id,
+              `${num.get(n.parent)}.${map.nodes.filter((s) => s.parent === n.parent).indexOf(n) + 1}`,
+            );
+        }
+        const topOf = (id) => {
+          let n = byId.get(id);
+          while (n?.parent) n = byId.get(n.parent);
+          return n;
+        };
+        const pkey = (n) => (GLYPHS[n.pattern] ? n.pattern : "step");
+        const pat = (n) => [GLYPHS[pkey(n)], PATTERNS[pkey(n)].label];
+        const taught = new Set(); // patterns whose lesson a card already shows
+        const accent = (n) => ACCENT[n.pattern] ?? ACCENT.step;
+
+        const events = [];
+        const cards = new Map();
+        let startTs = null;
+        let endTs = null;
+        let active = null;
+        let furthest = 0;
+
+        $("skill").textContent = `/${data.meta.skill ?? "skill"}`;
+        $("args").textContent = data.meta.args ?? "";
+        document.title = `10x-ray · /${data.meta.skill ?? "skill"}`;
+        if (map.summary) $("intro").append(el("p", null, map.summary));
+        $("intro").append(
+          el(
+            "small",
+            null,
+            say("mappedPage", { n: tops.length, steps: noun("step", tops.length) }),
+          ),
+        );
+        $("jump").textContent = say("jump");
+
+        function makeCard(node) {
+          const isChild = Boolean(node.parent);
+          const root = el("article", "card");
+          let row = null;
+          if (isChild) root.style.setProperty("--acc", accent(node));
+          else {
+            row = el("div", "stop");
+            row.style.setProperty("--acc", accent(node));
+            const rail = el("div", "rail");
+            rail.append(el("div", "station", num.get(node.id)), el("div", "st-time"));
+            row.append(rail, root);
+          }
+          root.append(el("div", "glow"));
+          const top = el("div", "card-top");
+          const [glyph, label] = pat(node);
+          top.append(
+            el("span", "no", num.get(node.id).padStart(isChild ? 3 : 2, "0")),
+            el("span", "badge", `${glyph} ${label}`),
+          );
+          const iters = el("span", "iters");
+          top.append(iters, el("span", "t"), el("span", "pulse"));
+          root.append(top, el("div", "title", node.title));
+          // First card of a pattern teaches the pattern itself: the agent limitation
+          // it answers and why authors reach for it.
+          const lesson = PATTERNS[pkey(node)];
+          if (lesson.why && !taught.has(pkey(node))) {
+            taught.add(pkey(node));
+            const box = el("div", "concept lesson");
+            box.append(
+              el("span", "k", `✗ ${say("limit").toUpperCase()}`),
+              el("p", null, lesson.limit),
+              el("span", "k", `✓ ${say("why").toUpperCase()}`),
+              el("p", null, lesson.why),
+            );
+            root.append(box);
+          }
+          const concept = el("div", "concept");
+          concept.append(
+            el("span", "k", say("here").toUpperCase()),
+            document.createTextNode(node.concept),
+          );
+          if (node.when) concept.append(el("span", "when", say("when", { when: node.when })));
+          root.append(concept);
+          const now = el("div", "now");
+          const nowDetail = el("div", "now-detail");
+          const asks = el("div");
+          const notes = el("ul", "notes");
+          const lanes = el("div", "lanes");
+          const trace = el("details", "trace");
+          const traceSum = el("summary");
+          const traceList = el("ol");
+          trace.append(traceSum, traceList);
+          root.append(now, nowDetail, asks, notes, lanes, trace);
+          const c = {
+            root,
+            asks,
+            now,
+            nowDetail,
+            notes,
+            lanes,
+            trace,
+            traceSum,
+            traceList,
+            iters,
+            time: top.querySelector(".t"),
+            row,
+            stTime: row?.querySelector(".st-time"),
+            count: 0,
+            iterSeen: new Set(),
+          };
+          cards.set(node.id, c);
+          if (isChild) {
+            const parent = cards.get(node.parent) ?? makeCard(byId.get(node.parent));
+            parent.lanes.append(root);
+          } else {
+            $("list").append(row);
+          }
+          return c;
+        }
+
+        // A symbolic marker of the hand-off, not the form: the user answers in the
+        // terminal, where the real picker appears.
+        function askBox(ev) {
+          const p = ev.payload ?? {};
+          const qs = p.questions ?? [];
+          const tool = p.tool ?? (p.mode === "text" ? say("freeText") : "AskUserQuestion");
+          const box = el("div", "ask");
+          const icon = el("div", "ask-icon");
+          icon.append(el("span", null, "?"));
+          const what =
+            p.mode === "text"
+              ? say("reply")
+              : say("questions", { n: qs.length, questions: noun("question", qs.length) });
+          // Both languages lead with the tool name, which is rendered bold.
+          const tail = (key) => say(key, { tool, what }).slice(tool.length);
+          const tl = el("div", "ask-tool");
+          const rest = document.createTextNode(`${tail("polls")} · ${say("inTerminal")}`);
+          tl.append(el("b", null, tool), rest);
+          const head = el("div", "ask-h", say("handed"));
+          box.append(icon, head, tl);
+          const chips = el("div", "chips");
+          for (const q of qs) chips.append(el("span", "chip", q.header || say("question")));
+          if (qs.length) box.append(chips);
+          box.answered = () => {
+            box.classList.add("answered");
+            head.textContent = say("answered");
+            rest.textContent = tail("polled");
+            icon.firstChild.textContent = "✓";
+          };
+          return box;
+        }
+
+        function setActive(id, waiting) {
+          const topId = id ? topOf(id)?.id : null;
+          for (const [nid, c] of cards) {
+            c.root.classList.toggle("active", nid === id && !waiting);
+            c.root.classList.toggle("waiting", nid === id && Boolean(waiting));
+            if (!c.row) continue;
+            const here = nid === topId;
+            c.row.classList.toggle("active", here && !waiting);
+            c.row.classList.toggle("waiting", here && Boolean(waiting));
+            c.row.classList.toggle("passed", !here);
+          }
+          active = id;
+        }
+
+        function header() {
+          const last = events[events.length - 1];
+          const st = $("status");
+          let label = say("running");
+          let cls = "";
+          if (!last) label = say(data.live ? "connecting" : "empty");
+          else if (last.kind === "done") {
+            label = say("missionComplete");
+            cls = "done";
+          } else if (last.kind === "fail") {
+            label = say("aborted").toLowerCase();
+            cls = "fail";
+          } else if (last.kind === "ask") {
+            label = say("waiting");
+            cls = "ask";
+          }
+          st.textContent = label;
+          st.className = `status ${cls}`;
+          $("overall").style.width = `${tops.length ? (furthest / tops.length) * 100 : 0}%`;
+          $("stepno").textContent = say("stepNo", { i: furthest || "–", n: tops.length });
+          if (startTs) $("clock").textContent = `T+${clock((endTs ?? Date.now()) - startTs)}`;
+          const left = tops.length - furthest;
+          $("ahead").textContent =
+            left > 0 ? say("ahead", { n: left, steps: noun("step", left) }) : say("lastStep");
+          $("aheadSt").textContent = left > 0 ? `+${left}` : "·";
+          $("aheadRow").hidden = Boolean(endTs);
+          $("list").lastElementChild?.classList.toggle("terminus", Boolean(endTs));
+        }
+
+        function anatomy() {
+          const seen = new Set(events.map((e) => e.node).filter((id) => byId.has(id)));
+          const maxIter = new Map();
+          for (const e of events) {
+            const k = Number(String(e.iter ?? "").split("/")[0]);
+            if (byId.has(e.node) && k) maxIter.set(e.node, Math.max(k, maxIter.get(e.node) ?? 0));
+          }
+          const sec = $("anatomy");
+          sec.replaceChildren();
+          const last = events[events.length - 1];
+          sec.append(
+            el("span", "eyebrow", say("fullMap")),
+            el("h2", null, `${say("anatomyTitle")} · /${data.meta.skill ?? "skill"}`),
+          );
+          sec.append(
+            el(
+              "div",
+              "sum",
+              `${say("pageTotals", {
+                verdict: say(last.kind === "done" ? "complete" : "aborted").toLowerCase(),
+                seen: seen.size,
+                all: map.nodes.length,
+                time: clock(last.ts - startTs),
+              })} · ${say("legend")}`,
+            ),
+          );
+          const an = el("div", "an");
+          for (const n of map.nodes) {
+            const visited = seen.has(n.id);
+            const r = el("div", `an-row${n.parent ? " child" : ""}${visited ? "" : " skipped"}`);
+            r.style.setProperty("--acc", accent(n));
+            const [glyph, label] = pat(n);
+            const body = el("div", "body");
+            body.append(
+              el("div", "ttl", n.title),
+              el(
+                "div",
+                "c",
+                n.when ? `${n.concept} (${say("whenShort", { when: n.when })})` : n.concept,
+              ),
+            );
+            const it = maxIter.get(n.id);
+            r.append(
+              el("span", "n", num.get(n.id)),
+              el("span", "p", `${glyph} ${label}`),
+              body,
+              el("span", "m", visited ? (it ? `✓ ×${it}` : "✓") : "–"),
+            );
+            an.append(r);
+          }
+          sec.append(an);
+          sec.hidden = false;
+        }
+
+        const nearBottom = () =>
+          window.innerHeight + window.scrollY >= document.body.scrollHeight - 200;
+
+        function add(ev) {
+          if (events.some((e) => e.n === ev.n)) return;
+          const stick = nearBottom();
+          events.push(ev);
+          startTs ??= ev.ts;
+          const node = byId.get(ev.node) ?? byId.get(active);
+          if (node) {
+            const fresh = !cards.has(node.id) || !cards.get(node.id).count;
+            const c = cards.get(node.id) ?? makeCard(node);
+            c.count += 1;
+            if (fresh) {
+              c.time.textContent = `T+${clock(ev.ts - startTs)}`;
+              if (c.stTime) c.stTime.textContent = clock(ev.ts - startTs);
+            }
+            const t = topOf(node.id);
+            furthest = Math.max(furthest, tops.indexOf(t) + 1);
+            if (ev.iter && !c.iterSeen.has(ev.iter)) {
+              c.iterSeen.add(ev.iter);
+              c.iters.append(el("span", null, ev.iter));
+            }
+            if (ev.kind === "ask") c.pendingAsk = c.asks.appendChild(askBox(ev));
+            if (ev.kind === "answer" && c.pendingAsk) {
+              c.pendingAsk.answered();
+              c.pendingAsk = null;
+            }
+            // "now" is the current action; notable outcomes go to the notes list.
+            if (fresh || !(NOTABLE.has(ev.kind) || ["ask", "done", "fail"].includes(ev.kind))) {
+              c.now.textContent = ev.title;
+              c.nowDetail.textContent = ev.detail ?? "";
+            }
+            if (!fresh && NOTABLE.has(ev.kind)) {
+              const li = el("li");
+              const body = el("span", null, ev.title);
+              if (ev.detail && ["result", "decide", "answer"].includes(ev.kind))
+                body.append(el("span", "d", ev.detail));
+              li.append(el("span", `k ${ev.kind}`, KINDS[ev.kind] ?? "STEP"), body);
+              c.notes.append(li);
+            }
+            c.traceList.append(
+              el(
+                "li",
+                null,
+                `T+${clock(ev.ts - startTs)}  ${(KINDS[ev.kind] ?? "STEP").padEnd(9)} ${ev.title}`,
+              ),
+            );
+            c.traceSum.textContent = say("trace", { n: c.traceList.children.length });
+            setActive(node.id, ev.kind === "ask");
+          }
+          if (ev.kind === "done" || ev.kind === "fail") {
+            endTs = ev.ts;
+            setActive(null);
+            anatomy();
+          }
+          header();
+          if (stick)
+            window.scrollTo({
+              top: document.body.scrollHeight,
+              behavior: data.live ? "smooth" : "auto",
+            });
+          else $("jump").classList.add("show");
+        }
+
+        $("jump").addEventListener("click", () => {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+          $("jump").classList.remove("show");
+        });
+        window.addEventListener("scroll", () => {
+          if (nearBottom()) $("jump").classList.remove("show");
+        });
+        setInterval(() => {
+          if (startTs && !endTs) $("clock").textContent = `T+${clock(Date.now() - startTs)}`;
+        }, 500);
+        header();
+
+        // Starfield, ported from the 10xHub layout: twinkles unless reduced motion is on.
+        (() => {
+          const c = $("stars");
+          const x = c.getContext("2d");
+          const DPR = Math.min(devicePixelRatio || 1, 2);
+          const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches || !data.live;
+          let stars = [];
+          const size = () => {
+            c.width = innerWidth * DPR;
+            c.height = innerHeight * DPR;
+            stars = Array.from({ length: Math.floor((innerWidth * innerHeight) / 5200) }, () => ({
+              x: Math.random() * c.width,
+              y: Math.random() * c.height,
+              r: (Math.random() * 1.1 + 0.3) * DPR,
+              p: Math.random() * Math.PI * 2,
+              s: 0.4 + Math.random() * 1.2,
+              hue:
+                Math.random() < 0.12
+                  ? "156,163,255"
+                  : Math.random() < 0.5
+                    ? "220,226,245"
+                    : "173,196,255",
+            }));
+          };
+          const draw = (t) => {
+            x.clearRect(0, 0, c.width, c.height);
+            for (const s of stars) {
+              const a = reduced
+                ? 0.55
+                : 0.35 + 0.4 * (0.5 + 0.5 * Math.sin(s.p + t * 0.00045 * s.s));
+              x.beginPath();
+              x.arc(s.x, s.y, s.r, 0, 6.2832);
+              x.fillStyle = `rgba(${s.hue},${a.toFixed(3)})`;
+              x.fill();
+            }
+            if (!reduced) requestAnimationFrame(draw);
+          };
+          size();
+          addEventListener("resize", () => {
+            size();
+            if (reduced) draw(0);
+          });
+          reduced ? draw(0) : requestAnimationFrame(draw);
+        })();
+
+        if (data.live) {
+          const es = new EventSource("/events");
+          es.onmessage = (m) => {
+            const ev = JSON.parse(m.data);
+            add(ev);
+            if (ev.kind === "done" || ev.kind === "fail") es.close();
+          };
+          es.onerror = () => {
+            if (!endTs) $("status").textContent = say("reconnecting");
+          };
+        } else {
+          document.body.classList.add("static");
+          data.events.forEach(add);
+          window.scrollTo(0, 0);
+        }
+      })();
+    </script>
+  </body>
+</html>

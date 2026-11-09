@@ -1,0 +1,81 @@
+{
+  "summary": "Answers a question about the codebase by splitting it into areas, researching them with parallel sub-agents, and writing one evidence-backed research.md into a change folder.",
+  "nodes": [
+    {
+      "id": "intake",
+      "title": "Take in the question and named files",
+      "pattern": "input",
+      "concept": "Anything the user pointed at is read in full by the main agent first, so its own context holds the ground truth before anything is delegated."
+    },
+    {
+      "id": "priors",
+      "title": "Load accepted lessons as priors",
+      "pattern": "context",
+      "concept": "lessons.md holds rules the team already agreed on. Reading it up front narrows what is worth re-investigating instead of rediscovering known pitfalls."
+    },
+    {
+      "id": "decompose",
+      "title": "Split the question into research areas",
+      "pattern": "decompose",
+      "concept": "A broad question becomes a few independent areas. Each area later becomes one sub-agent's assignment, so the split decides the shape of the whole run."
+    },
+    {
+      "id": "scope",
+      "title": "Agree on depth and focus with you",
+      "pattern": "gate",
+      "concept": "A cheap question before an expensive fan-out. Depth and focus change how many agents run and what they read, so the skill pins them down first.",
+      "when": "the question is broad or ambiguous; tight queries skip this gate"
+    },
+    {
+      "id": "fanout",
+      "title": "Research areas in parallel",
+      "pattern": "fan-out",
+      "concept": "2–4 sub-agents (fast Explore for finding, general-purpose for deep reading) work at once. Each keeps its own context, so the main agent only receives findings with file:line references."
+    },
+    {
+      "id": "fanout-code",
+      "parent": "fanout",
+      "title": "Trace the live code",
+      "pattern": "step",
+      "concept": "Current code is the primary source of truth; these agents map files, entry points and data flow."
+    },
+    {
+      "id": "fanout-history",
+      "parent": "fanout",
+      "title": "Mine prior changes for decisions",
+      "pattern": "step",
+      "concept": "context/changes and context/archive explain why the code looks the way it does. This is supplementary history, never a substitute for the code."
+    },
+    {
+      "id": "synthesize",
+      "title": "Wait for every agent, then connect findings",
+      "pattern": "synthesize",
+      "concept": "The barrier matters: synthesis starts only when all agents are done, so cross-area connections are made with the full picture, live code ranked above history."
+    },
+    {
+      "id": "change-folder",
+      "title": "Resolve the change folder and metadata",
+      "pattern": "step",
+      "concept": "Research belongs to a change. The skill reuses or creates context/changes/<id>/, refuses archived ones, and gathers commit, branch and date so the document has no placeholders."
+    },
+    {
+      "id": "write",
+      "title": "Write research.md",
+      "pattern": "artifact",
+      "concept": "One fixed template (frontmatter, summary, detailed findings, code references, history, open questions) makes every research doc comparable and consumable by /10x-plan."
+    },
+    {
+      "id": "permalinks",
+      "title": "Swap local refs for GitHub permalinks",
+      "pattern": "branch",
+      "concept": "Permalinks pin each reference to a commit, so links stay valid after the code moves on.",
+      "when": "on main/master or the commit is pushed"
+    },
+    {
+      "id": "present",
+      "title": "Present findings and invite follow-ups",
+      "pattern": "handoff",
+      "concept": "A short summary with key references closes the loop; follow-up questions append to the same document instead of starting over."
+    }
+  ]
+}
