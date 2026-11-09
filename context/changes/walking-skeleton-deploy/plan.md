@@ -471,21 +471,21 @@ Nie ma istniejących danych. Rewizja `0001_baseline` jest punktem startowym ła�
 
 #### Automated
 
-- [x] 3.1 Obraz Docker się buduje
-- [x] 3.2 Testy backendu z testem SPA przechodzą
-- [x] 3.3 Pełny stos z compose wstaje i odpowiada na /api/health
+- [x] 3.1 Obraz Docker się buduje — c0d9487
+- [x] 3.2 Testy backendu z testem SPA przechodzą — c0d9487
+- [x] 3.3 Pełny stos z compose wstaje i odpowiada na /api/health — c0d9487
 
 #### Manual
 
-- [x] 3.4 localhost:8000 pokazuje stronę stanu serwowaną przez FastAPI
-- [x] 3.5 Odświeżenie na ścieżce klienckiej nadal pokazuje aplikację
+- [x] 3.4 localhost:8000 pokazuje stronę stanu serwowaną przez FastAPI — c0d9487
+- [x] 3.5 Odświeżenie na ścieżce klienckiej nadal pokazuje aplikację — c0d9487
 
 ### Phase 4: CI/CD i darmowe wdrożenie
 
 #### Automated
 
-- [ ] 4.1 Polecenia z faz 1-3 przechodzą bez zmian
-- [ ] 4.2 render.yaml jest poprawny z plan free i checksPass
+- [x] 4.1 Polecenia z faz 1-3 przechodzą bez zmian
+- [x] 4.2 render.yaml jest poprawny z plan free i checksPass
 - [ ] 4.3 CI na GitHubie jest zielone dla pierwszego pusha do main
 
 #### Manual

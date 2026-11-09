@@ -1,0 +1,19 @@
+# Render Blueprint: one free Docker web service built from the root Dockerfile.
+# The database is Supabase (free), connected through its session pooler; the URL is
+# entered in the Render Dashboard when the Blueprint is created, never stored here.
+services:
+  - type: web
+    name: sales-order-orchestrator
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Deploy only after the GitHub Actions checks on main pass.
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/health
+    # PORT is set by Render; backend/start.sh binds uvicorn to ${PORT:-8000}.
+    envVars:
+      - key: DATABASE_URL
+        sync: false

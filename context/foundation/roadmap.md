@@ -74,7 +74,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Backend / API:** partial — FastAPI + uvicorn zainstalowane (`pyproject.toml`), `main.py` to placeholder bez aplikacji i tras.
 - **Data:** absent — PostgreSQL + SQLModel zadeklarowane w tech-stack.md, nic nie podłączone.
 - **Auth:** absent — proste logowanie na konta testowe zadeklarowane w tech-stack.md.
-- **Deploy / infra:** absent — Fly + GitHub Actions z auto-deployem po merge zadeklarowane w tech-stack.md; brak konfiguracji.
+- **Deploy / infra:** absent — Render free (Docker) + Supabase free (PostgreSQL) + GitHub Actions z auto-deployem po merge zadeklarowane w tech-stack.md; brak konfiguracji.
 - **Observability:** absent — brak śledzenia tokenów, kosztu i czasu.
 
 ## Foundations
