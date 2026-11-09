@@ -1,5 +1,6 @@
 import importlib.metadata
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
@@ -62,6 +63,17 @@ def test_negative_token_counts_are_rejected(field: str) -> None:
 def test_inconsistent_usage_is_a_programming_error() -> None:
     with pytest.raises(ValueError):
         price_usage(_usage(input_tokens=10, cache_read_tokens=50))
+
+
+def test_cost_is_rounded_to_the_column_scale(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Some bundled prices yield more than 10 decimal places; Postgres would round them silently.
+    unrounded = SimpleNamespace(total_price=Decimal("0.000000041666666666666664"))
+    monkeypatch.setattr("app.tracing.pricing.calc_price", lambda *args, **kwargs: unrounded)
+
+    result = price_usage(_usage())
+
+    assert result.cost_usd == Decimal("0.0000000417")
+    assert result.cost_usd.as_tuple().exponent == -10
 
 
 def test_separately_priced_calls_sum_exactly() -> None:

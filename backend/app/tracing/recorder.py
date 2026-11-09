@@ -3,18 +3,29 @@
 Durations come only from `time.perf_counter_ns()`; `started_at` is wall-clock UTC for ordering.
 The run and every step write through their own short session and commit at once, so finished
 steps survive a run that fails later.
+
+Tracing never breaks the work it wraps: a failed trace write (database down, a value too long
+for its column) is logged and dropped, and the body's own result or exception always wins.
+When the run itself cannot be opened, `RunHandle.id` is None and its steps are not written.
+
+Writes are synchronous; from `async def` code they block the event loop, so call them from a
+worker thread there. An interrupt or cancellation inside a run or step is recorded as `failed`.
 """
 
+import logging
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 
 from sqlalchemy import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from app.tracing.models import RunStatus, StepKind, StepStatus, TraceRun, TraceStep
 from app.tracing.pricing import LlmUsage, PriceResult, price_usage
+
+logger = logging.getLogger(__name__)
 
 
 def _elapsed_us(start_ns: int) -> int:
@@ -74,9 +85,9 @@ class StepRecorder:
 
 
 class RunHandle:
-    """An open run; steps are opened from it."""
+    """An open run; steps are opened from it. `id` is None when the run could not be saved."""
 
-    def __init__(self, engine: Engine, run_id: int) -> None:
+    def __init__(self, engine: Engine, run_id: int | None) -> None:
         self._engine = engine
         self.id = run_id
 
@@ -94,34 +105,57 @@ class RunHandle:
             error_type = type(exc).__name__
             raise
         finally:
-            row = recorder._to_row(
-                run_id=self.id,
-                name=name,
-                status=status,
-                error_type=error_type,
-                started_at=started_at,
-                duration_us=_elapsed_us(start_ns),
-            )
-            with Session(self._engine) as session:
-                session.add(row)
-                session.commit()
+            if self.id is not None:
+                row = recorder._to_row(
+                    run_id=self.id,
+                    name=name,
+                    status=status,
+                    error_type=error_type,
+                    started_at=started_at,
+                    duration_us=_elapsed_us(start_ns),
+                )
+                try:
+                    with Session(self._engine) as session:
+                        session.add(row)
+                        session.commit()
+                except SQLAlchemyError:
+                    logger.exception("Tracing: could not save step %r of run %s", name, self.id)
 
 
-@contextmanager
-def run(engine: Engine, *, subject_type: str, subject_id: str) -> Iterator[RunHandle]:
-    """Open a traced run: inserted as `running`, finished as `completed` or `failed`."""
+def _open_run(engine: Engine, subject_type: str, subject_id: str) -> int | None:
     trace_run = TraceRun(
         subject_type=subject_type,
         subject_id=subject_id,
         status="running",
         started_at=datetime.now(UTC),
     )
-    with Session(engine) as session:
-        session.add(trace_run)
-        session.commit()
-        session.refresh(trace_run)
-    assert trace_run.id is not None
-    run_id = trace_run.id
+    try:
+        with Session(engine) as session:
+            session.add(trace_run)
+            session.commit()
+            session.refresh(trace_run)
+    except SQLAlchemyError:
+        logger.exception("Tracing: could not open run for %s/%s", subject_type, subject_id)
+        return None
+    return trace_run.id
+
+
+def _finish_run(engine: Engine, run_id: int, status: RunStatus, duration_us: int) -> None:
+    try:
+        with Session(engine) as session:
+            row = session.get_one(TraceRun, run_id)
+            row.status = status
+            row.duration_us = duration_us
+            session.add(row)
+            session.commit()
+    except SQLAlchemyError:
+        logger.exception("Tracing: could not finish run %s", run_id)
+
+
+@contextmanager
+def run(engine: Engine, *, subject_type: str, subject_id: str) -> Iterator[RunHandle]:
+    """Open a traced run: inserted as `running`, finished as `completed` or `failed`."""
+    run_id = _open_run(engine, subject_type, subject_id)
     start_ns = time.perf_counter_ns()
     status: RunStatus = "completed"
     try:
@@ -130,10 +164,5 @@ def run(engine: Engine, *, subject_type: str, subject_id: str) -> Iterator[RunHa
         status = "failed"
         raise
     finally:
-        duration_us = _elapsed_us(start_ns)
-        with Session(engine) as session:
-            row = session.get_one(TraceRun, run_id)
-            row.status = status
-            row.duration_us = duration_us
-            session.add(row)
-            session.commit()
+        if run_id is not None:
+            _finish_run(engine, run_id, status, _elapsed_us(start_ns))

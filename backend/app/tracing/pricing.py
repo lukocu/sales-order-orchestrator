@@ -1,14 +1,22 @@
-"""Normalized LLM usage and its list-price cost via the bundled `genai-prices` data."""
+"""Normalized LLM usage and its list-price cost via the bundled `genai-prices` data.
+
+Prices come only from the snapshot shipped with the installed package; never start
+`genai_prices.UpdatePrices`, or `price_source` would no longer identify the prices used.
+"""
 
 import importlib.metadata
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
+from functools import lru_cache
 from typing import Any, Literal
 
 from genai_prices import Usage, calc_price
 from pydantic import BaseModel, ConfigDict, Field
 
 PricedStatus = Literal["priced", "unpriced"]
+
+# Matches the scale of trace_steps.cost_usd (NUMERIC(16,10)).
+COST_QUANTUM = Decimal("1e-10")
 
 
 class LlmUsage(BaseModel):
@@ -51,8 +59,11 @@ def price_usage(usage: LlmUsage) -> PriceResult:
         )
     except LookupError:
         return PriceResult(None, "unpriced", None)
-    return PriceResult(calculation.total_price, "priced", _price_source())
+    # Round here, not in the database: trace_steps.cost_usd is NUMERIC(16,10).
+    cost = calculation.total_price.quantize(COST_QUANTUM, rounding=ROUND_HALF_EVEN)
+    return PriceResult(cost, "priced", _price_source())
 
 
+@lru_cache
 def _price_source() -> str:
     return f"genai-prices {importlib.metadata.version('genai-prices')}"

@@ -362,13 +362,13 @@ Migracja tylko dodaje tabele, więc nie ma danych do przenoszenia; `downgrade` u
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą
-- [x] 2.2 Testy wyceny przechodzą
-- [x] 2.3 Testy rejestratora na Postgresie przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą — 152c944
+- [x] 2.2 Testy wyceny przechodzą — 152c944
+- [x] 2.3 Testy rejestratora na Postgresie przechodzą — 152c944
 
 #### Manual
 
-- [x] 2.4 Przegląd API rejestratora z przykładem użycia
+- [x] 2.4 Przegląd API rejestratora z przykładem użycia — 152c944
 
 ### Phase 3: Sumy, endpoint i dowód na środowisku
 
