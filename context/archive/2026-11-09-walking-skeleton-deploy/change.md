@@ -1,10 +1,10 @@
 ---
 change_id: walking-skeleton-deploy
 title: Szkielet aplikacji (FastAPI + React + Postgres) z darmowym auto-deployem
-status: implemented
+status: archived
 created: 2026-11-09
 updated: 2026-11-09
-archived_at: null
+archived_at: 2026-11-09T19:48:39Z
 ---
 
 ## Notes

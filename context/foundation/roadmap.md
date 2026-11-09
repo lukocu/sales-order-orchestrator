@@ -41,7 +41,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 
 | ID   | Change ID                          | Outcome (user can …)                                                                 | Prerequisites | PRD refs                         | Status   |
 | ---- | ---------------------------------- | ------------------------------------------------------------------------------------ | ------------- | -------------------------------- | -------- |
-| F-01 | walking-skeleton-deploy            | (foundation) szkielet aplikacji działa end-to-end i wdraża się automatycznie po merge | —             | Access Control, NFR              | in-progress |
+| F-01 | walking-skeleton-deploy            | (foundation) szkielet aplikacji działa end-to-end i wdraża się automatycznie po merge | —             | Access Control, NFR              | done     |
 | F-02 | step-cost-tracing                  | (foundation) każdy krok przetwarzania zapisuje tokeny, koszt i czas                  | F-01          | NFR                              | proposed |
 | S-01 | login-and-inbox                    | handlowiec loguje się kontem testowym i widzi skrzynkę zapytań                        | F-01, seeded test accounts with roles, seeded sample inquiries | FR-001, Access Control | proposed |
 | S-02 | parse-inquiry                      | handlowiec uruchamia analizę i poprawia sparsowane pola zapytania                     | S-01, F-02    | FR-002, US-01, NFR               | proposed |
@@ -90,7 +90,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Dwa zestawy narzędzi (Python + React) i baza na starcie; sekwencjonowane jako pierwsze, bo bez tego żaden wycinek nie jest weryfikowalny end-to-end. Zakres ograniczony do szkieletu — bez modeli domenowych i ekranów.
-- **Status:** in-progress
+- **Status:** done
 
 ### F-02: Śledzenie kosztu, tokenów i czasu kroków
 
@@ -267,3 +267,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Milestone History
 
 ## Done
+
+- **F-01: (foundation) frontend, backend i baza danych są połączone w jedną działającą aplikację bez funkcji, która wdraża się automatycznie na środowisko po merge.** — Archived 2026-11-09 → `context/archive/2026-11-09-walking-skeleton-deploy/`. Lesson: —.
