@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import pool
 from sqlmodel import SQLModel, create_engine
 
+import app.tracing.models  # noqa: F401  (registers tables on SQLModel.metadata)
 from app.settings import get_settings
 
 config = context.config
@@ -11,7 +12,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-# Import table models before this line once they exist, so autogenerate sees them.
+# Table models are imported above so autogenerate and `alembic check` see them.
 target_metadata = SQLModel.metadata
 
 

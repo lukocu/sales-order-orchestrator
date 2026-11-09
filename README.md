@@ -21,7 +21,7 @@ docker compose up --build
 ```
 
 Open http://localhost:8000. The status page shows the API, the database and the current
-migration revision (`0001_baseline`). Migrations run automatically when the container starts.
+migration revision. Migrations run automatically when the container starts.
 
 If port 8000 or 5432 is already taken on your machine, copy `.env.example` to `.env` and
 change `APP_HOST_PORT` / `POSTGRES_HOST_PORT`.
