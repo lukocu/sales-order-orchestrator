@@ -42,7 +42,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | ID   | Change ID                          | Outcome (user can …)                                                                 | Prerequisites | PRD refs                         | Status   |
 | ---- | ---------------------------------- | ------------------------------------------------------------------------------------ | ------------- | -------------------------------- | -------- |
 | F-01 | walking-skeleton-deploy            | (foundation) szkielet aplikacji działa end-to-end i wdraża się automatycznie po merge | —             | Access Control, NFR              | done     |
-| F-02 | step-cost-tracing                  | (foundation) każdy krok przetwarzania zapisuje tokeny, koszt i czas                  | F-01          | NFR                              | in-progress |
+| F-02 | step-cost-tracing                  | (foundation) każdy krok przetwarzania zapisuje tokeny, koszt i czas                  | F-01          | NFR                              | done |
 | S-01 | login-and-inbox                    | handlowiec loguje się kontem testowym i widzi skrzynkę zapytań                        | F-01, seeded test accounts with roles, seeded sample inquiries | FR-001, Access Control | proposed |
 | S-02 | parse-inquiry                      | handlowiec uruchamia analizę i poprawia sparsowane pola zapytania                     | S-01, F-02    | FR-002, US-01, NFR               | proposed |
 | S-03 | deterministic-checks-and-exception | handlowiec widzi sprawdzenia bez agentów i wykryty wyjątek albo zakończenie standardowe | S-02, seeded mock company data (customers, products, stock, prices, discounts, credit status) | FR-003, FR-004, US-01 | proposed |
@@ -103,7 +103,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Cel „jakość” — dodanie śledzenia po fakcie oznaczałoby przeróbkę każdego kroku; zakres to sam kontrakt zapisu, a wyświetlanie per krok dochodzi w wycinkach, które te kroki tworzą.
-- **Status:** in-progress
+- **Status:** done
 
 ## Slices
 
@@ -269,3 +269,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Done
 
 - **F-01: (foundation) frontend, backend i baza danych są połączone w jedną działającą aplikację bez funkcji, która wdraża się automatycznie na środowisko po merge.** — Archived 2026-11-09 → `context/archive/2026-11-09-walking-skeleton-deploy/`. Lesson: —.
+- **F-02: (foundation) każdy krok przetwarzania zapytania zapisuje zużyte tokeny, koszt i czas, a łączne wartości dla zapytania są dostępne do wyświetlenia.** — Archived 2026-11-09 → `context/archive/2026-11-09-step-cost-tracing/`. Lesson: —.
