@@ -1,0 +1,13 @@
+.git
+.gitignore
+.claude
+context/
+.env
+**/.env
+**/.env.local
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.py[oc]
+frontend/dist
+backend/static

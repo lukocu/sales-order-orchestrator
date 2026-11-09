@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # Default targets the local compose `db` service; deployments set DATABASE_URL.
     database_url: str = "postgresql://postgres:postgres@localhost:5432/orchestrator"
 
+    # Built frontend (Vite dist). The Docker image copies it here; when the directory
+    # does not exist (dev, tests) the app serves the API only.
+    static_dir: Path = BACKEND_DIR / "static"
+
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:

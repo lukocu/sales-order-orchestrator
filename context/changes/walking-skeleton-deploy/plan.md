@@ -457,28 +457,28 @@ Nie ma istniejących danych. Rewizja `0001_baseline` jest punktem startowym ła�
 
 #### Automated
 
-- [x] 2.1 Lint frontendu przechodzi
-- [x] 2.2 Typy frontendu przechodzą
-- [x] 2.3 Testy frontendu przechodzą
-- [x] 2.4 Build frontendu przechodzi
+- [x] 2.1 Lint frontendu przechodzi — 4228513
+- [x] 2.2 Typy frontendu przechodzą — 4228513
+- [x] 2.3 Testy frontendu przechodzą — 4228513
+- [x] 2.4 Build frontendu przechodzi — 4228513
 
 #### Manual
 
-- [x] 2.5 Strona na localhost:5173 pokazuje stan ok z rewizją migracji
-- [x] 2.6 Po zatrzymaniu bazy strona pokazuje stan degraded
+- [x] 2.5 Strona na localhost:5173 pokazuje stan ok z rewizją migracji — 4228513
+- [x] 2.6 Po zatrzymaniu bazy strona pokazuje stan degraded — 4228513
 
 ### Phase 3: Jeden kontener
 
 #### Automated
 
-- [ ] 3.1 Obraz Docker się buduje
-- [ ] 3.2 Testy backendu z testem SPA przechodzą
-- [ ] 3.3 Pełny stos z compose wstaje i odpowiada na /api/health
+- [x] 3.1 Obraz Docker się buduje
+- [x] 3.2 Testy backendu z testem SPA przechodzą
+- [x] 3.3 Pełny stos z compose wstaje i odpowiada na /api/health
 
 #### Manual
 
-- [ ] 3.4 localhost:8000 pokazuje stronę stanu serwowaną przez FastAPI
-- [ ] 3.5 Odświeżenie na ścieżce klienckiej nadal pokazuje aplikację
+- [x] 3.4 localhost:8000 pokazuje stronę stanu serwowaną przez FastAPI
+- [x] 3.5 Odświeżenie na ścieżce klienckiej nadal pokazuje aplikację
 
 ### Phase 4: CI/CD i darmowe wdrożenie
 

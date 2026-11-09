@@ -16,6 +16,19 @@ services:
       timeout: 5s
       retries: 10
 
+  # Full application from the root Dockerfile (API + built frontend, migrations on start):
+  #   docker compose up -d --build   -> http://localhost:8000
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/orchestrator
+    ports:
+      # Host port is configurable (APP_HOST_PORT in .env) for machines where 8000 is taken.
+      - "${APP_HOST_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
   # Backend dev environment in Linux: no Python needed on the host (and no clash with
   # Windows Smart App Control, which blocks native wheels like pydantic_core).
   #   docker compose --profile dev up backend          -> API with hot reload on :8000
