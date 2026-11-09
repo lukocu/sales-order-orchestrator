@@ -374,13 +374,13 @@ Migracja tylko dodaje tabele, więc nie ma danych do przenoszenia; `downgrade` u
 
 #### Automated
 
-- [x] 3.1 Wszystkie bramki backendu przechodzą
-- [x] 3.2 Testy sum i endpointu przechodzą
-- [x] 3.3 Bramki frontendu bez zmian zielone
-- [x] 3.4 Obraz się buduje
+- [x] 3.1 Wszystkie bramki backendu przechodzą — fc7167a
+- [x] 3.2 Testy sum i endpointu przechodzą — fc7167a
+- [x] 3.3 Bramki frontendu bez zmian zielone — fc7167a
+- [x] 3.4 Obraz się buduje — fc7167a
 
 #### Manual
 
-- [x] 3.5 Lokalnie skrypt demo i GET /api/runs/<id> pokazują 3 kroki i sumy
-- [ ] 3.6 Na Render przebieg demo widoczny pod /api/runs/<id>
-- [ ] 3.7 GET /api/runs/999999 na Render zwraca JSON 404
+- [x] 3.5 Lokalnie skrypt demo i GET /api/runs/<id> pokazują 3 kroki i sumy — fc7167a
+- [x] 3.6 Na Render przebieg demo widoczny pod /api/runs/<id> — fc7167a
+- [x] 3.7 GET /api/runs/999999 na Render zwraca JSON 404 — fc7167a

@@ -1,7 +1,7 @@
 ---
 change_id: step-cost-tracing
 title: Śledzenie tokenów, kosztu i czasu każdego kroku
-status: impl_reviewed
+status: implemented
 created: 2026-11-09
 updated: 2026-11-09
 ---
