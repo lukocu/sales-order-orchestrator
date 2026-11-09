@@ -443,29 +443,29 @@ Nie ma istniejących danych. Rewizja `0001_baseline` jest punktem startowym ła�
 
 #### Automated
 
-- [x] 1.1 Lint i format przechodzą
-- [x] 1.2 Typy przechodzą (mypy)
-- [x] 1.3 Migracje aplikują się na czystej bazie
-- [x] 1.4 Testy backendu przechodzą
+- [x] 1.1 Lint i format przechodzą — 1517548
+- [x] 1.2 Typy przechodzą (mypy) — 1517548
+- [x] 1.3 Migracje aplikują się na czystej bazie — 1517548
+- [x] 1.4 Testy backendu przechodzą — 1517548
 
 #### Manual
 
-- [x] 1.5 /api/health pokazuje database ok i rewizję 0001_baseline
-- [x] 1.6 Po zatrzymaniu bazy endpoint zwraca 503 bez wywrócenia serwera
+- [x] 1.5 /api/health pokazuje database ok i rewizję 0001_baseline — 1517548
+- [x] 1.6 Po zatrzymaniu bazy endpoint zwraca 503 bez wywrócenia serwera — 1517548
 
 ### Phase 2: Frontend
 
 #### Automated
 
-- [ ] 2.1 Lint frontendu przechodzi
-- [ ] 2.2 Typy frontendu przechodzą
-- [ ] 2.3 Testy frontendu przechodzą
-- [ ] 2.4 Build frontendu przechodzi
+- [x] 2.1 Lint frontendu przechodzi
+- [x] 2.2 Typy frontendu przechodzą
+- [x] 2.3 Testy frontendu przechodzą
+- [x] 2.4 Build frontendu przechodzi
 
 #### Manual
 
-- [ ] 2.5 Strona na localhost:5173 pokazuje stan ok z rewizją migracji
-- [ ] 2.6 Po zatrzymaniu bazy strona pokazuje stan degraded
+- [x] 2.5 Strona na localhost:5173 pokazuje stan ok z rewizją migracji
+- [x] 2.6 Po zatrzymaniu bazy strona pokazuje stan degraded
 
 ### Phase 3: Jeden kontener
 
