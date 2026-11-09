@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from uuid import uuid4
 
 import pytest
 from alembic import command
@@ -11,6 +12,9 @@ from app.main import app
 from app.settings import BACKEND_DIR, get_settings
 
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://postgres:postgres@127.0.0.1:1/unreachable"
+
+# Unique per pytest process, so teardowns delete only the runs this process created.
+TEST_SUBJECT_TYPE = f"test-{uuid4().hex[:12]}"  # trace_runs.subject_type is VARCHAR(50)
 
 
 @pytest.fixture(scope="session")

@@ -116,7 +116,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-02
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Najprostsze logowanie bez rejestracji i resetu hasła (Sokrates przy FR-001); role wchodzą od razu, bo potrzebuje ich S-08.
+- **Risk:** Najprostsze logowanie bez rejestracji i resetu hasła (Sokrates przy FR-001); role wchodzą od razu, bo potrzebuje ich S-08. Logowanie musi objąć też istniejący z F-02 publiczny `GET /api/runs/{id}` (Access Control: niezalogowany nie widzi żadnych danych); jeśli S-02 wejdzie przed S-01, ochrona wchodzi razem z S-02.
 - **Status:** proposed
 
 ### S-02: Analiza i poprawa sparsowanego zapytania

@@ -10,8 +10,8 @@ from sqlmodel import Session, col
 
 from app.tracing.models import RunStatus, TraceRun, TraceStep
 from app.tracing.summary import get_run_summary
+from tests.conftest import TEST_SUBJECT_TYPE
 
-TEST_SUBJECT_TYPE = "test"
 START = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 
 

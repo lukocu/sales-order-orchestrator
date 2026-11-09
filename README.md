@@ -76,7 +76,12 @@ If the backend listens elsewhere, set it in `frontend/.env.local` (see `frontend
 Every processing run is recorded as a run with its steps (`app.tracing`). A step stores its
 name, kind (`deterministic` or `llm`), status and the exception class on failure, its start
 time and duration, and for LLM steps the provider, model, token counts (input, output,
-cache read/write) and cost. Prompts and responses are never stored.
+cache read/write) and cost. Prompts and responses are never stored. Tracing never breaks the
+work it wraps: if a trace row cannot be written (for example the database is down), the error
+is logged and the work carries on without that row.
+
+`GET /api/runs/{id}` is public until login arrives (roadmap S-01), so a run's `subject_id` must
+not contain personal or business identifiers until then.
 
 The cost is an estimate from list prices bundled with
 [`genai-prices`](https://github.com/pydantic/genai-prices) (the version is stored per step),

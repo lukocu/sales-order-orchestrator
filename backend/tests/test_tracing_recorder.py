@@ -9,8 +9,7 @@ from sqlmodel import Session, col, select
 
 from app.tracing import LlmUsage, price_usage, run
 from app.tracing.models import TraceRun, TraceStep
-
-TEST_SUBJECT_TYPE = "test"
+from tests.conftest import TEST_SUBJECT_TYPE
 
 USAGE = LlmUsage(
     provider="google",

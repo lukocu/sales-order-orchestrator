@@ -8,8 +8,7 @@ from sqlmodel import Session, col
 
 from app.tracing import LlmUsage, run
 from app.tracing.models import TraceRun
-
-TEST_SUBJECT_TYPE = "test"
+from tests.conftest import TEST_SUBJECT_TYPE
 
 USAGE = LlmUsage(
     provider="google",
@@ -56,7 +55,8 @@ def test_run_summary_shape(client: TestClient, migrated_engine: Engine) -> None:
         "steps",
         "totals",
     }
-    assert (body["id"], body["subject_type"], body["status"]) == (run_id, "test", "completed")
+    assert (body["id"], body["status"]) == (run_id, "completed")
+    assert body["subject_type"] == TEST_SUBJECT_TYPE
     assert [step["name"] for step in body["steps"]] == ["normalize", "parse"]
     assert set(body["totals"]) == {
         "input_tokens",
@@ -97,3 +97,17 @@ def test_unknown_run_is_json_404(client: TestClient) -> None:
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Run not found"}
+
+
+@pytest.mark.parametrize("run_id", [0, 2_147_483_648])
+def test_out_of_range_run_id_is_422(client: TestClient, run_id: int) -> None:
+    response = client.get(f"/api/runs/{run_id}")
+
+    assert response.status_code == 422
+
+
+def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None:
+    response = client_without_db.get("/api/runs/1")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Database unavailable"}

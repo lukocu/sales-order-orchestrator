@@ -1,9 +1,10 @@
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import Engine, delete
 from sqlmodel import Session, col
 
-from app.tracing import price_usage
+from app.tracing import demo, price_usage
 from app.tracing.demo import DEMO_SUBJECT_TYPE, PRICED_USAGE, UNPRICED_USAGE, create_demo_run
 from app.tracing.models import TraceRun
 from app.tracing.summary import get_run_summary
@@ -42,3 +43,14 @@ def test_demo_run_shows_all_three_price_states(migrated_engine: Engine) -> None:
         with Session(migrated_engine) as session:
             session.exec(delete(TraceRun).where(col(TraceRun.id) == run_id))
             session.commit()
+
+
+def test_main_fails_when_the_run_cannot_be_saved(
+    monkeypatch: pytest.MonkeyPatch,
+    unreachable_engine: Engine,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(demo, "get_engine", lambda: unreachable_engine)
+
+    assert demo.main() == 1
+    assert "could not be saved" in capsys.readouterr().err

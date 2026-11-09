@@ -1,7 +1,7 @@
 ---
 change_id: step-cost-tracing
 title: Śledzenie tokenów, kosztu i czasu każdego kroku
-status: implemented
+status: impl_reviewed
 created: 2026-11-09
 updated: 2026-11-09
 ---
@@ -18,4 +18,6 @@ Faza 3:
 - Kryterium 3.5 w planie („`duration_ms` ≤ `steps_duration_ms`”) było błędne. Relacja zachodzi tylko dla kroków równoległych; demo ma kroki sekwencyjne, więc czas przebiegu jest większy (lokalnie 24,7 ms wobec 16,6 ms). Relację dla kroków równoległych pokrywa test sum.
 - Model nieobjęty cennikiem w demo to `openrouter` / `z-ai/glm-4.5-air:free`. Wiele modeli `:free` `genai-prices` 0.2.1 wycenia na 0 USD, czyli jako `priced`.
 - Sumy liczone są w Pythonie z wczytanych kroków. Przy listach wielu przebiegów (S-10) może być potrzebna agregacja w SQL.
-- `GET /api/runs/{id}` przy awarii bazy zwraca 500.
+- `GET /api/runs/{id}` przy awarii bazy zwracał 500; po pełnym przeglądzie zwraca 503 (jak health).
+
+Pełny przegląd (`reviews/impl-review.md`), F1: `GET /api/runs/{id}` jest publiczny do S-01. Wymóg logowania dla `/api/runs/*` jest dopisany do S-01 w roadmapie. Do tego czasu `subject_id` przebiegów nie może zawierać danych osobowych ani biznesowych.

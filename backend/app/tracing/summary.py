@@ -7,11 +7,16 @@ is lost.
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any, cast
 
 from pydantic import BaseModel
+from sqlalchemy.orm import QueryableAttribute, defer
 from sqlmodel import Session, col, select
 
 from app.tracing.models import PriceStatus, RunStatus, StepKind, StepStatus, TraceRun, TraceStep
+
+# SQLModel types the column as its Python value; at runtime it is the mapped attribute.
+_RAW_USAGE = cast(QueryableAttribute[Any], TraceStep.raw_usage)
 
 
 def _us_to_ms(duration_us: int) -> float:
@@ -88,6 +93,7 @@ def get_run_summary(session: Session, run_id: int) -> RunSummary | None:
     assert trace_run.id is not None
     statement = (
         select(TraceStep)
+        .options(defer(_RAW_USAGE))  # never exposed, so never loaded
         .where(TraceStep.run_id == run_id)
         .order_by(col(TraceStep.started_at), col(TraceStep.id))
     )
