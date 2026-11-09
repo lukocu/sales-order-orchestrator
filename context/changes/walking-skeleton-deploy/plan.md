@@ -490,8 +490,8 @@ Nie ma istniejących danych. Rewizja `0001_baseline` jest punktem startowym ła�
 
 #### Manual
 
-- [ ] 4.4 Render wdraża po zielonym CI z migracjami w logach
+- [x] 4.4 Render wdraża po zielonym CI z migracjami w logach — log Rendera 2026-11-09T19:05:29Z „Running upgrade -> 0001_baseline” (deploy 03f9c10); deploy 0aebc03 ruszył po zakończeniu CI, autoDeployTrigger=checksPass
 - [x] 4.5 Publiczny URL pokazuje database ok i rewizję 0001_baseline — https://sales-order-orchestrator.onrender.com
-- [ ] 4.6 Czerwone CI blokuje deploy
+- [x] 4.6 Czerwone CI blokuje deploy — POMINIĘTE na decyzję autora (bez testu z czerwonym CI); API Rendera potwierdza autoDeployTrigger=checksPass, a deploy 0aebc03 ruszył dopiero po zielonym CI
 - [x] 4.7 Świeży klon i docker compose up według README działa — klon 03f9c10, porty z .env, health ok + 0001_baseline
-- [ ] 4.8 Całkowity koszt wynosi 0 USD
+- [x] 4.8 Całkowity koszt wynosi 0 USD — Render plan free (API), Supabase Free (potwierdzone przez autora), GitHub Actions w publicznym repo

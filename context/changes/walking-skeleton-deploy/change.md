@@ -1,7 +1,7 @@
 ---
 change_id: walking-skeleton-deploy
 title: Szkielet aplikacji (FastAPI + React + Postgres) z darmowym auto-deployem
-status: implementing
+status: implemented
 created: 2026-11-09
 updated: 2026-11-09
 archived_at: null
@@ -22,7 +22,8 @@ Faza 2 — adaptacje względem planu:
 Faza 4 — adaptacje i stan wdrożenia:
 - Gałąź przemianowana z master na main (CI i render.yaml celują w main). Autor commitów: lukocu (noreply GitHub), bez współautorów.
 - Repo: https://github.com/lukocu/sales-order-orchestrator, demo: https://sales-order-orchestrator.onrender.com (health ok, 0001_baseline). Baza: Supabase session pooler, eu-west-1.
-- Sync Blueprinta w Renderze pokazał błąd mimo działającego serwisu — do potwierdzenia w Settings, że Auto-Deploy = After CI Checks Pass (warunek dla 4.6).
+- Sync Blueprinta w Renderze pokazał błąd mimo działającego serwisu; API Rendera potwierdza plan free, frankfurt, healthCheckPath /api/health i autoDeployTrigger=checksPass.
+- 4.6 (czerwone CI blokuje deploy) pominięte na decyzję autora — sprawdzona tylko konfiguracja, nie zachowanie przy czerwonym CI.
 - `.mcp.json` (serwer MCP Supabase autora) jest w .gitignore.
 
 - Do zrobienia przy okazji: Starlette ostrzega, że TestClient z `httpx` jest deprecated na rzecz `httpx2`.
