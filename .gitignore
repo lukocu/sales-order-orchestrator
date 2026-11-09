@@ -12,6 +12,9 @@ wheels/
 # Local environment
 .env
 
+# Personal MCP servers (e.g. the author's Supabase project)
+.mcp.json
+
 # Frontend
 node_modules/
 frontend/dist/

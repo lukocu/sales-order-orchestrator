@@ -443,55 +443,55 @@ Nie ma istniejących danych. Rewizja `0001_baseline` jest punktem startowym ła�
 
 #### Automated
 
-- [x] 1.1 Lint i format przechodzą — 1517548
-- [x] 1.2 Typy przechodzą (mypy) — 1517548
-- [x] 1.3 Migracje aplikują się na czystej bazie — 1517548
-- [x] 1.4 Testy backendu przechodzą — 1517548
+- [x] 1.1 Lint i format przechodzą — 8efa06f
+- [x] 1.2 Typy przechodzą (mypy) — 8efa06f
+- [x] 1.3 Migracje aplikują się na czystej bazie — 8efa06f
+- [x] 1.4 Testy backendu przechodzą — 8efa06f
 
 #### Manual
 
-- [x] 1.5 /api/health pokazuje database ok i rewizję 0001_baseline — 1517548
-- [x] 1.6 Po zatrzymaniu bazy endpoint zwraca 503 bez wywrócenia serwera — 1517548
+- [x] 1.5 /api/health pokazuje database ok i rewizję 0001_baseline — 8efa06f
+- [x] 1.6 Po zatrzymaniu bazy endpoint zwraca 503 bez wywrócenia serwera — 8efa06f
 
 ### Phase 2: Frontend
 
 #### Automated
 
-- [x] 2.1 Lint frontendu przechodzi — 4228513
-- [x] 2.2 Typy frontendu przechodzą — 4228513
-- [x] 2.3 Testy frontendu przechodzą — 4228513
-- [x] 2.4 Build frontendu przechodzi — 4228513
+- [x] 2.1 Lint frontendu przechodzi — 64425ff
+- [x] 2.2 Typy frontendu przechodzą — 64425ff
+- [x] 2.3 Testy frontendu przechodzą — 64425ff
+- [x] 2.4 Build frontendu przechodzi — 64425ff
 
 #### Manual
 
-- [x] 2.5 Strona na localhost:5173 pokazuje stan ok z rewizją migracji — 4228513
-- [x] 2.6 Po zatrzymaniu bazy strona pokazuje stan degraded — 4228513
+- [x] 2.5 Strona na localhost:5173 pokazuje stan ok z rewizją migracji — 64425ff
+- [x] 2.6 Po zatrzymaniu bazy strona pokazuje stan degraded — 64425ff
 
 ### Phase 3: Jeden kontener
 
 #### Automated
 
-- [x] 3.1 Obraz Docker się buduje — c0d9487
-- [x] 3.2 Testy backendu z testem SPA przechodzą — c0d9487
-- [x] 3.3 Pełny stos z compose wstaje i odpowiada na /api/health — c0d9487
+- [x] 3.1 Obraz Docker się buduje — c501705
+- [x] 3.2 Testy backendu z testem SPA przechodzą — c501705
+- [x] 3.3 Pełny stos z compose wstaje i odpowiada na /api/health — c501705
 
 #### Manual
 
-- [x] 3.4 localhost:8000 pokazuje stronę stanu serwowaną przez FastAPI — c0d9487
-- [x] 3.5 Odświeżenie na ścieżce klienckiej nadal pokazuje aplikację — c0d9487
+- [x] 3.4 localhost:8000 pokazuje stronę stanu serwowaną przez FastAPI — c501705
+- [x] 3.5 Odświeżenie na ścieżce klienckiej nadal pokazuje aplikację — c501705
 
 ### Phase 4: CI/CD i darmowe wdrożenie
 
 #### Automated
 
-- [x] 4.1 Polecenia z faz 1-3 przechodzą bez zmian
-- [x] 4.2 render.yaml jest poprawny z plan free i checksPass
-- [ ] 4.3 CI na GitHubie jest zielone dla pierwszego pusha do main
+- [x] 4.1 Polecenia z faz 1-3 przechodzą bez zmian — 03f9c10
+- [x] 4.2 render.yaml jest poprawny z plan free i checksPass — 03f9c10
+- [x] 4.3 CI na GitHubie jest zielone dla pierwszego pusha do main — run 42676819211
 
 #### Manual
 
 - [ ] 4.4 Render wdraża po zielonym CI z migracjami w logach
-- [ ] 4.5 Publiczny URL pokazuje database ok i rewizję 0001_baseline
+- [x] 4.5 Publiczny URL pokazuje database ok i rewizję 0001_baseline — https://sales-order-orchestrator.onrender.com
 - [ ] 4.6 Czerwone CI blokuje deploy
-- [ ] 4.7 Świeży klon i docker compose up według README działa
+- [x] 4.7 Świeży klon i docker compose up według README działa — klon 03f9c10, porty z .env, health ok + 0001_baseline
 - [ ] 4.8 Całkowity koszt wynosi 0 USD

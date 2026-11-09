@@ -6,14 +6,17 @@ planning and trade-offs. This repository is currently the walking skeleton: Fast
 React + TypeScript and PostgreSQL wired into one app with a status page, quality gates in
 CI and a free auto-deploy.
 
+Live demo: https://sales-order-orchestrator.onrender.com (free tier — the first request after
+a period of inactivity can take about a minute).
+
 ## Run locally
 
 Requirements: [Docker](https://docs.docker.com/get-docker/) with Docker Compose. Nothing else
 is needed on the host.
 
 ```sh
-git clone <repository-url> agent-orchestrator
-cd agent-orchestrator
+git clone https://github.com/lukocu/sales-order-orchestrator.git
+cd sales-order-orchestrator
 docker compose up --build
 ```
 

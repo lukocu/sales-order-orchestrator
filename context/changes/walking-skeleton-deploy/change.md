@@ -19,4 +19,10 @@ Faza 2 — adaptacje względem planu:
 - Cel proxy dev: zmienna `API_PROXY_TARGET` (frontend/.env.local, gitignorowany), domyślnie http://localhost:8000.
 - Do sprawdzenia później: przy zatrzymanej bazie /api/health odpowiada 503 dopiero po ~10 s (timeouty połączenia), strona pokazuje w tym czasie „Checking…”.
 
+Faza 4 — adaptacje i stan wdrożenia:
+- Gałąź przemianowana z master na main (CI i render.yaml celują w main). Autor commitów: lukocu (noreply GitHub), bez współautorów.
+- Repo: https://github.com/lukocu/sales-order-orchestrator, demo: https://sales-order-orchestrator.onrender.com (health ok, 0001_baseline). Baza: Supabase session pooler, eu-west-1.
+- Sync Blueprinta w Renderze pokazał błąd mimo działającego serwisu — do potwierdzenia w Settings, że Auto-Deploy = After CI Checks Pass (warunek dla 4.6).
+- `.mcp.json` (serwer MCP Supabase autora) jest w .gitignore.
+
 - Do zrobienia przy okazji: Starlette ostrzega, że TestClient z `httpx` jest deprecated na rzecz `httpx2`.
