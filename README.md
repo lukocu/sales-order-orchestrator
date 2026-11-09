@@ -71,6 +71,51 @@ npm run dev   # http://localhost:5173
 The Vite dev server proxies `/api` to `API_PROXY_TARGET` (default `http://localhost:8000`).
 If the backend listens elsewhere, set it in `frontend/.env.local` (see `frontend/.env.example`).
 
+## Step tracing
+
+Every processing run is recorded as a run with its steps (`app.tracing`). A step stores its
+name, kind (`deterministic` or `llm`), status and the exception class on failure, its start
+time and duration, and for LLM steps the provider, model, token counts (input, output,
+cache read/write) and cost. Prompts and responses are never stored.
+
+The cost is an estimate from list prices bundled with
+[`genai-prices`](https://github.com/pydantic/genai-prices) (the version is stored per step),
+not the amount actually billed by the provider. A model missing from that price list is
+`unpriced`; deterministic steps are `not_applicable`. In the run totals, `cost_usd` sums the
+priced steps only and `cost_complete` is `false` when any step is unpriced, so the total is
+then a lower bound.
+
+Create a demo run (no LLM is called) with one step in each price state:
+
+```sh
+docker compose run --rm backend uv run python -m app.tracing.demo
+# against a deployed database: add -e DATABASE_URL=<Supabase session pooler URL>
+```
+
+It prints the run id. Read the run with its totals (Decimal values are JSON strings):
+
+```sh
+curl http://localhost:8000/api/runs/1
+```
+
+```json
+{
+  "id": 1, "subject_type": "demo", "subject_id": "demo-…", "status": "completed",
+  "started_at": "2026-11-09T21:00:00.123456Z", "duration_ms": 41.2,
+  "steps": [
+    {"name": "parse", "kind": "llm", "status": "ok", "provider": "google",
+     "model": "gemini-2.5-flash", "input_tokens": 1200, "output_tokens": 300,
+     "cost_usd": "0.0010560000", "price_status": "priced",
+     "price_source": "genai-prices 0.2.1", "duration_ms": 12.7, "...": "..."}
+  ],
+  "totals": {"input_tokens": 2000, "output_tokens": 450, "cache_read_tokens": 200,
+             "cost_usd": "0.0010560000", "cost_complete": false,
+             "steps_duration_ms": 25.4, "duration_ms": 41.2}
+}
+```
+
+An unknown id returns `404 {"detail": "Run not found"}`.
+
 ## Quality gates
 
 The same commands run in GitHub Actions (`.github/workflows/ci.yml`) on every push to `main`

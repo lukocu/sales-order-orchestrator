@@ -3,13 +3,14 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.api import health
+from app.api import health, runs
 from app.settings import get_settings
 
 API_PREFIX = "/api"
 
 api_router = APIRouter(prefix=API_PREFIX)
 api_router.include_router(health.router)
+api_router.include_router(runs.router)
 
 
 def _add_spa_routes(app: FastAPI, static_dir: Path) -> None:
