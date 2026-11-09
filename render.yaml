@@ -17,3 +17,8 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
+      # Shared password of the demo accounts. Render asks for sync: false values only
+      # when a Blueprint is created; for the existing service set it manually in the
+      # Dashboard (Environment), then restart. COOKIE_SECURE stays unset (default true).
+      - key: DEMO_PASSWORD
+        sync: false

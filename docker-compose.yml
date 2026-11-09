@@ -22,6 +22,8 @@ services:
     build: .
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/orchestrator
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
+      COOKIE_SECURE: "false"
     ports:
       # Host port is configurable (APP_HOST_PORT in .env) for machines where 8000 is taken.
       - "${APP_HOST_PORT:-8000}:8000"
@@ -39,6 +41,8 @@ services:
     working_dir: /app
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/orchestrator
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
+      COOKIE_SECURE: "false"
       UV_PROJECT_ENVIRONMENT: /opt/venv
       UV_LINK_MODE: copy
       WATCHFILES_FORCE_POLLING: "true"
@@ -54,6 +58,7 @@ services:
     command: >
       sh -c "uv sync --locked &&
              uv run alembic upgrade head &&
+             uv run python -m app.auth.demo_accounts &&
              uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:

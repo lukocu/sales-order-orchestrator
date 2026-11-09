@@ -4,7 +4,9 @@ from alembic import context
 from sqlalchemy import pool
 from sqlmodel import SQLModel, create_engine
 
-import app.tracing.models  # noqa: F401  (registers tables on SQLModel.metadata)
+import app.auth.models  # noqa: F401  (registers tables on SQLModel.metadata)
+import app.inquiries.models  # noqa: F401
+import app.tracing.models  # noqa: F401
 from app.settings import get_settings
 
 config = context.config

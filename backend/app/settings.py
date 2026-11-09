@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -32,10 +32,23 @@ class Settings(BaseSettings):
     # does not exist (dev, tests) the app serves the API only.
     static_dir: Path = BACKEND_DIR / "static"
 
+    # Shared password of the demo accounts (sales, supervisor), applied on start by
+    # `python -m app.auth.demo_accounts`. Unset or empty: demo login is disabled.
+    demo_password: SecretStr | None = None
+
+    # `Secure` flag of the session cookie. Local compose sets it to false, because
+    # Safari rejects Secure cookies on http://localhost.
+    cookie_secure: bool = True
+
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:
         return normalize_database_url(value)
+
+    @field_validator("demo_password", mode="before")
+    @classmethod
+    def _empty_demo_password_is_unset(cls, value: object) -> object:
+        return None if value == "" else value
 
 
 @lru_cache
