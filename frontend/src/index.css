@@ -255,3 +255,195 @@ button:disabled {
   margin: 0;
   font-family: ui-monospace, Consolas, monospace;
 }
+
+/* Analysis */
+
+.analysis {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.analysis__heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.analysis__subheading {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.analysis__banner {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.analysis__meta,
+.analysis__notice {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.analysis__problem {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.analysis__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.analysis__confirm {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+}
+
+.analysis__confirm p {
+  margin: 0;
+}
+
+.analysis__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.analysis__form input:not([type='checkbox']),
+.analysis__form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field--uncertain {
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--warn);
+}
+
+.field__label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+
+.field__label label {
+  font-weight: 600;
+}
+
+.field__edited {
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.field__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field__row > input,
+.field__row > select {
+  flex: 1 1 10rem;
+  width: auto;
+}
+
+.field__phrase {
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.field__uncertain {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.field__reason {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--warn);
+  overflow-wrap: anywhere;
+}
+
+.field__check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.metrics__steps {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metrics__step {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.metrics__step--total {
+  border-color: var(--muted);
+}
+
+.metrics__name {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.metrics__list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.125rem 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.metrics__list dt {
+  color: var(--muted);
+}
+
+.metrics__list dd {
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  overflow-wrap: anywhere;
+}

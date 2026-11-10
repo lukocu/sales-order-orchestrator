@@ -340,26 +340,26 @@ Wywołanie Groq trwa sekundy i zajmuje jeden wątek puli żądań; przy kilku an
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą
-- [x] 2.2 Modele zgadzają się z migracją
-- [x] 2.3 Migracja cofa się i wraca
+- [x] 2.1 Wszystkie bramki backendu przechodzą — 7936e12
+- [x] 2.2 Modele zgadzają się z migracją — 7936e12
+- [x] 2.3 Migracja cofa się i wraca — 7936e12
 
 #### Manual
 
-- [x] 2.4 Lokalny cykl POST/PUT/GET przez curl działa
+- [x] 2.4 Lokalny cykl POST/PUT/GET przez curl działa — 7936e12
 
 ### Phase 3: Frontend, konfiguracja i wdrożenie
 
 #### Automated
 
-- [ ] 3.1 Lint przechodzi
-- [ ] 3.2 Typy przechodzą
-- [ ] 3.3 Testy przechodzą
-- [ ] 3.4 Build przechodzi
-- [ ] 3.5 Bramki backendu przechodzą
-- [ ] 3.6 Obraz się buduje
+- [x] 3.1 Lint przechodzi
+- [x] 3.2 Typy przechodzą
+- [x] 3.3 Testy przechodzą
+- [x] 3.4 Build przechodzi
+- [x] 3.5 Bramki backendu przechodzą
+- [x] 3.6 Obraz się buduje
 
 #### Manual
 
-- [ ] 3.7 Lokalnie w trybie fake analiza, korekta i ponowna analiza działają
+- [x] 3.7 Lokalnie w trybie fake analiza, korekta i ponowna analiza działają
 - [ ] 3.8 Na Render z Groq analiza pokazuje pola i metryki kroku

@@ -91,6 +91,49 @@ npm run dev   # http://localhost:5173
 The Vite dev server proxies `/api` to `API_PROXY_TARGET` (default `http://localhost:8000`).
 If the backend listens elsewhere, set it in `frontend/.env.local` (see `frontend/.env.example`).
 
+## Analysis (LLM)
+
+In the detail of an inquiry, **Analyze request** extracts the customer, product, quantity,
+deadline (a relative phrase such as `do piątku` is resolved in code from the day the email
+arrived), whether a substitute is allowed and the price expectation. Fields the extractor is
+unsure about are highlighted with the reason; correct them or tick **Looks right**, then
+**Save corrections**. Corrected fields are marked `edited` with the model's value next to
+them. **Re-analyze** replaces the result and drops the corrections (the UI asks first). Below
+the form each step of the run shows its model, input/output tokens, cost and duration.
+
+The extractor is chosen with environment variables (see `.env.example`):
+
+| Variable       | Values                               | Default |
+| -------------- | ------------------------------------ | ------- |
+| `LLM_PROVIDER` | `fake`, `groq`, `openrouter`         | `fake`  |
+| `LLM_API_KEY`  | API key of `groq` / `openrouter`     | unset   |
+| `LLM_MODEL`    | model id; empty = provider default   | unset   |
+
+- `fake` (default locally and in tests): a rule-based demo parser, no key and no network.
+  The UI marks its results with *Rule-based demo parser (no LLM)*; its steps have no tokens
+  and no cost.
+- `groq` (used on Render): Groq's OpenAI-compatible API with `openai/gpt-oss-120b`
+  (structured output). Without `LLM_API_KEY` the analysis answers `503 LLM not configured`;
+  a provider rate limit is a `503` too, other provider failures a `502`. Nothing is retried.
+- `openrouter`: the same client against OpenRouter (default model
+  `nvidia/nemotron-3.5-super-vl:free`).
+
+To use Groq locally, create an account at [console.groq.com](https://console.groq.com) (the
+free plan needs no card), open **API Keys**, create a key and put it in `.env` (never commit
+it):
+
+```sh
+LLM_PROVIDER=groq
+LLM_API_KEY=<your key>
+```
+
+Then restart with `docker compose up --build`. Check the free plan's rate limits in the
+console.
+
+The cost shown in the UI is an estimate from list prices (see [Step tracing](#step-tracing)),
+not the amount on the provider's invoice. Prompts and model responses are not stored, only
+the validated fields and the step metrics.
+
 ## Step tracing
 
 Every processing run is recorded as a run with its steps (`app.tracing`). A step stores its
@@ -209,6 +252,9 @@ Environment variables of the service:
 - To change the demo password, change `DEMO_PASSWORD` in the Dashboard and restart the
   service; the container applies it on start (`python -m app.auth.demo_accounts`), which
   also signs out the existing sessions of the demo accounts.
+- `LLM_PROVIDER` is `groq` in `render.yaml`. `LLM_API_KEY` (the Groq key) is `sync: false`
+  like `DEMO_PASSWORD`: set it in the Dashboard (**Environment**) and restart the service.
+  Without it the analysis answers `503 LLM not configured`; the rest of the app keeps working.
 - `COOKIE_SECURE` (the `Secure` flag of the session cookie) defaults to `true` and stays unset
   on Render (HTTPS). Set it to `false` only for local http, as `docker compose` does.
 

@@ -65,6 +65,8 @@ const SIGNED_IN_INBOX: Routes = {
   'GET /api/inquiries': () => json(200, [summary(NEWER), summary(OLDER)]),
   'GET /api/inquiries/2': () => json(200, NEWER),
   'GET /api/inquiries/1': () => json(200, OLDER),
+  'GET /api/inquiries/2/analysis': () => json(200, null),
+  'GET /api/inquiries/1/analysis': () => json(200, null),
   'POST /api/auth/logout': () => new Response(null, { status: 204 }),
 }
 

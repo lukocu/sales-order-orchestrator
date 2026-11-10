@@ -24,6 +24,9 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/orchestrator
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
       COOKIE_SECURE: "false"
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
     ports:
       # Host port is configurable (APP_HOST_PORT in .env) for machines where 8000 is taken.
       - "${APP_HOST_PORT:-8000}:8000"
@@ -43,6 +46,9 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/orchestrator
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
       COOKIE_SECURE: "false"
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
       UV_PROJECT_ENVIRONMENT: /opt/venv
       UV_LINK_MODE: copy
       WATCHFILES_FORCE_POLLING: "true"

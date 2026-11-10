@@ -6,6 +6,7 @@ import {
   type InquiryDetail,
   type InquirySummary,
 } from '../api/inquiries'
+import AnalysisPanel from './AnalysisPanel'
 
 type Props = {
   user: User
@@ -168,6 +169,13 @@ function Inbox({ user, onSignedOut }: Props) {
               </p>
               <div className="detail__body">{currentDetail.inquiry.body}</div>
             </article>
+          )}
+          {currentDetail?.kind === 'ok' && (
+            <AnalysisPanel
+              key={currentDetail.inquiry.id}
+              inquiryId={currentDetail.inquiry.id}
+              onUnauthorized={onSignedOut}
+            />
           )}
         </section>
       </div>

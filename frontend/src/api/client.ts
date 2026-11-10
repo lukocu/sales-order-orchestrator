@@ -26,6 +26,15 @@ async function readDetail(response: Response): Promise<string | null> {
     if (typeof body === 'object' && body !== null) {
       const detail = (body as Record<string, unknown>).detail
       if (typeof detail === 'string') return detail
+      // FastAPI request validation (422): a list of errors, each with a `msg`.
+      if (Array.isArray(detail)) {
+        const messages = detail
+          .map((item: unknown) =>
+            typeof item === 'object' && item !== null ? (item as Record<string, unknown>).msg : null,
+          )
+          .filter((msg): msg is string => typeof msg === 'string')
+        if (messages.length > 0) return messages.join('; ')
+      }
     }
   } catch {
     // Not JSON; fall back to the generic message.
