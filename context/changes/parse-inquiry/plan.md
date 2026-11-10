@@ -352,14 +352,14 @@ Wywołanie Groq trwa sekundy i zajmuje jeden wątek puli żądań; przy kilku an
 
 #### Automated
 
-- [x] 3.1 Lint przechodzi
-- [x] 3.2 Typy przechodzą
-- [x] 3.3 Testy przechodzą
-- [x] 3.4 Build przechodzi
-- [x] 3.5 Bramki backendu przechodzą
-- [x] 3.6 Obraz się buduje
+- [x] 3.1 Lint przechodzi — 083af11
+- [x] 3.2 Typy przechodzą — 083af11
+- [x] 3.3 Testy przechodzą — 083af11
+- [x] 3.4 Build przechodzi — 083af11
+- [x] 3.5 Bramki backendu przechodzą — 083af11
+- [x] 3.6 Obraz się buduje — 083af11
 
 #### Manual
 
-- [x] 3.7 Lokalnie w trybie fake analiza, korekta i ponowna analiza działają
-- [ ] 3.8 Na Render z Groq analiza pokazuje pola i metryki kroku
+- [x] 3.7 Lokalnie w trybie fake analiza, korekta i ponowna analiza działają — 083af11
+- [x] 3.8 Na Render z Groq analiza pokazuje pola i metryki kroku — 083af11
