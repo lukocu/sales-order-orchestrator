@@ -5,6 +5,7 @@ from sqlalchemy import pool
 from sqlmodel import SQLModel, create_engine
 
 import app.auth.models  # noqa: F401  (registers tables on SQLModel.metadata)
+import app.checks.models  # noqa: F401
 import app.inquiries.models  # noqa: F401
 import app.parsing.models  # noqa: F401
 import app.tracing.models  # noqa: F401
