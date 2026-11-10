@@ -388,24 +388,24 @@ Migracja `0003_users_inquiries` tylko dodaje tabele i wiersze, więc nie ma dany
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą — 53d47c7
 
 #### Manual
 
-- [x] 2.2 Lokalnie curl bez ciasteczka daje 401, po logowaniu skrzynka i brak 401 na runs, po wylogowaniu znowu 401
+- [x] 2.2 Lokalnie curl bez ciasteczka daje 401, po logowaniu skrzynka i brak 401 na runs, po wylogowaniu znowu 401 — 53d47c7
 
 ### Phase 3: Frontend i dokumentacja
 
 #### Automated
 
-- [ ] 3.1 Lint przechodzi
-- [ ] 3.2 Typy przechodzą
-- [ ] 3.3 Testy frontendu przechodzą
-- [ ] 3.4 Build przechodzi
-- [ ] 3.5 Bramki backendu przechodzą
-- [ ] 3.6 Obraz się buduje
+- [x] 3.1 Lint przechodzi
+- [x] 3.2 Typy przechodzą
+- [x] 3.3 Testy frontendu przechodzą
+- [x] 3.4 Build przechodzi
+- [x] 3.5 Bramki backendu przechodzą
+- [x] 3.6 Obraz się buduje
 
 #### Manual
 
-- [ ] 3.7 Lokalnie logowanie, skrzynka, treść, wylogowanie i błędne hasło działają w przeglądarce
+- [x] 3.7 Lokalnie logowanie, skrzynka, treść, wylogowanie i błędne hasło działają w przeglądarce
 - [ ] 3.8 Na Render po ustawieniu DEMO_PASSWORD: health 0003, runs 401 bez sesji, logowanie obu kont i skrzynka działają

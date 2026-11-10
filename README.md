@@ -3,8 +3,8 @@
 An agent orchestrator for sales inquiries: standard requests go through a deterministic
 workflow without an LLM, and agents are used only for exceptions that need interpretation,
 planning and trade-offs. This repository is currently the walking skeleton: FastAPI,
-React + TypeScript and PostgreSQL wired into one app with a status page, quality gates in
-CI and a free auto-deploy.
+React + TypeScript and PostgreSQL wired into one app with sign-in and an inquiry inbox,
+quality gates in CI and a free auto-deploy.
 
 Live demo: https://sales-order-orchestrator.onrender.com (free tier — the first request after
 a period of inactivity can take about a minute).
@@ -20,11 +20,30 @@ cd sales-order-orchestrator
 docker compose up --build
 ```
 
-Open http://localhost:8000. The status page shows the API, the database and the current
-migration revision. Migrations run automatically when the container starts.
+Open http://localhost:8000 and sign in with one of the [demo accounts](#demo-accounts)
+(locally the password is `demo`). After signing in you see the inbox: incoming inquiries,
+newest first; click one to read it. Sign out returns to the sign-in form. A footer on every
+view shows the state of the API and the database and the current migration revision.
+Migrations and the demo account passwords are applied automatically when the container
+starts.
 
 If port 8000 or 5432 is already taken on your machine, copy `.env.example` to `.env` and
 change `APP_HOST_PORT` / `POSTGRES_HOST_PORT`.
+
+## Demo accounts
+
+| Username     | Role                        |
+| ------------ | --------------------------- |
+| `sales`      | Salesperson (handlowiec)    |
+| `supervisor` | Supervisor (przełożony)     |
+
+Both accounts share one password, the `DEMO_PASSWORD` environment variable. Locally
+`docker compose` uses `demo` when it is unset. Without `DEMO_PASSWORD` (outside compose) demo
+login is disabled. The password of the deployed demo is not in this repository; the author
+shares it on request.
+
+Everything under `/api` except `/api/health` and `/api/auth/login` requires a session cookie;
+without one the API answers `401`.
 
 ## Development
 
@@ -57,6 +76,7 @@ Python 3.14. With `docker compose up -d db` running and `DATABASE_URL` in `.env`
 cd backend
 uv sync
 uv run alembic upgrade head
+uv run python -m app.auth.demo_accounts   # sets the demo passwords from DEMO_PASSWORD
 uv run uvicorn app.main:app --reload
 ```
 
@@ -80,9 +100,6 @@ cache read/write) and cost. Prompts and responses are never stored. Tracing neve
 work it wraps: if a trace row cannot be written (for example the database is down), the error
 is logged and the work carries on without that row.
 
-`GET /api/runs/{id}` is public until login arrives (roadmap S-01), so a run's `subject_id` must
-not contain personal or business identifiers until then.
-
 The cost is an estimate from list prices bundled with
 [`genai-prices`](https://github.com/pydantic/genai-prices) (the version is stored per step),
 not the amount actually billed by the provider. A model missing from that price list is
@@ -97,10 +114,14 @@ docker compose run --rm backend uv run python -m app.tracing.demo
 # against a deployed database: add -e DATABASE_URL=<Supabase session pooler URL>
 ```
 
-It prints the run id. Read the run with its totals (Decimal values are JSON strings):
+It prints the run id. `GET /api/runs/{id}` requires a session (otherwise `401`), so sign in
+first and keep the cookie in a jar (`-c` writes it, `-b` sends it). Locally compose sets
+`COOKIE_SECURE=false`, so the session cookie also works over plain http. Read the run with its
+totals (Decimal values are JSON strings):
 
 ```sh
-curl http://localhost:8000/api/runs/1
+curl -c cookies.txt -H 'Content-Type: application/json'   -d '{"username": "sales", "password": "demo"}' http://localhost:8000/api/auth/login
+curl -b cookies.txt http://localhost:8000/api/runs/1
 ```
 
 ```json
@@ -176,7 +197,19 @@ One-time setup (manual):
    transaction pooler on port 6543 (breaks psycopg prepared statements).
 3. In Render choose **New → Blueprint**, select the repo and paste the Supabase URL as
    `DATABASE_URL` when prompted. The `postgresql://` scheme is fine; the app normalizes it.
+   Enter the demo account password as `DEMO_PASSWORD` in the same prompt.
 4. Merge to `main`. After the CI checks pass, Render builds the image and deploys it.
+
+Environment variables of the service:
+
+- `DATABASE_URL` and `DEMO_PASSWORD` are `sync: false` in `render.yaml`, so they live only in
+  the Render Dashboard. Render asks for such values only when a Blueprint is created; for an
+  existing service it ignores newly added `sync: false` variables, so set `DEMO_PASSWORD`
+  manually in the Dashboard (**Environment**) and restart the service.
+- To change the demo password, change `DEMO_PASSWORD` in the Dashboard and restart the
+  service; the container applies it on start (`python -m app.auth.demo_accounts`).
+- `COOKIE_SECURE` (the `Secure` flag of the session cookie) defaults to `true` and stays unset
+  on Render (HTTPS). Set it to `false` only for local http, as `docker compose` does.
 
 Free-tier caveats:
 

@@ -21,3 +21,6 @@ frontend/dist/
 
 # Built frontend copied in by the Docker image (Settings.static_dir)
 backend/static/
+
+# curl cookie jar from the README login example
+cookies.txt

@@ -6,6 +6,8 @@
         uv run python -m app.tracing.demo
 
 The token counts are fixed; the cost comes from the bundled `genai-prices` data.
+Reading the run back via `GET /api/runs/{id}` requires a session: sign in first
+(`POST /api/auth/login`), otherwise the endpoint answers 401.
 """
 
 import logging
@@ -60,7 +62,7 @@ def main() -> int:
         print("Demo run could not be saved; see the errors above.", file=sys.stderr)
         return 1
     print(f"Demo run id: {run_id}")
-    print(f"GET /api/runs/{run_id}")
+    print(f"GET /api/runs/{run_id} (sign in first via POST /api/auth/login; otherwise 401)")
     return 0
 
 

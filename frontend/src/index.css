@@ -32,14 +32,172 @@ body {
 }
 
 .page {
+  display: grid;
+  gap: 1.5rem;
   max-width: 32rem;
   margin: 0 auto;
   padding: 3rem 1rem;
 }
 
+.page--wide {
+  max-width: 64rem;
+}
+
 h1 {
-  margin: 0 0 1.5rem;
+  margin: 0;
   font-size: 1.75rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+}
+
+.card {
+  min-width: 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+/* Sign in */
+
+.login__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login__form label {
+  display: grid;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+.login__form input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: normal;
+  color: inherit;
+  background: var(--bg);
+}
+
+.login__form button {
+  justify-self: start;
+}
+
+/* Inbox */
+
+.inbox {
+  display: grid;
+  gap: 1rem;
+}
+
+.inbox__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inbox__user {
+  margin: 0;
+  font-weight: 600;
+}
+
+.inbox__role {
+  margin: 0;
+  color: var(--muted);
+}
+
+.inbox__body {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 48rem) {
+  .inbox__body {
+    grid-template-columns: minmax(16rem, 2fr) 3fr;
+  }
+}
+
+.inquiries {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inquiry {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  text-align: left;
+}
+
+.inquiry[aria-current='true'] {
+  border-color: var(--text);
+}
+
+.inquiry__sender {
+  font-weight: 600;
+}
+
+.inquiry__subject,
+.inquiry__sender {
+  overflow-wrap: anywhere;
+}
+
+.inquiry__date {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.detail__subject {
+  margin: 0;
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.detail__meta {
+  margin: 0.25rem 0 1rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.detail__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .status {
