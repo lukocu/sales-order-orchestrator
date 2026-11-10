@@ -227,7 +227,9 @@ describe('AnalysisPanel', () => {
     fireEvent.change(await screen.findByLabelText('Customer'), { target: { value: 'Other' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
 
-    expect(await screen.findByText('Analysis changed, reload')).toBeInTheDocument()
+    expect(
+      await screen.findByText(/reloaded, your unsaved edits were discarded/),
+    ).toBeInTheDocument()
     await vi.waitFor(() => expect(screen.getByLabelText('Customer')).toHaveValue('ACME SA'))
     const reads = fetchMock.mock.calls.filter(([, init]) => (init?.method ?? 'GET') === 'GET')
     expect(reads).toHaveLength(2)
@@ -257,6 +259,34 @@ describe('AnalysisPanel', () => {
 
     await vi.waitFor(() => expect(screen.getByLabelText('Quantity')).toHaveValue('80'))
     expect(screen.queryByText('Corrections will be lost.')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
+  })
+
+  it('asks again before retrying a failed re-analysis of a corrected result', async () => {
+    const fetchMock = stubApi({
+      [`GET ${PATH}`]: () =>
+        json(
+          200,
+          analysis({
+            fields: { ...FIELDS, quantity: 90 },
+            corrected_fields: ['quantity'],
+            corrected_at: '2026-11-10T09:05:00Z',
+          }),
+        ),
+      [`POST ${PATH}`]: [
+        () => json(502, { detail: 'Analysis failed, try again' }),
+        () => json(200, analysis()),
+      ],
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: 'Re-analyze' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Re-analyze anyway' }))
+
+    const alert = await screen.findByRole('alert')
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
+
+    expect(screen.getByText('Corrections will be lost.')).toBeInTheDocument()
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
   })
 

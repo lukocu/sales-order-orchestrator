@@ -28,7 +28,9 @@ class InquiryAnalysis(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     inquiry_id: int = Field(foreign_key="inquiries.id", ondelete="CASCADE")
-    run_id: int | None = Field(default=None, foreign_key="trace_runs.id", ondelete="SET NULL")
+    run_id: int | None = Field(
+        default=None, foreign_key="trace_runs.id", ondelete="SET NULL", index=True
+    )
     extractor: LlmProvider = Field(sa_type=String(EXTRACTOR_LENGTH))
     reference_date: date  # received_at as a date in Europe/Warsaw
     # Fields as the model returned them, unchanged until the next analysis. The attribute

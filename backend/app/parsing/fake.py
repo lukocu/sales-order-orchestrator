@@ -75,9 +75,17 @@ def _price(body: str) -> tuple[PriceKind, float | None, str | None]:
     return "none", None, None
 
 
+_CLOSINGS = frozenset(
+    {"pozdrawiam", "pozdrawiamy", "z poważaniem", "dziękuję", "dziękujemy", "dzień dobry"}
+)
+
+
 def _customer(body: str) -> str | None:
-    """Company from the signature: its last line, after a department ("Zakupy, ACME")."""
+    """Company from the signature: its last line, after a department ("Zakupy, ACME").
+
+    A closing phrase as the last line ("Pozdrawiam") names no company: the field stays empty.
+    """
     lines = [line.strip() for line in body.strip().splitlines() if line.strip()]
-    if not lines:
+    if not lines or lines[-1].lower().rstrip(",.!") in _CLOSINGS:
         return None
     return lines[-1].rsplit(",", 1)[-1].strip() or None

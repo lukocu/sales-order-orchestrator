@@ -15,6 +15,8 @@ def build_engine(database_url: str) -> Engine:
         pool_size=5,
         max_overflow=5,
         connect_args={"connect_timeout": CONNECT_TIMEOUT_SECONDS},
+        # Bound values (parsed inquiry fields) must not reach logs with DB errors.
+        hide_parameters=True,
     )
 
 

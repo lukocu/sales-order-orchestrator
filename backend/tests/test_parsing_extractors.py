@@ -378,3 +378,10 @@ def test_get_extractor_with_key_uses_provider_default_model(
     assert extractor.name == provider
     assert extractor.step_kind == "llm"
     assert extractor.model == expected_model
+
+
+def test_rule_based_leaves_customer_empty_when_signature_is_a_closing() -> None:
+    body = "Dzień dobry,\n\nprosimy o 10 szt. ABC-100 do piątku.\n\nPozdrawiam"
+    result = RuleBasedExtractor().extract("Zapytanie", body, REFERENCE)
+
+    assert result.extraction.customer is None

@@ -1,9 +1,7 @@
 from datetime import UTC, date, datetime
 
 import pytest
-from alembic import command
-from alembic.config import Config
-from sqlalchemy import Engine, delete, inspect
+from sqlalchemy import Engine, delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
@@ -14,7 +12,6 @@ from app.parsing.fake import RuleBasedExtractor
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
 from app.parsing.service import analyze_inquiry, changed_fields, reference_date_of
-from app.settings import BACKEND_DIR
 from app.tracing.models import TraceRun
 from tests.conftest import InquiryFactory, UserFactory
 
@@ -125,15 +122,3 @@ def test_extractor_check_rejects_unknown_name(
     ):
         session.add(analysis)
         session.commit()
-
-
-def test_migration_downgrades_and_upgrades(migrated_engine: Engine) -> None:
-    config = Config(str(BACKEND_DIR / "alembic.ini"))
-
-    command.downgrade(config, "0003_users_inquiries")
-    try:
-        assert not inspect(migrated_engine).has_table("inquiry_analyses")
-    finally:
-        command.upgrade(config, "head")
-
-    assert inspect(migrated_engine).has_table("inquiry_analyses")

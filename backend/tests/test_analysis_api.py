@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, update
 from sqlmodel import Session, col, select
 
 from app.inquiries.models import Inquiry
@@ -15,6 +15,7 @@ from app.parsing.extractor import (
     ExtractionRateLimited,
     ExtractionResult,
 )
+from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ModelExtraction
 from app.tracing.models import TraceRun
 from app.tracing.pricing import LlmUsage
@@ -385,3 +386,21 @@ def test_failed_extraction_still_records_usage(
     assert (parse.name, parse.status, parse.error_type) == ("parse", "failed", "ExtractionFailed")
     assert parse.price_status == "priced"
     assert parse.cost_usd is not None and parse.cost_usd > 0
+
+
+def test_stored_analysis_not_matching_schema_is_500(
+    auth_client: TestClient, acme: Inquiry, migrated_engine: Engine
+) -> None:
+    assert auth_client.post(_path(acme.id)).status_code == 200
+    with Session(migrated_engine) as session:
+        session.execute(
+            update(InquiryAnalysis)
+            .where(col(InquiryAnalysis.inquiry_id) == acme.id)
+            .values(fields={"removed_field": "x"})
+        )
+        session.commit()
+
+    response = auth_client.get(_path(acme.id))
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Stored analysis is invalid"}

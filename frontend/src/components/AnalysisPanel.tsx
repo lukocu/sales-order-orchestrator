@@ -61,6 +61,9 @@ const SUBSTITUTE_LABEL: Record<Substitute, string> = {
   unknown: 'Not stated',
 }
 
+const RELOADED_NOTICE =
+  'Analysis changed by a re-analysis — reloaded, your unsaved edits were discarded.'
+
 const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
 function formatDate(iso: string): string {
@@ -350,7 +353,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
     } catch (error) {
       if (error instanceof UnauthorizedError) onUnauthorized()
       else if (error instanceof ApiError && error.status === 409) {
-        setNotice('Analysis changed, reload')
+        setNotice(RELOADED_NOTICE)
         reload()
       } else setFormError(errorMessage(error))
     } finally {
@@ -536,7 +539,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
       {analyzeError && (
         <div role="alert" className="analysis__problem">
           <p className="error">{analyzeError}</p>
-          <button type="button" onClick={runAnalysis} disabled={busy !== null}>
+          <button type="button" onClick={requestReanalysis} disabled={busy !== null}>
             Retry
           </button>
         </div>

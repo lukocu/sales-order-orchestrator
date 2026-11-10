@@ -2,7 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
-from pydantic import AwareDatetime, BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, ValidationError
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -48,6 +48,15 @@ def _inquiry_not_found() -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inquiry not found")
 
 
+def _invalid_stored_analysis() -> HTTPException:
+    # A stored row no longer matching ParsedFields (schema changed without a data migration).
+    # Only the class is logged: the validation message would quote the stored values.
+    logger.error("Analysis API: stored analysis does not match the schema (ValidationError)")
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stored analysis is invalid"
+    )
+
+
 def _extraction_error(error: ExtractionError) -> HTTPException:
     if isinstance(error, ExtractionNotConfigured):
         return HTTPException(
@@ -72,6 +81,8 @@ def read_analysis(
         return get_analysis(engine, inquiry_id)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
     except SQLAlchemyError:
         logger.exception("Analysis API: database unavailable")
         raise database_unavailable() from None
@@ -98,6 +109,8 @@ def analyze(
             type(error).__name__,
         )
         raise _extraction_error(error) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
     except SQLAlchemyError:
         logger.exception("Analysis API: database unavailable")
         raise database_unavailable() from None
@@ -128,6 +141,8 @@ def correct(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Analysis changed, reload"
         ) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
     except SQLAlchemyError:
         logger.exception("Analysis API: database unavailable")
         raise database_unavailable() from None
