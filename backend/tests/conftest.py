@@ -25,6 +25,7 @@ TEST_SUBJECT_TYPE = f"test-{uuid4().hex[:12]}"  # trace_runs.subject_type is VAR
 # inquiries are sent from `...@<marker>.test`; the demo accounts are never touched.
 TEST_USERNAME_PREFIX = f"{TEST_SUBJECT_TYPE}-"
 TEST_EMAIL_DOMAIN = f"{TEST_SUBJECT_TYPE}.test"
+TEST_PASSWORD = "test-password-123"
 
 
 def new_test_username() -> str:
@@ -110,7 +111,8 @@ def make_inquiry(migrated_engine: Engine, delete_test_rows: None) -> InquiryFact
 def _client_with(engine: Engine) -> Iterator[TestClient]:
     app.dependency_overrides[get_engine] = lambda: engine
     try:
-        with TestClient(app) as client:
+        # https, so the client stores and sends the `Secure` session cookie.
+        with TestClient(app, base_url="https://testserver") as client:
             yield client
     finally:
         app.dependency_overrides.clear()
@@ -124,3 +126,19 @@ def client(migrated_engine: Engine) -> Iterator[TestClient]:
 @pytest.fixture
 def client_without_db(unreachable_engine: Engine) -> Iterator[TestClient]:
     yield from _client_with(unreachable_engine)
+
+
+@pytest.fixture
+def test_user(make_user: UserFactory) -> User:
+    """A marked test account whose password is TEST_PASSWORD."""
+    return make_user(password=TEST_PASSWORD)
+
+
+@pytest.fixture
+def auth_client(client: TestClient, test_user: User) -> TestClient:
+    """`client` logged in as `test_user` through POST /api/auth/login."""
+    response = client.post(
+        "/api/auth/login", json={"username": test_user.username, "password": TEST_PASSWORD}
+    )
+    assert response.status_code == 200
+    return client

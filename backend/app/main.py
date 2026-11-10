@@ -1,16 +1,23 @@
 from pathlib import Path
 
-from fastapi import APIRouter, FastAPI, HTTPException, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.api import health, runs
+from app.api import auth, health, inquiries, runs
+from app.auth.deps import get_current_user
 from app.settings import get_settings
 
 API_PREFIX = "/api"
 
+# Everything here requires a valid session cookie.
+protected_router = APIRouter(dependencies=[Depends(get_current_user)])
+protected_router.include_router(runs.router)
+protected_router.include_router(inquiries.router)
+
 api_router = APIRouter(prefix=API_PREFIX)
 api_router.include_router(health.router)
-api_router.include_router(runs.router)
+api_router.include_router(auth.router)
+api_router.include_router(protected_router)
 
 
 def _add_spa_routes(app: FastAPI, static_dir: Path) -> None:

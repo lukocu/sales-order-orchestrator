@@ -375,24 +375,24 @@ Migracja `0003_users_inquiries` tylko dodaje tabele i wiersze, więc nie ma dany
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Modele zgadzają się z migracją
-- [x] 1.3 Migracja cofa się i wraca
-- [x] 1.4 Synchronizacja kończy się kodem 0 z hasłem i bez
+- [x] 1.1 Wszystkie bramki backendu przechodzą — 1cbfaff
+- [x] 1.2 Modele zgadzają się z migracją — 1cbfaff
+- [x] 1.3 Migracja cofa się i wraca — 1cbfaff
+- [x] 1.4 Synchronizacja kończy się kodem 0 z hasłem i bez — 1cbfaff
 
 #### Manual
 
-- [x] 1.5 Po docker compose up baza ma konta z hashem i cztery zapytania, log bez błędów
+- [x] 1.5 Po docker compose up baza ma konta z hashem i cztery zapytania, log bez błędów — 1cbfaff
 
 ### Phase 2: Uwierzytelnianie i API skrzynki
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą
 
 #### Manual
 
-- [ ] 2.2 Lokalnie curl bez ciasteczka daje 401, po logowaniu skrzynka i brak 401 na runs, po wylogowaniu znowu 401
+- [x] 2.2 Lokalnie curl bez ciasteczka daje 401, po logowaniu skrzynka i brak 401 na runs, po wylogowaniu znowu 401
 
 ### Phase 3: Frontend i dokumentacja
 

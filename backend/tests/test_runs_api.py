@@ -38,10 +38,10 @@ def _traced_run(engine: Engine) -> int:
     return r.id
 
 
-def test_run_summary_shape(client: TestClient, migrated_engine: Engine) -> None:
+def test_run_summary_shape(auth_client: TestClient, migrated_engine: Engine) -> None:
     run_id = _traced_run(migrated_engine)
 
-    response = client.get(f"/api/runs/{run_id}")
+    response = auth_client.get(f"/api/runs/{run_id}")
 
     assert response.status_code == 200
     body = response.json()
@@ -71,10 +71,10 @@ def test_run_summary_shape(client: TestClient, migrated_engine: Engine) -> None:
     assert body["totals"]["cost_complete"] is True
 
 
-def test_decimal_cost_is_a_string(client: TestClient, migrated_engine: Engine) -> None:
+def test_decimal_cost_is_a_string(auth_client: TestClient, migrated_engine: Engine) -> None:
     run_id = _traced_run(migrated_engine)
 
-    body = client.get(f"/api/runs/{run_id}").json()
+    body = auth_client.get(f"/api/runs/{run_id}").json()
 
     step_cost = body["steps"][1]["cost_usd"]
     assert isinstance(step_cost, str)
@@ -83,30 +83,40 @@ def test_decimal_cost_is_a_string(client: TestClient, migrated_engine: Engine) -
     assert body["steps"][0]["cost_usd"] is None
 
 
-def test_response_has_no_raw_usage(client: TestClient, migrated_engine: Engine) -> None:
+def test_response_has_no_raw_usage(auth_client: TestClient, migrated_engine: Engine) -> None:
     run_id = _traced_run(migrated_engine)
 
-    response = client.get(f"/api/runs/{run_id}")
+    response = auth_client.get(f"/api/runs/{run_id}")
 
     assert "raw_usage" not in response.text
     assert "should-not-leak" not in response.text
 
 
-def test_unknown_run_is_json_404(client: TestClient) -> None:
-    response = client.get("/api/runs/999999999")
+def test_unknown_run_is_json_404(auth_client: TestClient) -> None:
+    response = auth_client.get("/api/runs/999999999")
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Run not found"}
 
 
 @pytest.mark.parametrize("run_id", [0, 2_147_483_648])
-def test_out_of_range_run_id_is_422(client: TestClient, run_id: int) -> None:
-    response = client.get(f"/api/runs/{run_id}")
+def test_out_of_range_run_id_is_422(auth_client: TestClient, run_id: int) -> None:
+    response = auth_client.get(f"/api/runs/{run_id}")
 
     assert response.status_code == 422
 
 
+def test_without_session_is_401(client: TestClient) -> None:
+    response = client.get("/api/runs/1")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Not authenticated"}
+
+
 def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None:
+    # Any cookie: without one the 401 comes before the database is touched.
+    client_without_db.cookies.set("session", "any-token")
+
     response = client_without_db.get("/api/runs/1")
 
     assert response.status_code == 503
