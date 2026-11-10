@@ -45,7 +45,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | F-02 | step-cost-tracing                  | (foundation) każdy krok przetwarzania zapisuje tokeny, koszt i czas                  | F-01          | NFR                              | done |
 | S-01 | login-and-inbox                    | handlowiec loguje się kontem testowym i widzi skrzynkę zapytań                        | F-01, seeded test accounts with roles, seeded sample inquiries | FR-001, Access Control | done |
 | S-02 | parse-inquiry                      | handlowiec uruchamia analizę i poprawia sparsowane pola zapytania                     | S-01, F-02    | FR-002, US-01, NFR               | done        |
-| S-03 | deterministic-checks-and-exception | handlowiec widzi sprawdzenia bez agentów i wykryty wyjątek albo zakończenie standardowe | S-02, seeded mock company data (customers, products, stock, prices, discounts, credit status) | FR-003, FR-004, US-01 | in-progress |
+| S-03 | deterministic-checks-and-exception | handlowiec widzi sprawdzenia bez agentów i wykryty wyjątek albo zakończenie standardowe | S-02, seeded mock company data (customers, products, stock, prices, discounts, credit status) | FR-003, FR-004, US-01 | done |
 | S-04 | orchestrator-plan-and-delegation   | handlowiec widzi plan orchestratora i wyniki delegowanych sprawdzeń                   | S-03, seeded substitute catalog and customer order history | FR-005, FR-006, FR-014, US-01, NFR | proposed |
 | S-05 | recommendation-with-confidence     | handlowiec widzi rekomendację z uzasadnieniem i pewnością                              | S-04          | FR-007, US-01                    | proposed |
 | S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | proposed |
@@ -142,7 +142,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Które typy wyjątków poza brakiem pełnej ilości wykrywa MVP? (Open Roadmap Question 4) — Owner: autor. Block: no (brak ilości jest zdefiniowany w US-01).
 - **Risk:** Dowodzi drugiej połowy tezy („standard bez agentów”); bez scenariusza standardowego teza nie jest udowodniona (Sokrates przy FR-004).
-- **Status:** in-progress
+- **Status:** done
 
 ### S-04: Plan orchestratora i delegowanie sprawdzeń
 
@@ -272,3 +272,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-02: (foundation) każdy krok przetwarzania zapytania zapisuje zużyte tokeny, koszt i czas, a łączne wartości dla zapytania są dostępne do wyświetlenia.** — Archived 2026-11-09 → `context/archive/2026-11-09-step-cost-tracing/`. Lesson: —.
 - **S-01: handlowiec (i przełożony) loguje się gotowym kontem testowym i widzi skrzynkę przychodzących zapytań klientów (dane przykładowe); niezalogowany użytkownik nie widzi żadnych danych.** — Archived 2026-11-10 → `context/archive/2026-11-09-login-and-inbox/`. Lesson: —.
 - **S-02: handlowiec klika „Analyze request”, widzi ustrukturyzowane dane (klient, produkt, ilość, termin, zgoda na zamiennik, oczekiwanie cenowe) z oznaczonymi niepewnymi polami, poprawia je i widzi koszt, tokeny i czas tego kroku.** — Archived 2026-11-10 → `context/archive/2026-11-10-parse-inquiry/`. Lesson: —.
+- **S-03: handlowiec widzi wynik sprawdzenia klienta, stanu, ceny standardowej, rabatu i statusu kredytowego; zapytanie standardowe kończy się z widoczną informacją, że agenci nie byli użyci, a brak pełnej ilości jest oznaczony jako wyjątek.** — Archived 2026-11-10 → `context/archive/2026-11-10-deterministic-checks-and-exception/`. Lesson: —.

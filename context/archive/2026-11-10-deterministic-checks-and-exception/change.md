@@ -1,7 +1,8 @@
 ---
 change_id: deterministic-checks-and-exception
 title: Sprawdzenia bez agentów i wykrycie wyjątku
-status: impl_reviewed
+status: archived
+archived_at: 2026-11-10T21:20:32Z
 created: 2026-11-10
 updated: 2026-11-10
 ---
