@@ -1,10 +1,10 @@
 ---
 change_id: login-and-inbox
 title: Logowanie kontem testowym i skrzynka zapytań
-status: impl_reviewed
+status: archived
 created: 2026-11-09
 updated: 2026-11-10
-archived_at: null
+archived_at: 2026-11-10T14:55:59Z
 ---
 
 ## Notes
