@@ -372,14 +372,14 @@ Dane firmy to kilka wierszy; sprawdzenia trwają milisekundy i dodają 6 zapisó
 
 #### Automated
 
-- [x] 3.1 Lint przechodzi
-- [x] 3.2 Typy przechodzą
-- [x] 3.3 Testy przechodzą
-- [x] 3.4 Build przechodzi
-- [x] 3.5 Bramki backendu przechodzą
-- [x] 3.6 Obraz się buduje
+- [x] 3.1 Lint przechodzi — 5457674
+- [x] 3.2 Typy przechodzą — 5457674
+- [x] 3.3 Testy przechodzą — 5457674
+- [x] 3.4 Build przechodzi — 5457674
+- [x] 3.5 Bramki backendu przechodzą — 5457674
+- [x] 3.6 Obraz się buduje — 5457674
 
 #### Manual
 
-- [x] 3.7 Lokalnie w trybie fake wyniki i znacznik w skrzynce działają
-- [ ] 3.8 Na Render z Groq wyniki 4 zapytań zgadzają się z planem
+- [x] 3.7 Lokalnie w trybie fake wyniki i znacznik w skrzynce działają — 5457674
+- [x] 3.8 Na Render z Groq wyniki 4 zapytań zgadzają się z planem — 5457674
