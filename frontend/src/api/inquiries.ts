@@ -1,3 +1,4 @@
+import { isOutcome, type Outcome } from './analysis'
 import { requestJson } from './client'
 
 // Mirrors InquirySummary / InquiryDetail in backend/app/api/inquiries.py.
@@ -7,6 +8,7 @@ export type InquirySummary = {
   sender_email: string
   subject: string
   received_at: string
+  outcome: Outcome | null // of the check result, only while it is current
 }
 
 export type InquiryDetail = InquirySummary & { body: string }
@@ -19,7 +21,8 @@ function isInquirySummary(value: unknown): value is InquirySummary {
     typeof v.sender_name === 'string' &&
     typeof v.sender_email === 'string' &&
     typeof v.subject === 'string' &&
-    typeof v.received_at === 'string'
+    typeof v.received_at === 'string' &&
+    (v.outcome === null || isOutcome(v.outcome))
   )
 }
 

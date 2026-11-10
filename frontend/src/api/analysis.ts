@@ -1,8 +1,10 @@
 import { requestJson } from './client'
 
 // Mirrors AnalysisView in backend/app/parsing/service.py, ParsedFields in
-// backend/app/parsing/schema.py and RunSummary in backend/app/tracing/summary.py.
-// Decimal values (price_value, cost_usd) arrive as JSON strings.
+// backend/app/parsing/schema.py, RunSummary in backend/app/tracing/summary.py and
+// ChecksView / CheckResults in backend/app/checks/{service,schema}.py.
+// Decimal values (price_value, cost_usd, amounts and percents of the checks) arrive as
+// JSON strings.
 
 export type FieldName =
   | 'customer'
@@ -68,6 +70,81 @@ export type RunSummary = {
   totals: RunTotals
 }
 
+export type Outcome = 'standard' | 'exception' | 'needs_input'
+
+export type ExceptionType = 'insufficient_stock'
+
+export type NeedsInputReason =
+  | 'customer_missing'
+  | 'customer_not_found'
+  | 'customer_ambiguous'
+  | 'product_missing'
+  | 'product_not_found'
+  | 'quantity_missing'
+
+// Analysis fields the checks depend on.
+export type CheckInput = 'customer' | 'product_code' | 'quantity'
+
+export type CustomerCheck = {
+  status: 'matched' | 'missing' | 'not_found' | 'ambiguous'
+  matched_by: 'name' | 'email' | null
+  customer_id: number | null
+  name: string | null
+  candidates: string[] // names when ambiguous
+}
+
+export type StockCheck = {
+  status: 'ok' | 'insufficient' | 'skipped'
+  product_code: string | null // catalogue code when found, else as requested
+  product_name: string | null
+  requested: number | null
+  available: number | null
+  shortage: number | null
+}
+
+export type PriceCheck = {
+  status: 'ok' | 'skipped'
+  list_price: string | null
+  discount_percent: string | null // the customer's standard discount
+  unit_price: string | null
+  total: string | null // null without a quantity
+  currency: 'PLN'
+}
+
+export type DiscountCheck = {
+  status: 'ok' | 'above_standard' | 'skipped'
+  standard_percent: string | null
+  requested_kind: PriceKind
+  requested_value: string | null
+}
+
+export type CreditCheck = {
+  status: 'ok' | 'over_limit' | 'blocked' | 'skipped'
+  limit: string | null
+  balance: string | null
+  order_value: string | null
+}
+
+export type CheckResults = {
+  customer: CustomerCheck
+  stock: StockCheck
+  price: PriceCheck
+  discount: DiscountCheck
+  credit: CreditCheck
+  reasons: NeedsInputReason[]
+}
+
+export type ChecksView = {
+  outcome: Outcome
+  exception_type: ExceptionType | null
+  reasons: NeedsInputReason[]
+  results: CheckResults
+  checked_at: string
+  stale: boolean // computed from an analysis version that is no longer current
+  uncertain_inputs: CheckInput[] // uncertain analysis fields the checks used
+  run: RunSummary | null // null when the run could not be traced
+}
+
 export type Analysis = {
   inquiry_id: number
   extractor: Extractor
@@ -81,6 +158,7 @@ export type Analysis = {
   corrected_at: string | null
   corrected_by_name: string | null
   run: RunSummary | null // null when the run could not be traced
+  checks: ChecksView | null // null until the checks succeeded once; has its own run
 }
 
 export const FIELD_NAMES: readonly FieldName[] = [
@@ -94,6 +172,19 @@ export const FIELD_NAMES: readonly FieldName[] = [
 
 const PRICE_KINDS: readonly PriceKind[] = ['none', 'best_price', 'discount_percent', 'target_price']
 
+const OUTCOMES: readonly Outcome[] = ['standard', 'exception', 'needs_input']
+
+const NEEDS_INPUT_REASONS: readonly NeedsInputReason[] = [
+  'customer_missing',
+  'customer_not_found',
+  'customer_ambiguous',
+  'product_missing',
+  'product_not_found',
+  'quantity_missing',
+]
+
+const CHECK_INPUTS: readonly CheckInput[] = ['customer', 'product_code', 'quantity']
+
 type Json = Record<string, unknown>
 
 function isObject(value: unknown): value is Json {
@@ -106,6 +197,22 @@ function isStringOrNull(value: unknown): value is string | null {
 
 function isNumberOrNull(value: unknown): value is number | null {
   return typeof value === 'number' || value === null
+}
+
+function isOneOf<T>(value: unknown, options: readonly T[]): value is T {
+  return options.includes(value as T)
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+export function isOutcome(value: unknown): value is Outcome {
+  return isOneOf(value, OUTCOMES)
+}
+
+function isNeedsInputReasons(value: unknown): value is NeedsInputReason[] {
+  return Array.isArray(value) && value.every((item) => isOneOf(item, NEEDS_INPUT_REASONS))
 }
 
 function isFieldName(value: unknown): value is FieldName {
@@ -178,6 +285,88 @@ function isUncertain(value: unknown): value is Partial<Record<FieldName, string>
   )
 }
 
+function isCustomerCheck(value: unknown): value is CustomerCheck {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.status, ['matched', 'missing', 'not_found', 'ambiguous']) &&
+    (value.matched_by === 'name' || value.matched_by === 'email' || value.matched_by === null) &&
+    isNumberOrNull(value.customer_id) &&
+    isStringOrNull(value.name) &&
+    isStringList(value.candidates)
+  )
+}
+
+function isStockCheck(value: unknown): value is StockCheck {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.status, ['ok', 'insufficient', 'skipped']) &&
+    isStringOrNull(value.product_code) &&
+    isStringOrNull(value.product_name) &&
+    isNumberOrNull(value.requested) &&
+    isNumberOrNull(value.available) &&
+    isNumberOrNull(value.shortage)
+  )
+}
+
+function isPriceCheck(value: unknown): value is PriceCheck {
+  if (!isObject(value)) return false
+  return (
+    (value.status === 'ok' || value.status === 'skipped') &&
+    isStringOrNull(value.list_price) &&
+    isStringOrNull(value.discount_percent) &&
+    isStringOrNull(value.unit_price) &&
+    isStringOrNull(value.total) &&
+    value.currency === 'PLN'
+  )
+}
+
+function isDiscountCheck(value: unknown): value is DiscountCheck {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.status, ['ok', 'above_standard', 'skipped']) &&
+    isStringOrNull(value.standard_percent) &&
+    isOneOf(value.requested_kind, PRICE_KINDS) &&
+    isStringOrNull(value.requested_value)
+  )
+}
+
+function isCreditCheck(value: unknown): value is CreditCheck {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.status, ['ok', 'over_limit', 'blocked', 'skipped']) &&
+    isStringOrNull(value.limit) &&
+    isStringOrNull(value.balance) &&
+    isStringOrNull(value.order_value)
+  )
+}
+
+function isCheckResults(value: unknown): value is CheckResults {
+  if (!isObject(value)) return false
+  return (
+    isCustomerCheck(value.customer) &&
+    isStockCheck(value.stock) &&
+    isPriceCheck(value.price) &&
+    isDiscountCheck(value.discount) &&
+    isCreditCheck(value.credit) &&
+    isNeedsInputReasons(value.reasons)
+  )
+}
+
+function isChecksView(value: unknown): value is ChecksView {
+  if (!isObject(value)) return false
+  return (
+    isOutcome(value.outcome) &&
+    (value.exception_type === 'insufficient_stock' || value.exception_type === null) &&
+    isNeedsInputReasons(value.reasons) &&
+    isCheckResults(value.results) &&
+    typeof value.checked_at === 'string' &&
+    typeof value.stale === 'boolean' &&
+    Array.isArray(value.uncertain_inputs) &&
+    value.uncertain_inputs.every((item) => isOneOf(item, CHECK_INPUTS)) &&
+    (value.run === null || isRunSummary(value.run))
+  )
+}
+
 function isAnalysis(value: unknown): value is Analysis {
   if (!isObject(value)) return false
   return (
@@ -193,7 +382,8 @@ function isAnalysis(value: unknown): value is Analysis {
     isStringOrNull(value.analyzed_by_name) &&
     isStringOrNull(value.corrected_at) &&
     isStringOrNull(value.corrected_by_name) &&
-    (value.run === null || isRunSummary(value.run))
+    (value.run === null || isRunSummary(value.run)) &&
+    (value.checks === null || isChecksView(value.checks))
   )
 }
 
@@ -229,4 +419,10 @@ export function saveCorrections(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields, reviewed, analyzed_at: analyzedAt }),
   })
+}
+
+// POST: run the checks again in a new run for the current analysis (after a stale or
+// missing result). Answers with the whole analysis; without an analysis ApiError 404.
+export function rerunChecks(inquiryId: number): Promise<Analysis> {
+  return requestJson(`/api/inquiries/${inquiryId}/checks`, isAnalysis, { method: 'POST' })
 }

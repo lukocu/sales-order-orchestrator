@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
+import type { Analysis, ChecksView } from './api/analysis'
 import type { User } from './api/auth'
 import type { InquiryDetail } from './api/inquiries'
 
@@ -26,6 +27,7 @@ const NEWER: InquiryDetail = {
   sender_email: 'jan@example.com',
   subject: 'Zapytanie o papier A4',
   received_at: '2026-11-09T10:00:00Z',
+  outcome: 'exception',
   body: 'Dzień dobry,\nproszę o wycenę 2 palet papieru A4.',
 }
 const OLDER: InquiryDetail = {
@@ -34,7 +36,77 @@ const OLDER: InquiryDetail = {
   sender_email: 'ewa@example.com',
   subject: 'Tonery do drukarek',
   received_at: '2026-11-08T09:00:00Z',
+  outcome: null,
   body: 'Prosimy o ofertę na tonery.',
+}
+
+// A standard result for OLDER: customer, product and quantity found, enough in stock.
+const STANDARD: ChecksView = {
+  outcome: 'standard',
+  exception_type: null,
+  reasons: [],
+  results: {
+    customer: { status: 'matched', matched_by: 'email', customer_id: 2, name: 'Biuro Max', candidates: [] },
+    stock: {
+      status: 'ok',
+      product_code: 'ABC-200',
+      product_name: 'Moduł sterujący ABC-200',
+      requested: 20,
+      available: 150,
+      shortage: 0,
+    },
+    price: {
+      status: 'ok',
+      list_price: '85.00',
+      discount_percent: '0.00',
+      unit_price: '85.00',
+      total: '1700.00',
+      currency: 'PLN',
+    },
+    discount: { status: 'ok', standard_percent: '0.00', requested_kind: 'none', requested_value: null },
+    credit: { status: 'ok', limit: '10000.00', balance: '0.00', order_value: '1700.00' },
+    reasons: [],
+  },
+  checked_at: '2026-11-10T09:00:02Z',
+  stale: false,
+  uncertain_inputs: [],
+  run: null,
+}
+
+const OLDER_ANALYSIS: Analysis = {
+  inquiry_id: 1,
+  extractor: 'fake',
+  reference_date: '2026-11-08',
+  fields: {
+    customer: null,
+    product_code: 'ABC-200',
+    quantity: 20,
+    deadline: null,
+    deadline_text: null,
+    substitute_allowed: null,
+    price_kind: 'none',
+    price_value: null,
+    price_text: null,
+  },
+  model_fields: {
+    customer: null,
+    product_code: 'ABC-200',
+    quantity: 20,
+    deadline: null,
+    deadline_text: null,
+    substitute_allowed: null,
+    price_kind: 'none',
+    price_value: null,
+    price_text: null,
+  },
+  uncertain: {},
+  corrected_fields: [],
+  analyzed_at: '2026-11-10T09:00:01Z',
+  analyzed_by_name: 'Anna Nowak',
+  corrected_at: null,
+  corrected_by_name: null,
+  run: null,
+  checks: STANDARD,
 }
 
 function summary({ body: _body, ...rest }: InquiryDetail) {
@@ -153,6 +225,27 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Zapytanie o papier A4/ }))
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+  })
+
+  it('shows the outcome badge of each inquiry and updates it after an analysis', async () => {
+    const fetchMock = stubApi({
+      ...SIGNED_IN_INBOX,
+      'POST /api/inquiries/1/analysis': () => json(200, OLDER_ANALYSIS),
+    })
+
+    render(<App />)
+    const newer = await screen.findByRole('button', { name: /Zapytanie o papier A4/ })
+    const older = screen.getByRole('button', { name: /Tonery do drukarek/ })
+    expect(within(newer).getByText('Exception')).toBeInTheDocument()
+    expect(older.querySelector('.badge')).toBeNull()
+
+    fireEvent.click(older)
+    fireEvent.click(await screen.findByRole('button', { name: 'Analyze request' }))
+
+    expect(await within(older).findByText('Standard')).toBeInTheDocument()
+    expect(within(newer).getByText('Exception')).toBeInTheDocument()
+    const listReads = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/inquiries')
+    expect(listReads).toHaveLength(1)
   })
 
   it('shows a message for an empty inbox', async () => {

@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Analysis, ParsedFields, RunSummary } from '../api/analysis'
+import type { Analysis, ChecksView, ParsedFields, RunSummary } from '../api/analysis'
 import AnalysisPanel from './AnalysisPanel'
 
 type Handler = () => Response | Promise<Response>
 type Routes = Record<string, Handler | Handler[]>
 
 const PATH = '/api/inquiries/7/analysis'
+const CHECKS_PATH = '/api/inquiries/7/checks'
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -99,6 +100,71 @@ const LLM_RUN: RunSummary = {
   },
 }
 
+const CHECKS_RUN: RunSummary = {
+  ...LLM_RUN,
+  id: 4,
+  duration_ms: 3.1,
+  steps: [{ ...LLM_RUN.steps[1], id: 20, name: 'classify' }],
+  totals: {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_read_tokens: 0,
+    cost_usd: '0',
+    cost_complete: true,
+    steps_duration_ms: 0.4,
+    duration_ms: 3.1,
+  },
+}
+
+// ACME asks for 80 × ABC-100 with 50 in stock.
+const EXCEPTION: ChecksView = {
+  outcome: 'exception',
+  exception_type: 'insufficient_stock',
+  reasons: [],
+  results: {
+    customer: { status: 'matched', matched_by: 'name', customer_id: 1, name: 'ACME', candidates: [] },
+    stock: {
+      status: 'insufficient',
+      product_code: 'ABC-100',
+      product_name: 'Czujnik ciśnienia ABC-100',
+      requested: 80,
+      available: 50,
+      shortage: 30,
+    },
+    price: {
+      status: 'ok',
+      list_price: '120.00',
+      discount_percent: '5.00',
+      unit_price: '114.00',
+      total: '9120.00',
+      currency: 'PLN',
+    },
+    discount: {
+      status: 'ok',
+      standard_percent: '5.00',
+      requested_kind: 'best_price',
+      requested_value: null,
+    },
+    credit: { status: 'ok', limit: '30000.00', balance: '2000.00', order_value: '9120.00' },
+    reasons: [],
+  },
+  checked_at: '2026-11-10T09:00:02Z',
+  stale: false,
+  uncertain_inputs: [],
+  run: CHECKS_RUN,
+}
+
+// The same inquiry corrected to 20 pieces.
+const STANDARD: ChecksView = {
+  ...EXCEPTION,
+  outcome: 'standard',
+  exception_type: null,
+  results: {
+    ...EXCEPTION.results,
+    stock: { ...EXCEPTION.results.stock, status: 'ok', requested: 20, shortage: 0 },
+  },
+}
+
 function analysis(overrides: Partial<Analysis> = {}): Analysis {
   return {
     inquiry_id: 7,
@@ -113,12 +179,13 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
     corrected_at: null,
     corrected_by_name: null,
     run: LLM_RUN,
+    checks: null,
     ...overrides,
   }
 }
 
-function renderPanel(onUnauthorized = vi.fn()) {
-  render(<AnalysisPanel inquiryId={7} onUnauthorized={onUnauthorized} />)
+function renderPanel(onUnauthorized = vi.fn(), onOutcome = vi.fn()) {
+  render(<AnalysisPanel inquiryId={7} onUnauthorized={onUnauthorized} onOutcome={onOutcome} />)
   return onUnauthorized
 }
 
@@ -353,6 +420,57 @@ describe('AnalysisPanel', () => {
 
     expect(await screen.findByText('Rule-based demo parser (no LLM)')).toBeInTheDocument()
     expect(screen.getByText('Metrics unavailable')).toBeInTheDocument()
+  })
+
+  it('shows the checks below the analysis and reports the outcome after a correction', async () => {
+    const onOutcome = vi.fn()
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
+      [`PUT ${PATH}`]: () =>
+        json(
+          200,
+          analysis({
+            fields: { ...FIELDS, quantity: 20 },
+            corrected_fields: ['quantity'],
+            corrected_at: '2026-11-10T09:05:00Z',
+            checks: STANDARD,
+          }),
+        ),
+    })
+
+    renderPanel(vi.fn(), onOutcome)
+
+    expect(await screen.findByText(/^Exception: insufficient stock/)).toBeInTheDocument()
+    expect(onOutcome).toHaveBeenLastCalledWith(7, 'exception')
+
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '20' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
+
+    expect(
+      await screen.findByText('Standard inquiry — completed without agents'),
+    ).toBeInTheDocument()
+    expect(onOutcome).toHaveBeenLastCalledWith(7, 'standard')
+    // Two runs on one panel: the analysis and the checks have their own metrics.
+    expect(screen.getByRole('region', { name: 'Metrics' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Checks metrics' })).toBeInTheDocument()
+  })
+
+  it('re-runs stale checks without discarding unsaved edits', async () => {
+    const onOutcome = vi.fn()
+    const fetchMock = stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis({ checks: { ...EXCEPTION, stale: true } })),
+      [`POST ${CHECKS_PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
+    })
+
+    renderPanel(vi.fn(), onOutcome)
+    fireEvent.change(await screen.findByLabelText('Customer'), { target: { value: 'ACME SA' } })
+    expect(onOutcome).toHaveBeenLastCalledWith(7, null)
+    fireEvent.click(screen.getByRole('button', { name: 'Re-run checks' }))
+
+    await vi.waitFor(() => expect(onOutcome).toHaveBeenLastCalledWith(7, 'exception'))
+    expect(screen.queryByRole('button', { name: 'Re-run checks' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Customer')).toHaveValue('ACME SA')
+    expect(fetchMock).toHaveBeenCalledWith(CHECKS_PATH, expect.objectContaining({ method: 'POST' }))
   })
 
   it('calls onUnauthorized when the API answers 401', async () => {

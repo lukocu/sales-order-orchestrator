@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { Outcome } from '../api/analysis'
 import { logout, ROLE_LABEL, UnauthorizedError, type User } from '../api/auth'
 import {
   fetchInquiries,
@@ -22,6 +23,13 @@ type ListState =
 type DetailState =
   | { id: number; kind: 'ok'; inquiry: InquiryDetail }
   | { id: number; kind: 'error'; message: string }
+
+// Text and colour: the badge never relies on colour alone.
+const OUTCOME_LABEL: Record<Outcome, string> = {
+  standard: 'Standard',
+  exception: 'Exception',
+  needs_input: 'Needs input',
+}
 
 const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -68,6 +76,23 @@ function Inbox({ user, onSignedOut }: Props) {
     )
     return () => controller.abort()
   }, [selectedId, onSignedOut])
+
+  // The panel reports the outcome after an analysis, a correction or a re-run of the
+  // checks; the list item is updated in place, without fetching the list again.
+  const handleOutcome = useCallback((inquiryId: number, outcome: Outcome | null) => {
+    setList((current) =>
+      current.kind !== 'ok'
+        ? current
+        : {
+            ...current,
+            inquiries: current.inquiries.map((inquiry) =>
+              inquiry.id === inquiryId && inquiry.outcome !== outcome
+                ? { ...inquiry, outcome }
+                : inquiry,
+            ),
+          },
+    )
+  }, [])
 
   function retryList() {
     setList({ kind: 'loading' })
@@ -137,9 +162,16 @@ function Inbox({ user, onSignedOut }: Props) {
                   >
                     <span className="inquiry__sender">{inquiry.sender_name}</span>
                     <span className="inquiry__subject">{inquiry.subject}</span>
-                    <time className="inquiry__date" dateTime={inquiry.received_at}>
-                      {formatDate(inquiry.received_at)}
-                    </time>
+                    <span className="inquiry__footer">
+                      <time className="inquiry__date" dateTime={inquiry.received_at}>
+                        {formatDate(inquiry.received_at)}
+                      </time>
+                      {inquiry.outcome !== null && (
+                        <span className={`badge badge--${inquiry.outcome}`}>
+                          {OUTCOME_LABEL[inquiry.outcome]}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -175,6 +207,7 @@ function Inbox({ user, onSignedOut }: Props) {
               key={currentDetail.inquiry.id}
               inquiryId={currentDetail.inquiry.id}
               onUnauthorized={onSignedOut}
+              onOutcome={handleOutcome}
             />
           )}
         </section>

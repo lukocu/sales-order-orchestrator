@@ -134,6 +134,77 @@ The cost shown in the UI is an estimate from list prices (see [Step tracing](#st
 not the amount on the provider's invoice. Prompts and model responses are not stored, only
 the validated fields and the step metrics.
 
+## Checks and exceptions
+
+After every analysis and every saved correction the backend checks the current fields
+against company data in code, without an LLM (`app.checks`). The checks get their own run
+with deterministic steps only (`match-customer`, `check-stock`, `check-price`,
+`check-discount`, `check-credit`, `classify`), so a standard inquiry costs 0 tokens even when
+the analysis used a model. The **Checks** section below the analysis form shows the outcome,
+every single check and the metrics of that run; each inquiry in the inbox carries a badge
+`Standard`, `Exception` or `Needs input` (no badge without a current result).
+
+Company data is a sample seeded by migration `0006_company_data_and_checks` (simulated, not
+real records):
+
+| Customer        | E-mail domain            | Standard discount | Credit limit (PLN) | Balance (PLN) |
+| --------------- | ------------------------ | ----------------- | ------------------ | ------------- |
+| ACME            | `acme.example`           | 5%                | 30 000             | 2 000         |
+| Biuro Max       | `biuromax.example`       | 0%                | 10 000             | 0             |
+| Hurtownia Delta | `hurtowniadelta.example` | 10%               | 50 000             | 0             |
+| Technika Omega  | `technikaomega.example`  | 3%                | 40 000             | 5 000         |
+
+| Product   | Name                  | List price (PLN) | Stock |
+| --------- | --------------------- | ---------------- | ----- |
+| `ABC-100` | Czujnik ciśnienia     | 120.00           | 50    |
+| `ABC-200` | Moduł sterujący       | 85.00            | 150   |
+| `XYZ-300` | Zawór proporcjonalny  | 240.00           | 60    |
+
+The customer is matched by the name in the analysis (legal forms such as `Sp. z o.o.` are
+ignored); only when that field is empty, by the domain of the sender's e-mail. A filled name
+without a match does not fall back to the e-mail. The outcome is decided in this order:
+
+1. **Needs input** when the customer is missing, not found or ambiguous, the product code is
+   missing or not in the catalogue, or the quantity is missing. The UI lists the reasons.
+2. **Exception** (`insufficient_stock`) when the quantity is greater than the stock (equal is
+   still standard). The inquiry is meant to be handed over to orchestration (not available
+   yet); the UI shows the shortage and whether the customer accepts a substitute.
+3. **Standard** otherwise: completed without agents.
+
+The price (list price less the customer's standard discount, value in PLN), a requested
+discount above the standard, credit over the limit or blocked, the deadline and a target
+price are shown for information only and never change the outcome; they are judged by
+policy later. Checks that cannot run (for example the price without a customer) are shown as
+`—`. When the checks used fields the analysis was unsure about, the UI warns
+*Based on uncertain fields: …*.
+
+Expected results for the four seed inquiries:
+
+| Inquiry                     | Outcome   | Details                                                                                     |
+| --------------------------- | --------- | ------------------------------------------------------------------------------------------- |
+| Biuro Max, 20 × `ABC-200`   | Standard  | 20 ≤ 150 in stock, 85.00 PLN per piece, 0% discount, credit OK                              |
+| ACME, 80 × `ABC-100`        | Exception | 80 > 50 in stock, short 30, substitute allowed                                              |
+| Hurtownia Delta, 500 × `ABC-100` | Exception | 500 > 50 in stock; 25% requested vs 10% standard (above standard); 500 × 108.00 = 54 000 PLN is over the 50 000 limit |
+| Technika Omega, 120 × `XYZ-300` | Exception | 120 > 60 in stock, substitute not allowed                                              |
+
+Correcting a field (for example ACME's quantity to 20) runs the checks again and updates
+the outcome and the inbox badge. A result computed from an older version of the analysis is
+marked stale; analyses stored before the checks existed have no result. In both cases the
+panel offers **Re-run checks**, which calls:
+
+```sh
+curl -b cookies.txt -X POST http://localhost:8000/api/inquiries/1/checks
+```
+
+It runs the checks in a new run for the current analysis and answers with the whole analysis
+(`checks` holds the outcome, the single checks, `stale`, `uncertain_inputs` and the run;
+amounts and percents are JSON strings). Without an analysis it answers `404 No analysis yet`.
+`GET /api/inquiries` returns each inquiry's `outcome` while its result is current, else
+`null`.
+
+The feature is deployed like everything else, by a merge to `main` (see [Deploy](#deploy)):
+the container applies migration `0006` with the seed data when it starts.
+
 ## Step tracing
 
 Every processing run is recorded as a run with its steps (`app.tracing`). A step stores its

@@ -5,17 +5,22 @@ import {
   saveCorrections,
   type Analysis,
   type FieldName,
+  type Outcome,
   type ParsedFields,
   type PriceKind,
-  type RunSummary,
-  type StepSummary,
 } from '../api/analysis'
 import { ApiError, UnauthorizedError } from '../api/client'
+import ChecksSection from './ChecksSection'
+import { formatDate } from './format'
+import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
+  // Called with the inquiry's current outcome whenever the analysis is loaded or replaced
+  // (null without a current check result), so the inbox can update its badge.
+  onOutcome?: (inquiryId: number, outcome: Outcome | null) => void
 }
 
 type LoadState =
@@ -64,15 +69,14 @@ const SUBSTITUTE_LABEL: Record<Substitute, string> = {
 const RELOADED_NOTICE =
   'Analysis changed by a re-analysis — reloaded, your unsaved edits were discarded.'
 
-const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
-
-function formatDate(iso: string): string {
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? iso : DATE_FORMAT.format(date)
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong'
+}
+
+// As the inbox lists it: the outcome only while the result matches the current analysis.
+function outcomeOf(analysis: Analysis | null): Outcome | null {
+  const checks = analysis?.checks ?? null
+  return checks === null || checks.stale ? null : checks.outcome
 }
 
 function substituteOf(value: boolean | null): Substitute {
@@ -155,81 +159,6 @@ function modelValue(field: FieldName, fields: ParsedFields): string {
   }
 }
 
-// Decimal strings from the API (may be in exponent form, e.g. "1E-7").
-function formatUsd(value: string): string {
-  const amount = Number(value)
-  if (!Number.isFinite(amount)) return `$${value}`
-  const [whole, fraction = ''] = amount.toFixed(10).split('.')
-  return `$${whole}.${fraction.replace(/0+$/, '').padEnd(2, '0')}`
-}
-
-function formatMs(ms: number): string {
-  return `${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
-}
-
-function stepCost(step: StepSummary): string {
-  if (step.price_status === 'not_applicable') return '—'
-  if (step.price_status === 'unpriced' || step.cost_usd === null) return 'not priced'
-  return `${formatUsd(step.cost_usd)} list price`
-}
-
-function totalCost(run: RunSummary): string {
-  const anyPriced = run.steps.some((step) => step.price_status === 'priced')
-  if (!anyPriced) return run.totals.cost_complete ? '—' : 'not priced'
-  const cost = `${formatUsd(run.totals.cost_usd)} list price`
-  return run.totals.cost_complete ? cost : `${cost} (some steps not priced)`
-}
-
-function Metrics({ run }: { run: RunSummary | null }) {
-  if (run === null) return <p className="muted">Metrics unavailable</p>
-  const totals = run.totals
-  return (
-    <section className="metrics" aria-label="Metrics">
-      <h4 className="analysis__subheading">Metrics</h4>
-      <ul className="metrics__steps">
-        {run.steps.map((step) => (
-          <li key={step.id} className="metrics__step">
-            <p className="metrics__name">
-              {step.name} <span className="muted">· {step.kind}</span>
-              {step.status === 'failed' && (
-                <span className="error">
-                  {' '}
-                  · failed{step.error_type ? ` (${step.error_type})` : ''}
-                </span>
-              )}
-            </p>
-            <dl className="metrics__list">
-              <dt>Model</dt>
-              <dd>{step.model ?? '—'}</dd>
-              <dt>Tokens</dt>
-              <dd>
-                {step.input_tokens} in / {step.output_tokens} out
-              </dd>
-              <dt>Cost</dt>
-              <dd>{stepCost(step)}</dd>
-              <dt>Duration</dt>
-              <dd>{formatMs(step.duration_ms)}</dd>
-            </dl>
-          </li>
-        ))}
-        <li className="metrics__step metrics__step--total">
-          <p className="metrics__name">Total</p>
-          <dl className="metrics__list">
-            <dt>Tokens</dt>
-            <dd>
-              {totals.input_tokens} in / {totals.output_tokens} out
-            </dd>
-            <dt>Cost</dt>
-            <dd>{totalCost(run)}</dd>
-            <dt>Duration</dt>
-            <dd>{formatMs(totals.duration_ms ?? totals.steps_duration_ms)}</dd>
-          </dl>
-        </li>
-      </ul>
-    </section>
-  )
-}
-
 type FieldProps = {
   name: FieldName
   label: string
@@ -271,7 +200,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
   )
 }
 
-function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
+function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -289,6 +218,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
         setLoad({ kind: 'ok', analysis })
         setDraft(analysis === null ? null : toDraft(analysis.fields))
         setReviewed([])
+        onOutcome?.(inquiryId, outcomeOf(analysis))
       },
       (error: unknown) => {
         if (controller.signal.aborted) return
@@ -297,12 +227,13 @@ function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
       },
     )
     return () => controller.abort()
-  }, [inquiryId, loadAttempt, onUnauthorized])
+  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome])
 
   function show(analysis: Analysis) {
     setLoad({ kind: 'ok', analysis })
     setDraft(toDraft(analysis.fields))
     setReviewed([])
+    onOutcome?.(inquiryId, outcomeOf(analysis))
   }
 
   function reload() {
@@ -314,6 +245,21 @@ function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
   const dirty = analysis !== null && draft !== null && !sameDraft(draft, toDraft(analysis.fields))
   const hasCorrections =
     analysis !== null && (analysis.corrected_at !== null || analysis.corrected_fields.length > 0)
+
+  // A re-run of the checks leaves the fields as they were, so unsaved edits are kept
+  // unless the analysis itself was replaced or corrected meanwhile.
+  function showChecked(next: Analysis) {
+    if (
+      analysis === null ||
+      next.analyzed_at !== analysis.analyzed_at ||
+      next.corrected_at !== analysis.corrected_at
+    ) {
+      show(next)
+      return
+    }
+    setLoad({ kind: 'ok', analysis: next })
+    onOutcome?.(inquiryId, outcomeOf(next))
+  }
 
   async function runAnalysis() {
     setConfirming(false)
@@ -511,7 +457,15 @@ function AnalysisPanel({ inquiryId, onUnauthorized }: Props) {
           )}
         </form>
 
-        <Metrics run={analysis.run} />
+        <RunMetrics run={analysis.run} />
+
+        <ChecksSection
+          inquiryId={inquiryId}
+          analysis={analysis}
+          disabled={busy !== null}
+          onRerun={showChecked}
+          onUnauthorized={onUnauthorized}
+        />
       </>
     )
   }
