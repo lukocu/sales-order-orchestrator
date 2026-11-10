@@ -6,6 +6,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
+from app.api.errors import database_unavailable
 from app.db import get_engine
 from app.tracing.summary import RunSummary, get_run_summary
 
@@ -26,9 +27,7 @@ def read_run(
             summary = get_run_summary(session, run_id)
     except SQLAlchemyError:
         logger.exception("Runs API: database unavailable")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database unavailable"
-        ) from None
+        raise database_unavailable() from None
     if summary is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
     return summary

@@ -207,7 +207,8 @@ Environment variables of the service:
   existing service it ignores newly added `sync: false` variables, so set `DEMO_PASSWORD`
   manually in the Dashboard (**Environment**) and restart the service.
 - To change the demo password, change `DEMO_PASSWORD` in the Dashboard and restart the
-  service; the container applies it on start (`python -m app.auth.demo_accounts`).
+  service; the container applies it on start (`python -m app.auth.demo_accounts`), which
+  also signs out the existing sessions of the demo accounts.
 - `COOKIE_SECURE` (the `Secure` flag of the session cookie) defaults to `true` and stays unset
   on Render (HTTPS). Set it to `false` only for local http, as `docker compose` does.
 

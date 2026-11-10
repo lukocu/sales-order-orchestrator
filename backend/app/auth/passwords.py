@@ -1,9 +1,20 @@
-"""The one place that hashes and verifies passwords (Argon2 via pwdlib)."""
+"""The one place that hashes and verifies passwords (Argon2id via pwdlib)."""
+
+import threading
 
 from pwdlib import PasswordHash
 from pwdlib.exceptions import UnknownHashError
+from pwdlib.hashers.argon2 import Argon2Hasher
 
-_password_hash = PasswordHash.recommended()
+# OWASP minimum for Argon2id (19 MiB, 2 iterations, 1 lane), small enough for a free
+# instance. Each hash stores its own parameters, so older hashes still verify.
+_password_hash = PasswordHash((Argon2Hasher(memory_cost=19_456, time_cost=2, parallelism=1),))
+
+# At most this many logins verify a password at once; a login that cannot get a slot
+# within LOGIN_VERIFY_WAIT_SECONDS is answered 503, so a burst of parallel logins cannot
+# exhaust the memory or CPU of a small instance. Startup sync does not use it.
+LOGIN_VERIFY_SLOTS = threading.BoundedSemaphore(2)
+LOGIN_VERIFY_WAIT_SECONDS = 2.0
 
 # Verified against when there is no real hash (unknown login, account without a
 # password), so the response time does not reveal whether the account exists.

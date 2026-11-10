@@ -4,19 +4,20 @@
     docker compose run --rm backend uv run python -m app.auth.demo_accounts
 
 Runs on every container start after `alembic upgrade head` (backend/start.sh). Without
-DEMO_PASSWORD the hashes are cleared and demo login is disabled. Always exits 0, so a
-database problem here never stops the application from starting.
+DEMO_PASSWORD the hashes are cleared and demo login is disabled. A changed or cleared
+password also ends the account's existing sessions. Database errors are logged and never
+stop the application from starting.
 """
 
 import logging
 import sys
 from collections.abc import Sequence
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from app.auth.models import User
+from app.auth.models import User, UserSession
 from app.auth.passwords import hash_password, verify_password
 from app.db import get_engine
 from app.settings import get_settings
@@ -31,20 +32,24 @@ def sync_demo_passwords(
 ) -> None:
     """Make each listed account's hash match `password` (NULL when None).
 
-    A hash that already verifies is left unchanged; a missing account is skipped.
+    A hash that already verifies is left unchanged; a missing account is skipped. When a
+    hash changes or is cleared, the account's sessions are deleted in the same transaction.
     """
     with Session(engine) as session:
         users = session.exec(select(User).where(col(User.username).in_(usernames))).all()
         for user in users:
             if password is None:
-                if user.password_hash is not None:
-                    user.password_hash = None
-                    session.add(user)
-                    logger.info("Cleared the password of demo account %s", user.username)
+                if user.password_hash is None:
+                    continue
+                user.password_hash = None
+                logger.info("Cleared the password of demo account %s", user.username)
             elif not verify_password(password, user.password_hash):
                 user.password_hash = hash_password(password)
-                session.add(user)
                 logger.info("Set the password of demo account %s", user.username)
+            else:
+                continue
+            session.add(user)
+            session.exec(delete(UserSession).where(col(UserSession.user_id) == user.id))
         session.commit()
 
 

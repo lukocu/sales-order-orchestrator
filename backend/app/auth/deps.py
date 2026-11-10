@@ -8,6 +8,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
+from app.api.errors import database_unavailable
 from app.auth.models import Role, User
 from app.auth.sessions import SESSION_COOKIE, get_session_user
 from app.db import get_engine
@@ -34,12 +35,6 @@ class AuthUser(BaseModel):
 
 def not_authenticated() -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-
-
-def database_unavailable() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database unavailable"
-    )
 
 
 def get_current_user(

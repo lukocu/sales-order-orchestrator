@@ -5,13 +5,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, update
 from sqlmodel import Session, col
 
+from app.api import auth as auth_api
 from app.auth.models import User, UserSession
+from app.auth.passwords import LOGIN_VERIFY_SLOTS, verify_password
 from app.main import app
 from app.settings import get_settings
 from tests.conftest import TEST_PASSWORD, UserFactory, new_test_username
 
 INVALID_CREDENTIALS = {"detail": "Invalid username or password"}
 NOT_AUTHENTICATED = {"detail": "Not authenticated"}
+DATABASE_UNAVAILABLE = {"detail": "Database unavailable"}
 
 
 def _credentials(username: str, password: str = TEST_PASSWORD) -> dict[str, str]:
@@ -63,6 +66,62 @@ def test_unknown_username_is_401(client: TestClient) -> None:
     assert response.json() == INVALID_CREDENTIALS
 
 
+def test_unknown_username_still_verifies_a_password(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str | None] = []
+
+    def spy(password: str, password_hash: str | None) -> bool:
+        calls.append(password_hash)
+        return verify_password(password, password_hash)
+
+    monkeypatch.setattr(auth_api, "verify_password", spy)
+
+    response = client.post("/api/auth/login", json=_credentials(new_test_username()))
+
+    assert response.status_code == 401
+    assert calls == [None]
+
+
+def test_login_is_503_when_all_verification_slots_are_busy(
+    client: TestClient, test_user: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(auth_api, "LOGIN_VERIFY_WAIT_SECONDS", 0.01)
+    held = 0
+    try:
+        while LOGIN_VERIFY_SLOTS.acquire(blocking=False):
+            held += 1
+        response = client.post("/api/auth/login", json=_credentials(test_user.username))
+    finally:
+        for _ in range(held):
+            LOGIN_VERIFY_SLOTS.release()
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Login busy, try again"}
+    assert "set-cookie" not in response.headers
+
+
+def test_login_without_database_is_503(client_without_db: TestClient) -> None:
+    response = client_without_db.post("/api/auth/login", json=_credentials(new_test_username()))
+
+    assert response.status_code == 503
+    assert response.json() == DATABASE_UNAVAILABLE
+
+
+def test_login_ends_the_previous_session(auth_client: TestClient, test_user: User) -> None:
+    old_token = auth_client.cookies["session"]
+
+    response = auth_client.post("/api/auth/login", json=_credentials(test_user.username))
+
+    assert response.status_code == 200
+    new_token = auth_client.cookies["session"]
+    assert new_token != old_token
+    assert auth_client.get("/api/auth/me").status_code == 200
+    auth_client.cookies.clear()
+    auth_client.cookies.set("session", old_token)
+    assert auth_client.get("/api/auth/me").status_code == 401
+
+
 def test_account_without_password_is_401(client: TestClient, make_user: UserFactory) -> None:
     user = make_user(password=None)
 
@@ -105,6 +164,20 @@ def test_logout_without_session_is_204(client: TestClient) -> None:
 
     assert response.status_code == 204
     assert "max-age=0" in _cookie_attributes(response.headers["set-cookie"])[1]
+
+
+def test_logout_without_database_is_503_and_clears_the_cookie(
+    client_without_db: TestClient,
+) -> None:
+    client_without_db.cookies.set("session", "some-token")
+
+    response = client_without_db.post("/api/auth/logout")
+
+    assert response.status_code == 503
+    assert response.json() == DATABASE_UNAVAILABLE
+    name_value, attributes = _cookie_attributes(response.headers["set-cookie"])
+    assert name_value in {"session=", 'session=""'}
+    assert {"httponly", "samesite=lax", "path=/", "max-age=0"} <= attributes
 
 
 def test_expired_session_is_401(

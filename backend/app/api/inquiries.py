@@ -8,7 +8,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from app.auth.deps import database_unavailable
+from app.api.errors import database_unavailable
 from app.db import get_engine
 from app.inquiries.models import Inquiry
 
