@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.api import auth, health, inquiries, runs
+from app.api import analysis, auth, health, inquiries, runs
 from app.auth.deps import get_current_user
 from app.settings import get_settings
 
@@ -13,6 +13,7 @@ API_PREFIX = "/api"
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
 protected_router.include_router(runs.router)
 protected_router.include_router(inquiries.router)
+protected_router.include_router(analysis.router)
 
 api_router = APIRouter(prefix=API_PREFIX)
 api_router.include_router(health.router)

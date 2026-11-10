@@ -329,24 +329,24 @@ Wywołanie Groq trwa sekundy i zajmuje jeden wątek puli żądań; przy kilku an
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Testy parsowania przechodzą
+- [x] 1.1 Wszystkie bramki backendu przechodzą — 20ae105
+- [x] 1.2 Testy parsowania przechodzą — 20ae105
 
 #### Manual
 
-- [x] 1.3 Jednorazowe wywołanie prawdziwego Groq zwraca poprawny JSON i wycenione usage
+- [x] 1.3 Jednorazowe wywołanie prawdziwego Groq zwraca poprawny JSON i wycenione usage — 20ae105
 
 ### Phase 2: Zapis i API
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
-- [ ] 2.2 Modele zgadzają się z migracją
-- [ ] 2.3 Migracja cofa się i wraca
+- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.2 Modele zgadzają się z migracją
+- [x] 2.3 Migracja cofa się i wraca
 
 #### Manual
 
-- [ ] 2.4 Lokalny cykl POST/PUT/GET przez curl działa
+- [x] 2.4 Lokalny cykl POST/PUT/GET przez curl działa
 
 ### Phase 3: Frontend, konfiguracja i wdrożenie
 

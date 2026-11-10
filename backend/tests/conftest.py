@@ -1,5 +1,5 @@
-from collections.abc import Iterator
-from datetime import datetime
+from collections.abc import Callable, Iterator
+from datetime import date, datetime
 from typing import Protocol
 from uuid import uuid4
 
@@ -8,14 +8,22 @@ from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, delete
-from sqlmodel import Session, col
+from sqlmodel import Session, col, select
 
 from app.auth.models import Role, User
 from app.auth.passwords import hash_password
 from app.db import build_engine, get_engine
 from app.inquiries.models import Inquiry
 from app.main import app
+from app.parsing.extractor import (
+    ExtractionError,
+    ExtractionResult,
+    InquiryExtractor,
+    get_extractor,
+)
+from app.parsing.fake import RuleBasedExtractor
 from app.settings import BACKEND_DIR, get_settings
+from app.tracing.models import StepKind, TraceRun
 
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://postgres:postgres@127.0.0.1:1/unreachable"
 
@@ -37,7 +45,40 @@ class UserFactory(Protocol):
 
 
 class InquiryFactory(Protocol):
-    def __call__(self, *, received_at: datetime, subject: str = ...) -> Inquiry: ...
+    def __call__(
+        self,
+        *,
+        received_at: datetime,
+        subject: str = ...,
+        body: str = ...,
+        sender_name: str = ...,
+    ) -> Inquiry: ...
+
+
+class StubExtractor:
+    """Extractor for tests: returns `result` or raises `error`."""
+
+    def __init__(
+        self,
+        *,
+        name: str = "fake",
+        step_kind: StepKind = "deterministic",
+        result: ExtractionResult | None = None,
+        error: ExtractionError | None = None,
+    ) -> None:
+        self.name = name
+        self.step_kind: StepKind = step_kind
+        self._result = result
+        self._error = error
+
+    def extract(self, subject: str, body: str, reference_date: date) -> ExtractionResult:
+        if self._error is not None:
+            raise self._error
+        assert self._result is not None
+        return self._result
+
+
+ExtractorSetter = Callable[[InquiryExtractor], None]
 
 
 @pytest.fixture(scope="session")
@@ -58,13 +99,21 @@ def unreachable_engine() -> Iterator[Engine]:
 
 @pytest.fixture
 def delete_test_rows(migrated_engine: Engine) -> Iterator[None]:
-    """After the test, delete the test users (sessions cascade) and test inquiries."""
+    """After the test, delete the test users (sessions cascade), the inquiry runs of test
+    inquiries and the test inquiries (analyses cascade)."""
     yield
+    test_inquiry = col(Inquiry.sender_email).endswith(f"@{TEST_EMAIL_DOMAIN}")
     with Session(migrated_engine) as session:
+        inquiry_ids = session.exec(select(Inquiry.id).where(test_inquiry)).all()
+        if inquiry_ids:
+            session.exec(
+                delete(TraceRun).where(
+                    col(TraceRun.subject_type) == "inquiry",
+                    col(TraceRun.subject_id).in_([str(i) for i in inquiry_ids]),
+                )
+            )
         session.exec(delete(User).where(col(User.username).startswith(TEST_USERNAME_PREFIX)))
-        session.exec(
-            delete(Inquiry).where(col(Inquiry.sender_email).endswith(f"@{TEST_EMAIL_DOMAIN}"))
-        )
+        session.exec(delete(Inquiry).where(test_inquiry))
         session.commit()
 
 
@@ -94,18 +143,36 @@ def make_user(migrated_engine: Engine, delete_test_rows: None) -> UserFactory:
 
 @pytest.fixture
 def make_inquiry(migrated_engine: Engine, delete_test_rows: None) -> InquiryFactory:
-    def make(*, received_at: datetime, subject: str = "Test inquiry") -> Inquiry:
+    def make(
+        *,
+        received_at: datetime,
+        subject: str = "Test inquiry",
+        body: str = "Test inquiry body.",
+        sender_name: str = "Test Sender",
+    ) -> Inquiry:
         inquiry = Inquiry(
-            sender_name="Test Sender",
+            sender_name=sender_name,
             sender_email=f"sender-{uuid4().hex[:8]}@{TEST_EMAIL_DOMAIN}",
             subject=subject,
-            body="Test inquiry body.",
+            body=body,
             received_at=received_at,
         )
         _add(migrated_engine, inquiry)
         return inquiry
 
     return make
+
+
+@pytest.fixture
+def use_extractor() -> Iterator[ExtractorSetter]:
+    """Override `get_extractor`: the rule-based parser until the test sets another one."""
+
+    def use(extractor: InquiryExtractor) -> None:
+        app.dependency_overrides[get_extractor] = lambda: extractor
+
+    use(RuleBasedExtractor())
+    yield use
+    app.dependency_overrides.pop(get_extractor, None)
 
 
 def _client_with(engine: Engine) -> Iterator[TestClient]:
