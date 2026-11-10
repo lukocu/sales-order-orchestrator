@@ -8,7 +8,7 @@ tracing step; `evaluate` runs them all in order.
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Literal
 
 from app.checks.schema import (
@@ -147,16 +147,23 @@ def check_stock(fields: ParsedFields, product: ProductRecord | None) -> StockChe
 def check_price(
     fields: ParsedFields, customer: CustomerRecord | None, product: ProductRecord | None
 ) -> PriceCheck:
-    """List price less the customer's standard discount; total only with a quantity."""
+    """List price less the customer's standard discount; total only with a quantity.
+
+    Skipped as well when the total does not fit the decimal precision (an absurd quantity),
+    so the credit check, which needs the total, is skipped too.
+    """
     if customer is None or product is None:
         return PriceCheck(status="skipped")
     discount = customer.standard_discount_percent
-    unit_price = (product.list_price * (HUNDRED - discount) / HUNDRED).quantize(
-        CENT, rounding=ROUND_HALF_UP
-    )
-    total = None
-    if fields.quantity is not None:
-        total = (unit_price * fields.quantity).quantize(CENT, rounding=ROUND_HALF_UP)
+    try:
+        unit_price = (product.list_price * (HUNDRED - discount) / HUNDRED).quantize(
+            CENT, rounding=ROUND_HALF_UP
+        )
+        total = None
+        if fields.quantity is not None:
+            total = (unit_price * fields.quantity).quantize(CENT, rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        return PriceCheck(status="skipped")
     return PriceCheck(
         status="ok",
         list_price=product.list_price,
@@ -171,7 +178,8 @@ def check_discount(
 ) -> DiscountCheck:
     """The customer's standard discount next to what the inquiry asks for; informational.
 
-    A target price is compared with the standard unit price only when that price is known.
+    A target price is compared with the standard unit price; without that price (no
+    product, or the price check skipped) the check is skipped rather than reported as ok.
     """
     if customer is None:
         return DiscountCheck(status="skipped")
@@ -180,12 +188,16 @@ def check_discount(
     above = False
     if fields.price_kind == "discount_percent" and requested is not None:
         above = requested > standard
-    elif (
-        fields.price_kind == "target_price"
-        and requested is not None
-        and price.unit_price is not None
-    ):
-        above = requested < price.unit_price
+    elif fields.price_kind == "target_price":
+        if price.unit_price is None:
+            return DiscountCheck(
+                status="skipped",
+                standard_percent=standard,
+                requested_kind=fields.price_kind,
+                requested_value=requested,
+            )
+        if requested is not None:
+            above = requested < price.unit_price
     return DiscountCheck(
         status="above_standard" if above else "ok",
         standard_percent=standard,

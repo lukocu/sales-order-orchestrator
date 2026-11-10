@@ -64,6 +64,12 @@ def _invalid_stored_analysis() -> HTTPException:
     )
 
 
+def _checks_failed(inquiry_id: int, error: Exception) -> HTTPException:
+    # Class and inquiry id only: the message could quote inquiry content.
+    logger.error("Analysis API: checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)
+    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Checks failed")
+
+
 def _extraction_error(error: ExtractionError) -> HTTPException:
     if isinstance(error, ExtractionNotConfigured):
         return HTTPException(
@@ -169,3 +175,5 @@ def recheck(inquiry_id: InquiryId, engine: Annotated[Engine, Depends(get_engine)
     except SQLAlchemyError:
         logger.exception("Analysis API: database unavailable")
         raise database_unavailable() from None
+    except Exception as error:  # a failing check; its run and step are recorded as failed
+        raise _checks_failed(inquiry_id, error) from None

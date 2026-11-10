@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import {
   analyzeInquiry,
   fetchAnalysis,
+  rerunChecks,
   saveCorrections,
   type Analysis,
   type FieldName,
@@ -205,7 +206,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [reviewed, setReviewed] = useState<FieldName[]>([])
-  const [busy, setBusy] = useState<'analyzing' | 'saving' | null>(null)
+  const [busy, setBusy] = useState<'analyzing' | 'saving' | 'checking' | null>(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -259,6 +260,16 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
     }
     setLoad({ kind: 'ok', analysis: next })
     onOutcome?.(inquiryId, outcomeOf(next))
+  }
+
+  // Errors are left to ChecksSection, which shows them next to its button.
+  async function rerun() {
+    setBusy('checking')
+    try {
+      showChecked(await rerunChecks(inquiryId))
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function runAnalysis() {
@@ -463,7 +474,8 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
           inquiryId={inquiryId}
           analysis={analysis}
           disabled={busy !== null}
-          onRerun={showChecked}
+          running={busy === 'checking'}
+          onRerun={rerun}
           onUnauthorized={onUnauthorized}
         />
       </>

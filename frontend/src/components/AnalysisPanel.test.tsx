@@ -473,6 +473,27 @@ describe('AnalysisPanel', () => {
     expect(fetchMock).toHaveBeenCalledWith(CHECKS_PATH, expect.objectContaining({ method: 'POST' }))
   })
 
+  it('disables saving and re-analyzing while the checks re-run', async () => {
+    let answer: (response: Response) => void = () => {}
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis({ checks: { ...EXCEPTION, stale: true } })),
+      [`POST ${CHECKS_PATH}`]: () => new Promise<Response>((resolve) => (answer = resolve)),
+    })
+
+    renderPanel()
+    fireEvent.change(await screen.findByLabelText('Customer'), { target: { value: 'ACME SA' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Re-run checks' }))
+
+    expect(await screen.findByRole('button', { name: 'Running checks…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save corrections' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeDisabled()
+    answer(json(200, analysis({ checks: EXCEPTION })))
+
+    expect(await screen.findByRole('button', { name: 'Save corrections' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Running checks…' })).not.toBeInTheDocument()
+  })
+
   it('calls onUnauthorized when the API answers 401', async () => {
     stubApi({ [`GET ${PATH}`]: () => json(401, { detail: 'Not authenticated' }) })
 

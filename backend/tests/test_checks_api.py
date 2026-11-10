@@ -8,6 +8,8 @@ from sqlmodel import Session, col, select
 
 from app.checks import service as checks_service
 from app.checks.models import InquiryChecks
+from app.checks.rules import CustomerRecord, check_credit
+from app.checks.schema import CreditCheck, PriceCheck
 from app.inquiries.models import Inquiry
 from app.parsing.models import InquiryAnalysis
 from app.tracing.models import TraceRun
@@ -233,6 +235,67 @@ def test_recheck_returns_a_new_run(
     assert body["checks"]["outcome"] == "exception"
 
 
+def test_recheck_with_failing_check_is_json_500(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    broken_checks: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    assert auth_client.post(_analysis_path(acme.id)).status_code == 200
+    caplog.clear()
+
+    response = auth_client.post(_checks_path(acme.id))
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Checks failed"}
+    assert "RuntimeError" in caplog.text
+    assert str(acme.id) in caplog.text
+    assert "check failed" not in caplog.text
+
+
+def test_result_of_a_replaced_analysis_version_is_dropped(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert acme.id is not None
+    stored = auth_client.post(_analysis_path(acme.id)).json()["checks"]
+
+    def correct_meanwhile(customer: CustomerRecord | None, price: PriceCheck) -> CreditCheck:
+        # A correction saved while the checks run: the analysis version changes.
+        with Session(migrated_engine) as session:
+            session.execute(
+                update(InquiryAnalysis)
+                .where(col(InquiryAnalysis.inquiry_id) == acme.id)
+                .values(corrected_at=datetime.now(UTC))
+            )
+            session.commit()
+        return check_credit(customer, price)
+
+    monkeypatch.setattr(checks_service, "check_credit", correct_meanwhile)
+
+    checks_service.run_checks(migrated_engine, acme.id)
+
+    with Session(migrated_engine) as session:
+        row = session.exec(
+            select(InquiryChecks).where(col(InquiryChecks.inquiry_id) == acme.id)
+        ).one()
+        assert row.run_id == stored["run"]["id"]  # the earlier result was kept
+        runs = session.exec(
+            select(TraceRun)
+            .where(
+                col(TraceRun.subject_type) == "inquiry",
+                col(TraceRun.subject_id) == str(acme.id),
+            )
+            .order_by(col(TraceRun.id).desc())
+        ).all()
+    assert runs[0].id != stored["run"]["id"]
+    assert runs[0].status == "completed"
+
+
 def test_recheck_without_analysis_is_404(auth_client: TestClient, acme: Inquiry) -> None:
     response = auth_client.post(_checks_path(acme.id))
 
@@ -283,11 +346,12 @@ def test_uncertain_inputs_are_listed(
     assert checks["uncertain_inputs"] == ["quantity"]
 
 
-def test_stored_result_not_matching_schema_is_500(
+def test_stored_result_not_matching_schema_can_be_rechecked(
     auth_client: TestClient,
     use_extractor: ExtractorSetter,
     acme: Inquiry,
     migrated_engine: Engine,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     assert auth_client.post(_analysis_path(acme.id)).status_code == 200
     with Session(migrated_engine) as session:
@@ -300,5 +364,17 @@ def test_stored_result_not_matching_schema_is_500(
 
     response = auth_client.get(_analysis_path(acme.id))
 
-    assert response.status_code == 500
-    assert response.json() == {"detail": "Stored analysis is invalid"}
+    assert response.status_code == 200
+    assert response.json()["checks"] is None
+    assert "ValidationError" in caplog.text
+    assert "removed_field" not in caplog.text
+
+    rechecked = auth_client.post(_checks_path(acme.id))
+
+    assert rechecked.status_code == 200
+    assert rechecked.json()["checks"]["outcome"] == "exception"
+    with Session(migrated_engine) as session:
+        stored = session.exec(
+            select(InquiryChecks.results).where(col(InquiryChecks.inquiry_id) == acme.id)
+        ).one()
+    assert "removed_field" not in stored

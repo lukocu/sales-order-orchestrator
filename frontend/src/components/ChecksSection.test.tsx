@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type {
-  Analysis,
-  ChecksView,
-  ParsedFields,
-  RunSummary,
-  StepSummary,
+import {
+  rerunChecks,
+  type Analysis,
+  type ChecksView,
+  type ParsedFields,
+  type RunSummary,
+  type StepSummary,
 } from '../api/analysis'
 import ChecksSection from './ChecksSection'
 
@@ -191,15 +192,27 @@ function analysis(checks: ChecksView | null, fields: Partial<ParsedFields> = {})
   }
 }
 
-// Holds the analysis like AnalysisPanel does, so a re-run result is shown.
+// Holds the analysis and the re-run state like AnalysisPanel does, so a re-run result is shown.
 function Harness({ initial, onUnauthorized }: { initial: Analysis; onUnauthorized: () => void }) {
   const [current, setCurrent] = useState(initial)
+  const [running, setRunning] = useState(false)
+
+  async function rerun() {
+    setRunning(true)
+    try {
+      setCurrent(await rerunChecks(7))
+    } finally {
+      setRunning(false)
+    }
+  }
+
   return (
     <ChecksSection
       inquiryId={7}
       analysis={current}
-      disabled={false}
-      onRerun={setCurrent}
+      disabled={running}
+      running={running}
+      onRerun={rerun}
       onUnauthorized={onUnauthorized}
     />
   )

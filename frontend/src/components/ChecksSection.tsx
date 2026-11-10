@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import {
-  rerunChecks,
   type Analysis,
   type CheckInput,
   type ChecksView,
@@ -18,10 +17,12 @@ import RunMetrics from './RunMetrics'
 type Props = {
   inquiryId: number
   analysis: Analysis
-  // True while the panel analyzes or saves: the checks are about to be replaced.
+  // True while the panel analyzes, saves or re-runs the checks.
   disabled: boolean
-  // Called with the analysis returned by a re-run of the checks.
-  onRerun: (analysis: Analysis) => void
+  // True while the panel re-runs the checks.
+  running: boolean
+  // Re-runs the checks and shows the result; rejects when the re-run failed.
+  onRerun: () => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -265,22 +266,18 @@ function CreditItem({ check }: { check: CreditCheck }) {
   )
 }
 
-function ChecksSection({ inquiryId, analysis, disabled, onRerun, onUnauthorized }: Props) {
-  const [running, setRunning] = useState(false)
+function ChecksSection({ inquiryId, analysis, disabled, running, onRerun, onUnauthorized }: Props) {
   const [error, setError] = useState<string | null>(null)
   const checks = analysis.checks
   const headingId = `checks-${inquiryId}-heading`
 
   async function rerun() {
-    setRunning(true)
     setError(null)
     try {
-      onRerun(await rerunChecks(inquiryId))
+      await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
       else setError(errorMessage(failure))
-    } finally {
-      setRunning(false)
     }
   }
 
@@ -298,7 +295,7 @@ function ChecksSection({ inquiryId, analysis, disabled, onRerun, onUnauthorized 
               : 'The analysis changed after these checks ran; the result may be out of date.'}
           </p>
           <div className="analysis__actions">
-            <button type="button" onClick={rerun} disabled={running || disabled}>
+            <button type="button" onClick={rerun} disabled={disabled}>
               {running ? 'Running checks…' : 'Re-run checks'}
             </button>
           </div>
@@ -307,7 +304,7 @@ function ChecksSection({ inquiryId, analysis, disabled, onRerun, onUnauthorized 
       {error && (
         <div role="alert" className="analysis__problem">
           <p className="error">Re-running the checks failed: {error}</p>
-          <button type="button" onClick={rerun} disabled={running || disabled}>
+          <button type="button" onClick={rerun} disabled={disabled}>
             Retry
           </button>
         </div>

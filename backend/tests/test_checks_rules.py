@@ -311,6 +311,22 @@ def test_missing_quantity_skips_stock_total_and_credit() -> None:
     assert checks.credit.status == "skipped"
 
 
+def test_absurd_quantity_skips_price_and_credit() -> None:
+    # The total would need more digits than the decimal context holds.
+    result = evaluate(
+        _fields(quantity=10**30, price_kind="target_price", price_value="80"),
+        "",
+        [_customer()],
+        [_product()],
+    )
+
+    checks = result.results
+    assert (checks.price.status, checks.price.total) == ("skipped", None)
+    assert checks.discount.status == "skipped"
+    assert checks.credit.status == "skipped"
+    assert checks.stock.status == "insufficient"
+
+
 def test_price_rounds_half_up_to_cents() -> None:
     # 10.05 x 0.95 = 9.5475 -> 9.55; 9.55 x 3 = 28.65
     result = evaluate(
@@ -360,6 +376,20 @@ def test_discount_above_standard(kind: str, value: str | None, status: str) -> N
     assert result.results.discount.status == status
     assert result.results.discount.requested_kind == kind
     assert result.outcome == "standard"  # informational only
+
+
+def test_target_price_without_a_standard_price_is_skipped() -> None:
+    result = evaluate(
+        _fields(product_code="ABC-999", price_kind="target_price", price_value="80"),
+        "",
+        [_customer(standard_discount_percent=Decimal("5.00"))],
+        [_product()],
+    )
+
+    discount = result.results.discount
+    assert result.results.price.status == "skipped"
+    assert (discount.status, discount.standard_percent) == ("skipped", Decimal("5.00"))
+    assert (discount.requested_kind, discount.requested_value) == ("target_price", Decimal("80"))
 
 
 @pytest.mark.parametrize(

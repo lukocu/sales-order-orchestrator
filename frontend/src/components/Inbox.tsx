@@ -8,6 +8,7 @@ import {
   type InquirySummary,
 } from '../api/inquiries'
 import AnalysisPanel from './AnalysisPanel'
+import { formatDate } from './format'
 
 type Props = {
   user: User
@@ -29,13 +30,6 @@ const OUTCOME_LABEL: Record<Outcome, string> = {
   standard: 'Standard',
   exception: 'Exception',
   needs_input: 'Needs input',
-}
-
-const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
-
-function formatDate(iso: string): string {
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? iso : DATE_FORMAT.format(date)
 }
 
 function errorMessage(error: unknown): string {

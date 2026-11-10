@@ -7,10 +7,11 @@ another short session that locks the analysis row: a result computed from an ana
 version that is no longer current is dropped (the newer run wins).
 """
 
+import logging
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import Engine, Select, case, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.elements import ColumnElement
@@ -34,6 +35,8 @@ from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
 from app.tracing import run
 from app.tracing.summary import RunSummary, get_run_summary
+
+logger = logging.getLogger(__name__)
 
 SUBJECT_TYPE = "inquiry"
 
@@ -129,14 +132,24 @@ def run_checks(engine: Engine, inquiry_id: int) -> None:
 def get_checks_view(session: Session, analysis: InquiryAnalysis) -> ChecksView | None:
     """The stored result for the analysis' inquiry; None when it was never checked.
 
-    Raises `ValidationError` when the stored result no longer matches `CheckResults`.
+    Also None when the stored result no longer matches `CheckResults` (schema changed without
+    a data migration): the analysis stays readable and the checks can simply be re-run.
     """
     checks = session.exec(
         select(InquiryChecks).where(col(InquiryChecks.inquiry_id) == analysis.inquiry_id)
     ).first()
     if checks is None:
         return None
-    results = CheckResults.model_validate(checks.results)
+    try:
+        results = CheckResults.model_validate(checks.results)
+    except ValidationError as error:
+        # Class and inquiry id only: the validation message would quote the stored values.
+        logger.error(
+            "Stored check result of inquiry %s does not match the schema: %s",
+            analysis.inquiry_id,
+            type(error).__name__,
+        )
+        return None
     return ChecksView(
         outcome=checks.outcome,
         exception_type=checks.exception_type,
