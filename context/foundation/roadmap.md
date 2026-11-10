@@ -44,7 +44,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | F-01 | walking-skeleton-deploy            | (foundation) szkielet aplikacji działa end-to-end i wdraża się automatycznie po merge | —             | Access Control, NFR              | done     |
 | F-02 | step-cost-tracing                  | (foundation) każdy krok przetwarzania zapisuje tokeny, koszt i czas                  | F-01          | NFR                              | done |
 | S-01 | login-and-inbox                    | handlowiec loguje się kontem testowym i widzi skrzynkę zapytań                        | F-01, seeded test accounts with roles, seeded sample inquiries | FR-001, Access Control | done |
-| S-02 | parse-inquiry                      | handlowiec uruchamia analizę i poprawia sparsowane pola zapytania                     | S-01, F-02    | FR-002, US-01, NFR               | proposed |
+| S-02 | parse-inquiry                      | handlowiec uruchamia analizę i poprawia sparsowane pola zapytania                     | S-01, F-02    | FR-002, US-01, NFR               | in-progress |
 | S-03 | deterministic-checks-and-exception | handlowiec widzi sprawdzenia bez agentów i wykryty wyjątek albo zakończenie standardowe | S-02, seeded mock company data (customers, products, stock, prices, discounts, credit status) | FR-003, FR-004, US-01 | proposed |
 | S-04 | orchestrator-plan-and-delegation   | handlowiec widzi plan orchestratora i wyniki delegowanych sprawdzeń                   | S-03, seeded substitute catalog and customer order history | FR-005, FR-006, FR-014, US-01, NFR | proposed |
 | S-05 | recommendation-with-confidence     | handlowiec widzi rekomendację z uzasadnieniem i pewnością                              | S-04          | FR-007, US-01                    | proposed |
@@ -129,7 +129,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Błędne parsowanie (np. „do piątku”) zatruwa cały przepływ — dlatego korekta pól jest częścią tego wycinka, a nie dodatkiem.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-03: Sprawdzenia bez agentów i wykrycie wyjątku
 

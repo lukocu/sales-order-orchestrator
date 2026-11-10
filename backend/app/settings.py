@@ -1,11 +1,14 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BACKEND_DIR.parent
+
+LlmProvider = Literal["fake", "groq", "openrouter"]
 
 
 def normalize_database_url(url: str) -> str:
@@ -40,14 +43,22 @@ class Settings(BaseSettings):
     # Safari rejects Secure cookies on http://localhost.
     cookie_secure: bool = True
 
+    # Inquiry analysis: `fake` is the rule-based parser (no key, no network); `groq` and
+    # `openrouter` call an OpenAI-compatible endpoint with LLM_API_KEY. LLM_MODEL unset or
+    # empty: the provider's default model (see app.parsing.extractor.DEFAULT_MODELS).
+    llm_provider: LlmProvider = "fake"
+    llm_api_key: SecretStr | None = None
+    llm_model: str | None = None
+    llm_timeout_seconds: float = Field(default=30, gt=0)
+
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:
         return normalize_database_url(value)
 
-    @field_validator("demo_password", mode="before")
+    @field_validator("demo_password", "llm_api_key", "llm_model", mode="before")
     @classmethod
-    def _empty_demo_password_is_unset(cls, value: object) -> object:
+    def _empty_string_is_unset(cls, value: object) -> object:
         return None if value == "" else value
 
 
