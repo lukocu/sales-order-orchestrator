@@ -398,14 +398,14 @@ Migracja `0003_users_inquiries` tylko dodaje tabele i wiersze, więc nie ma dany
 
 #### Automated
 
-- [x] 3.1 Lint przechodzi
-- [x] 3.2 Typy przechodzą
-- [x] 3.3 Testy frontendu przechodzą
-- [x] 3.4 Build przechodzi
-- [x] 3.5 Bramki backendu przechodzą
-- [x] 3.6 Obraz się buduje
+- [x] 3.1 Lint przechodzi — 0a105b5
+- [x] 3.2 Typy przechodzą — 0a105b5
+- [x] 3.3 Testy frontendu przechodzą — 0a105b5
+- [x] 3.4 Build przechodzi — 0a105b5
+- [x] 3.5 Bramki backendu przechodzą — 0a105b5
+- [x] 3.6 Obraz się buduje — 0a105b5
 
 #### Manual
 
-- [x] 3.7 Lokalnie logowanie, skrzynka, treść, wylogowanie i błędne hasło działają w przeglądarce
-- [ ] 3.8 Na Render po ustawieniu DEMO_PASSWORD: health 0003, runs 401 bez sesji, logowanie obu kont i skrzynka działają
+- [x] 3.7 Lokalnie logowanie, skrzynka, treść, wylogowanie i błędne hasło działają w przeglądarce — 0a105b5
+- [x] 3.8 Na Render po ustawieniu DEMO_PASSWORD: health 0003, runs 401 bez sesji, logowanie obu kont i skrzynka działają — 0a105b5
