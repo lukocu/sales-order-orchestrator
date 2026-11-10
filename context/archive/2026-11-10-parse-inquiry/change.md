@@ -1,7 +1,8 @@
 ---
 change_id: parse-inquiry
 title: Analiza zapytania do ustrukturyzowanych pól z korektą
-status: impl_reviewed
+status: archived
+archived_at: 2026-11-10T19:06:42Z
 created: 2026-11-10
 updated: 2026-11-10
 ---
