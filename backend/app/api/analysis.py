@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.errors import database_unavailable
 from app.auth.deps import AuthUser, get_current_user
+from app.checks.service import NoAnalysis
 from app.db import get_engine
 from app.parsing.extractor import (
     ExtractionError,
@@ -24,6 +25,7 @@ from app.parsing.service import (
     InquiryNotFound,
     analyze_inquiry,
     get_analysis,
+    recheck_inquiry,
     save_corrections,
 )
 
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 PATH = "/inquiries/{inquiry_id}/analysis"
+CHECKS_PATH = "/inquiries/{inquiry_id}/checks"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -46,6 +49,10 @@ class CorrectionRequest(BaseModel):
 
 def _inquiry_not_found() -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inquiry not found")
+
+
+def _no_analysis() -> HTTPException:
+    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No analysis yet")
 
 
 def _invalid_stored_analysis() -> HTTPException:
@@ -134,13 +141,29 @@ def correct(
             user,
         )
     except AnalysisNotFound:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No analysis yet"
-        ) from None
+        raise _no_analysis() from None
+    except InquiryNotFound:  # deleted right after the corrections were saved
+        raise _inquiry_not_found() from None
     except AnalysisChanged:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Analysis changed, reload"
         ) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+
+
+@router.post(CHECKS_PATH, response_model=AnalysisView)
+def recheck(inquiry_id: InquiryId, engine: Annotated[Engine, Depends(get_engine)]) -> AnalysisView:
+    """Run the checks again for the current analysis (after a stale or failed result)."""
+    try:
+        return recheck_inquiry(engine, inquiry_id)
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except NoAnalysis:
+        raise _no_analysis() from None
     except ValidationError:
         raise _invalid_stored_analysis() from None
     except SQLAlchemyError:

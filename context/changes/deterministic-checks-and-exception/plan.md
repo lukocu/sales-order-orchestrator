@@ -349,24 +349,24 @@ Dane firmy to kilka wierszy; sprawdzenia trwają milisekundy i dodają 6 zapisó
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Testy reguł przechodzą
-- [x] 1.3 Modele zgadzają się z migracją
+- [x] 1.1 Wszystkie bramki backendu przechodzą — b6b036f
+- [x] 1.2 Testy reguł przechodzą — b6b036f
+- [x] 1.3 Modele zgadzają się z migracją — b6b036f
 
 #### Manual
 
-- [x] 1.4 Seed w lokalnej bazie zgadza się z tabelami planu
+- [x] 1.4 Seed w lokalnej bazie zgadza się z tabelami planu — b6b036f
 
 ### Phase 2: Integracja z analizą i API
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
-- [ ] 2.2 Testy API sprawdzeń przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.2 Testy API sprawdzeń przechodzą
 
 #### Manual
 
-- [ ] 2.3 Lokalny cykl przez curl daje oczekiwane wyniki
+- [x] 2.3 Lokalny cykl przez curl daje oczekiwane wyniki
 
 ### Phase 3: UI i wdrożenie
 

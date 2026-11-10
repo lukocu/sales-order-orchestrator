@@ -207,6 +207,12 @@ def test_llm_analysis_is_priced(
     assert (parse["input_tokens"], parse["output_tokens"]) == (1500, 300)
     assert Decimal(parse["cost_usd"]) > 0
     assert Decimal(body["run"]["totals"]["cost_usd"]) == Decimal(parse["cost_usd"])
+    assert [step["name"] for step in body["run"]["steps"]] == ["parse", "resolve-deadline"]
+    checks_run = body["checks"]["run"]
+    assert checks_run["id"] != body["run"]["id"]
+    assert "llm" not in {step["kind"] for step in checks_run["steps"]}
+    assert (checks_run["totals"]["input_tokens"], checks_run["totals"]["output_tokens"]) == (0, 0)
+    assert Decimal(checks_run["totals"]["cost_usd"]) == 0
 
 
 def test_uncertain_fields_are_returned(

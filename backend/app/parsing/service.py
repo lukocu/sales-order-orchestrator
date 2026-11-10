@@ -2,9 +2,11 @@
 
 No database connection is held while the extractor runs: the inquiry is read in one short
 session, the extraction runs inside a tracing run, and the result is written in another
-short session.
+short session. After every stored analysis or correction the checks run in their own run
+(`app.checks.service`); their failure never undoes the stored analysis.
 """
 
+import logging
 from datetime import UTC, date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -16,6 +18,7 @@ from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.auth.models import User
+from app.checks.service import ChecksView, NoAnalysis, get_checks_view, run_checks
 from app.inquiries.models import Inquiry
 from app.parsing.analyze import build_parsed
 from app.parsing.extractor import ExtractionError, ExtractionResult, InquiryExtractor
@@ -24,6 +27,8 @@ from app.parsing.schema import FieldName, ParsedFields
 from app.settings import LlmProvider
 from app.tracing import run
 from app.tracing.summary import RunSummary, get_run_summary
+
+logger = logging.getLogger(__name__)
 
 REFERENCE_TIMEZONE = ZoneInfo("Europe/Warsaw")
 SUBJECT_TYPE = "inquiry"
@@ -67,6 +72,7 @@ class AnalysisView(BaseModel):
     corrected_at: datetime | None
     corrected_by_name: str | None
     run: RunSummary | None  # None when the run could not be traced or was deleted
+    checks: ChecksView | None  # None until checks succeeded once; has its own run
 
 
 def reference_date_of(received_at: datetime) -> date:
@@ -134,9 +140,8 @@ def analyze_inquiry(
     with Session(engine) as session:
         session.exec(statement)
         session.commit()
-        analysis = _find(session, inquiry_id)
-        assert analysis is not None
-        return _view(session, analysis)
+    _run_checks_after_save(engine, inquiry_id)
+    return _current_view(engine, inquiry_id)
 
 
 def get_analysis(engine: Engine, inquiry_id: int) -> AnalysisView | None:
@@ -181,7 +186,40 @@ def save_corrections(
         analysis.corrected_by = user.id
         session.add(analysis)
         session.commit()
-        session.refresh(analysis)
+    # Outside the lock: the checks lock the analysis again only to store their result.
+    _run_checks_after_save(engine, inquiry_id)
+    return _current_view(engine, inquiry_id)
+
+
+def recheck_inquiry(engine: Engine, inquiry_id: int) -> AnalysisView:
+    """Run the checks again in a new run for the current analysis.
+
+    Raises `InquiryNotFound`, `NoAnalysis` without an analysis, and whatever the checks raise.
+    """
+    try:
+        run_checks(engine, inquiry_id)
+    except NoAnalysis:
+        with Session(engine) as session:
+            if session.get(Inquiry, inquiry_id) is None:
+                raise InquiryNotFound from None
+        raise
+    return _current_view(engine, inquiry_id)
+
+
+def _run_checks_after_save(engine: Engine, inquiry_id: int) -> None:
+    """Checks after a saved analysis or correction; a failure leaves the result stale or empty."""
+    try:
+        run_checks(engine, inquiry_id)
+    except Exception as error:
+        # Class and inquiry id only: the message could quote inquiry content.
+        logger.warning("Checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)
+
+
+def _current_view(engine: Engine, inquiry_id: int) -> AnalysisView:
+    with Session(engine) as session:
+        analysis = _find(session, inquiry_id)
+        if analysis is None:  # the inquiry was deleted meanwhile
+            raise InquiryNotFound
         return _view(session, analysis)
 
 
@@ -215,4 +253,5 @@ def _view(session: Session, analysis: InquiryAnalysis) -> AnalysisView:
         corrected_at=analysis.corrected_at,
         corrected_by_name=_user_name(session, analysis.corrected_by),
         run=None if analysis.run_id is None else get_run_summary(session, analysis.run_id),
+        checks=get_checks_view(session, analysis),
     )

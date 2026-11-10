@@ -2,8 +2,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine, update
+from sqlmodel import Session, col
 
-from tests.conftest import TEST_EMAIL_DOMAIN, InquiryFactory
+from app.checks.models import InquiryChecks
+from tests.conftest import TEST_EMAIL_DOMAIN, ExtractorSetter, InquiryFactory
+from tests.test_parsing_extractors import ACME, BIURO_MAX
 
 
 @pytest.mark.parametrize("path", ["/api/inquiries", "/api/inquiries/1"])
@@ -25,7 +29,14 @@ def test_list_is_newest_first(auth_client: TestClient, make_inquiry: InquiryFact
     assert response.status_code == 200
     rows = [r for r in response.json() if r["sender_email"].endswith(f"@{TEST_EMAIL_DOMAIN}")]
     assert [r["id"] for r in rows] == [newest.id, middle.id, oldest.id]
-    assert set(rows[0]) == {"id", "sender_name", "sender_email", "subject", "received_at"}
+    assert set(rows[0]) == {
+        "id",
+        "sender_name",
+        "sender_email",
+        "subject",
+        "received_at",
+        "outcome",
+    }
 
 
 def test_same_time_is_ordered_by_id_desc(
@@ -82,3 +93,34 @@ def test_unreachable_database_is_json_503(client_without_db: TestClient, path: s
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Database unavailable"}
+
+
+def test_list_and_detail_show_only_a_current_outcome(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    migrated_engine: Engine,
+) -> None:
+    now = datetime.now(UTC)
+    checked = make_inquiry(received_at=now, subject=BIURO_MAX[0], body=BIURO_MAX[1])
+    unchecked = make_inquiry(received_at=now, subject=ACME[0], body=ACME[1])
+    stale = make_inquiry(received_at=now, subject=ACME[0], body=ACME[1])
+    assert auth_client.post(f"/api/inquiries/{checked.id}/analysis").status_code == 200
+    assert auth_client.post(f"/api/inquiries/{stale.id}/analysis").status_code == 200
+    with Session(migrated_engine) as session:
+        # A result computed from an older version of the analysis.
+        session.execute(
+            update(InquiryChecks)
+            .where(col(InquiryChecks.inquiry_id) == stale.id)
+            .values(analysis_version=now - timedelta(days=1))
+        )
+        session.commit()
+
+    rows = {r["id"]: r for r in auth_client.get("/api/inquiries").json()}
+
+    assert rows[checked.id]["outcome"] == "standard"
+    assert rows[unchecked.id]["outcome"] is None
+    assert rows[stale.id]["outcome"] is None
+    for inquiry, outcome in ((checked, "standard"), (unchecked, None), (stale, None)):
+        detail = auth_client.get(f"/api/inquiries/{inquiry.id}").json()
+        assert detail["outcome"] == outcome
