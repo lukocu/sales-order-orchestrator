@@ -661,23 +661,23 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
 
 #### Automated
 
-- [x] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 3.2 Testy orchestracji i regresji przechodzą
+- [x] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — a631336
+- [x] 3.2 Testy orchestracji i regresji przechodzą — a631336
 
 #### Manual
 
-- [x] 3.3 Lokalny cykl przez curl w trybie fake pokazuje plany i ślad z tabeli
+- [x] 3.3 Lokalny cykl przez curl w trybie fake pokazuje plany i ślad z tabeli — a631336
 
 ### Phase 4: Planner LLM
 
 #### Automated
 
-- [ ] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 4.2 Testy klienta i plannera przechodzą
+- [x] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 4.2 Testy klienta i plannera przechodzą
 
 #### Manual
 
-- [ ] 4.3 Lokalnie z Groq krok plan ma tokeny i koszt, a plany przechodzą walidację
+- [x] 4.3 Lokalnie z Groq krok plan ma tokeny i koszt, a plany przechodzą walidację
 
 ### Phase 5: Frontend i wdrożenie
 

@@ -6,10 +6,10 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
+from app.llm.client import LlmError, LlmRateLimited, chat_json
 from app.parsing.extractor import ExtractionFailed, ExtractionRateLimited, ExtractionResult
 from app.parsing.schema import ModelExtraction, model_extraction_json_schema
 from app.tracing.models import StepKind
-from app.tracing.pricing import LlmUsage
 
 MAX_BODY_CHARS = 8000
 MAX_SUBJECT_CHARS = 500
@@ -75,62 +75,28 @@ class OpenAICompatibleExtractor:
 
     def extract(self, subject: str, body: str, reference_date: dt.date) -> ExtractionResult:
         payload = build_payload(self.model, subject, body, reference_date)
-        response = self._post(payload)
-        if response.status_code == httpx.codes.TOO_MANY_REQUESTS:
-            raise ExtractionRateLimited(f"{self.name} rate limit reached")
-        if not response.is_success:
-            raise ExtractionFailed(f"{self.name} answered HTTP {response.status_code}")
         try:
-            data = response.json()
-        except ValueError as error:
-            raise ExtractionFailed(f"{self.name} answered with invalid JSON") from error
-        # Usage first: the call is billed even when its content turns out to be unusable.
-        usage = self._usage(data)
+            chat = chat_json(
+                name=self.name,
+                base_url=self._base_url,
+                api_key=self._api_key,
+                model=self.model,
+                timeout_seconds=self._timeout_seconds,
+                payload=payload,
+                transport=self._transport,
+            )
+        except LlmRateLimited as error:
+            raise ExtractionRateLimited(str(error), usage=error.usage) from error
+        except LlmError as error:
+            raise ExtractionFailed(str(error), usage=error.usage) from error
         try:
-            content = data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as error:
-            raise ExtractionFailed(
-                f"{self.name} response has no message content", usage=usage
-            ) from error
-        if not isinstance(content, str):
-            raise ExtractionFailed(f"{self.name} response has no message content", usage=usage)
-        try:
-            extraction = ModelExtraction.model_validate_json(content)
+            extraction = ModelExtraction.model_validate_json(chat.content)
         except ValidationError:
             # Not chained: a ValidationError quotes input values, i.e. inquiry content.
             raise ExtractionFailed(
-                f"{self.name} content does not match the schema", usage=usage
+                f"{self.name} content does not match the schema", usage=chat.usage
             ) from None
-        return ExtractionResult(extraction=extraction, usage=usage)
-
-    def _post(self, payload: dict[str, Any]) -> httpx.Response:
-        try:
-            with httpx.Client(
-                base_url=self._base_url,
-                timeout=self._timeout_seconds,
-                transport=self._transport,
-                headers={"Authorization": f"Bearer {self._api_key}"},
-            ) as client:
-                return client.post("/chat/completions", json=payload)
-        except httpx.TimeoutException as error:
-            raise ExtractionFailed(f"{self.name} timed out") from error
-        except httpx.HTTPError as error:
-            raise ExtractionFailed(f"{self.name} request failed: {type(error).__name__}") from error
-
-    def _usage(self, data: Any) -> LlmUsage | None:
-        raw = data.get("usage") if isinstance(data, dict) else None
-        if not isinstance(raw, dict):
-            return None
-        try:
-            return LlmUsage(
-                provider=self.name,
-                model=self.model,
-                input_tokens=raw["prompt_tokens"],
-                output_tokens=raw["completion_tokens"],
-                raw=raw,
-            )
-        except KeyError, ValidationError:
-            return None
+        return ExtractionResult(extraction=extraction, usage=chat.usage)
 
 
 def build_payload(model: str, subject: str, body: str, reference_date: dt.date) -> dict[str, Any]:

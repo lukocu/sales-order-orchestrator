@@ -6,20 +6,13 @@ from typing import Annotated, Protocol
 
 from fastapi import Depends
 
+# Re-exported: the provider tables live with the shared client.
+from app.llm.client import BASE_URLS as BASE_URLS
+from app.llm.client import DEFAULT_MODELS as DEFAULT_MODELS
 from app.parsing.schema import ModelExtraction
-from app.settings import LlmProvider, Settings, get_settings
+from app.settings import Settings, get_settings
 from app.tracing.models import StepKind
 from app.tracing.pricing import LlmUsage
-
-# Model ids as genai-prices knows them: without the `openai/` prefix Groq is unpriced.
-DEFAULT_MODELS: dict[LlmProvider, str] = {
-    "groq": "openai/gpt-oss-120b",
-    "openrouter": "nvidia/nemotron-3.5-super-vl:free",
-}
-BASE_URLS: dict[LlmProvider, str] = {
-    "groq": "https://api.groq.com/openai/v1",
-    "openrouter": "https://openrouter.ai/api/v1",
-}
 
 
 @dataclass(frozen=True)

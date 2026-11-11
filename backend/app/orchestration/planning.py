@@ -11,6 +11,7 @@ from typing import Annotated, Literal, Protocol
 
 from fastapi import Depends
 
+from app.llm.client import BASE_URLS, DEFAULT_MODELS
 from app.orchestration.registry import CAPABILITIES
 from app.orchestration.schema import (
     Capability,
@@ -129,13 +130,36 @@ class RuleBasedPlanner:
         return PlanningResult(choice=PlannerChoice(tasks=tasks, summary=summary), usage=None)
 
 
-def get_planner(settings: Annotated[Settings, Depends(get_settings)]) -> Planner:
-    """Planner selected by settings; also a FastAPI dependency overridable in tests.
+class UnconfiguredPlanner:
+    """Stands in for an LLM provider without an API key; every call fails clearly."""
 
-    Always the rule-based planner until the LLM planner exists.
-    """
-    del settings  # selects the provider once the LLM planner exists
-    return RuleBasedPlanner()
+    step_kind: StepKind = "llm"
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def plan(self, facts: PlanFacts) -> PlanningResult:
+        raise PlannerNotConfigured(f"LLM provider {self.name} has no API key")
+
+
+def get_planner(settings: Annotated[Settings, Depends(get_settings)]) -> Planner:
+    """Planner selected by settings (like `get_extractor`); a FastAPI dependency overridable
+    in tests."""
+    # Imported here: the LLM planner imports the types defined above.
+    from app.orchestration.llm_planner import OpenAICompatiblePlanner
+
+    provider = settings.llm_provider
+    if provider == "fake":
+        return RuleBasedPlanner()
+    if settings.llm_api_key is None:
+        return UnconfiguredPlanner(provider)
+    return OpenAICompatiblePlanner(
+        name=provider,
+        base_url=BASE_URLS[provider],
+        api_key=settings.llm_api_key.get_secret_value(),
+        model=settings.llm_model or DEFAULT_MODELS[provider],
+        timeout_seconds=settings.llm_timeout_seconds,
+    )
 
 
 class PlanRejected(Exception):
