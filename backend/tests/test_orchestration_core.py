@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import Engine, delete
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from sqlmodel import Session, col, select
 
 from app.orchestration.agents import AgentInput
@@ -442,6 +443,21 @@ def test_execute_does_not_retry_other_errors(migrated_engine: Engine) -> None:
     assert [(s.name, s.status, s.error_type) for s in steps] == [
         ("agent:customer-history", "failed", "FlakyError")
     ]
+
+
+def test_execute_does_not_retry_pool_timeout(migrated_engine: Engine) -> None:
+    calls: list[int] = []
+
+    def starved(engine: Engine, agent_input: AgentInput) -> AgentResult:
+        calls.append(1)
+        raise PoolTimeoutError("QueuePool limit reached")
+
+    outcomes, _ = _execute(migrated_engine, _plan({"customer-history": starved}))
+
+    [outcome] = outcomes
+    assert (outcome.status, outcome.error_type) == ("failed", "TimeoutError")
+    assert outcome.steps == ["agent:customer-history"]
+    assert len(calls) == 1
 
 
 def test_execute_rejects_a_result_of_another_capability(migrated_engine: Engine) -> None:

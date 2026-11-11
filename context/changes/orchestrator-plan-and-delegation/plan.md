@@ -312,7 +312,7 @@ Czysta logika bez API: typy, rejestr kompetencji, dopasowanie, walidacja planu, 
 - **Pula wątków.** Na każdy etap osobny `ThreadPoolExecutor(max_workers=len(etap))`, zamykany przed następnym etapem.
 - **Kroki śladu.** Każda próba to krok `traced.step("agent:<capability>", kind="deterministic")`, a druga próba ma sufiks `#2`.
 - **Klasyfikacja błędów:**
-  - przejściowe (`sqlalchemy.exc.OperationalError`, `sqlalchemy.exc.TimeoutError`) → jedno ponowienie po `retry_delay_s`;
+  - przejściowe (`sqlalchemy.exc.OperationalError`) → jedno ponowienie po `retry_delay_s`. Timeout puli (`sqlalchemy.exc.TimeoutError`) nie jest ponawiany, bo ponowienie tylko dociąża wyczerpaną pulę (poprawka z przeglądu, F3);
   - pozostałe → bez ponowienia.
 - **Statusy zadań.** Zadanie, którego poprzednik nie ma statusu `completed`, dostaje `skipped` bez kroku w śladzie.
 - **Wyjątki.** Funkcja nie rzuca wyjątków agentów: zamienia je na `failed` z `error_type`.
@@ -429,7 +429,7 @@ Orchestracja od początku do końca na fake plannerze: wejścia z wyniku sprawdz
 
 #### Manual Verification:
 
-- Lokalny cykl przez curl w trybie `fake`: analiza ACME, Omega i Delta zwraca `orchestration` z planami z tabeli, a `GET /api/runs/{run_id}` orchestracji pokazuje kroki `agent:*` i czas ścienny mniejszy od sumy kroków lub mu równy
+- Lokalny cykl przez curl w trybie `fake`: analiza ACME, Omega i Delta zwraca `orchestration` z planami z tabeli, a `GET /api/runs/{run_id}` orchestracji pokazuje kroki `agent:*` oraz czas ścienny i sumę kroków. Równoległość potwierdza test z barierą. Czas ścienny bywa większy od sumy kroków, bo zawiera narzut zapisu kroków; pierwotne kryterium „czas ścienny ≤ suma kroków” było błędne (przegląd, F7)
 
 **Implementation Note**: Po fazie i przejściu automatycznych bramek zatrzymaj się na potwierdzenie ręcznego sprawdzenia.
 
@@ -633,6 +633,20 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
   - A2A Agent Cards ([glukhov](https://glukhov.org/ai-systems/architecture/a2a-protocol-explained/));
   - klasyfikacja błędów przy ponowieniach ([Diagrid](https://www.diagrid.io/faq/005-why-are-retries-not-enough-to-make-ai-workflows-reliable)).
 
+## Addendum (przegląd implementacji, 2026-11-11)
+
+Zmiany po `/10x-impl-review` (`reviews/impl-review.md`):
+
+- **Wersja wyniku sprawdzeń (F1).** `inquiry_orchestrations.checks_checked_at` (migracja `0008_orchestration_checks_ref`) zapisuje `checked_at` wyniku sprawdzeń, z którego powstała orchestracja. `_store` porzuca wynik, gdy pod blokadą `checked_at` bieżącego wyniku sprawdzeń jest inny (ponowne sprawdzenie przy tej samej wersji analizy). `stale` jest prawdziwe także wtedy, gdy wynik sprawdzeń został zastąpiony.
+- **Jedna próba plannera po sprawdzeniach (F2).** `orchestrate_after_checks` woła `run_orchestration(..., planner_attempts=1)`, więc Analyze i zapis poprawek czekają najwyżej na jeden timeout plannera. Ponowienie `plan#2` zostaje dla `POST /api/inquiries/{id}/orchestration`.
+- **Bez ponawiania timeoutu puli (F3).** Zob. kontrakt executora w fazie 2.
+- **Logi z id zapytania (F5).** Logi błędów plannera i agentów zawierają id zapytania i klasę błędu.
+- **Dodatki zaimplementowane poza planem (F6):**
+  - kody błędów plannera w `OrchestrationError.code`: `not_configured`, `rate_limited`, `unavailable` (przejściowy) i `failed`;
+  - `UnexpectedResult` w executorze, gdy agent zwróci wynik innej kompetencji (zadanie `failed`);
+  - `NothingToOrchestrate`, gdy w wyniku sprawdzeń brakuje kodu produktu, ilości lub klienta albo produktu nie ma w katalogu;
+  - `max_workers` puli to liczba zadań etapu do uruchomienia (bez `skipped`).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
@@ -693,4 +707,4 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
 #### Manual
 
 - [x] 5.7 Lokalnie w trybie fake trzy scenariusze i korekty działają zgodnie z planem — 6c4071d
-- [x] 5.8 Na Render z Groq plan ACME przechodzi walidację z tokenami i kosztem
+- [x] 5.8 Na Render z Groq plan ACME przechodzi walidację z tokenami i kosztem — 6c4071d

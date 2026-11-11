@@ -7,6 +7,7 @@ from sqlalchemy import Engine, update
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, col, select
 
+from app.checks.models import InquiryChecks
 from app.inquiries.models import Inquiry
 from app.orchestration.agents import AgentInput
 from app.orchestration.models import InquiryOrchestration
@@ -17,7 +18,7 @@ from app.orchestration.planning import (
 )
 from app.orchestration.registry import AGENTS, AgentSpec
 from app.orchestration.schema import AgentResult, PlanFacts
-from app.orchestration.service import run_orchestration
+from app.orchestration.service import orchestrate_after_checks, run_orchestration
 from app.parsing.models import InquiryAnalysis
 from app.tracing.models import StepKind, TraceRun
 from tests.conftest import ExtractorSetter, InquiryFactory
@@ -496,6 +497,98 @@ def test_result_of_a_replaced_analysis_version_is_dropped(
     assert latest is not None
     assert latest.id != stored["run"]["id"]  # the dropped run was still traced
     assert latest.status == "completed"
+
+
+def _update_checks(engine: Engine, inquiry: Inquiry, **values: Any) -> None:
+    with Session(engine) as session:
+        session.execute(
+            update(InquiryChecks)
+            .where(col(InquiryChecks.inquiry_id) == inquiry.id)
+            .values(**values)
+        )
+        session.commit()
+
+
+class RecheckingPlanner(StubPlanner):
+    """Changes the inquiry's check result (same analysis version) while planning."""
+
+    def __init__(self, engine: Engine, inquiry: Inquiry, **values: Any) -> None:
+        super().__init__()
+        self._engine, self._inquiry, self._values = engine, inquiry, values
+
+    def plan(self, facts: PlanFacts) -> PlanningResult:
+        _update_checks(self._engine, self._inquiry, **self._values)
+        return super().plan(facts)
+
+
+def test_result_of_a_check_no_longer_an_exception_is_dropped(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+) -> None:
+    assert acme.id is not None
+    stored = _analyze(auth_client, acme)["orchestration"]
+    planner = RecheckingPlanner(migrated_engine, acme, outcome="standard", exception_type=None)
+
+    run_orchestration(migrated_engine, acme.id, planner)
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.run_id == stored["run"]["id"]  # the earlier result was kept
+
+
+def test_result_of_a_replaced_check_result_is_dropped(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+) -> None:
+    assert acme.id is not None
+    stored = _analyze(auth_client, acme)["orchestration"]
+    # A re-check at the same analysis version, stored while the orchestration runs.
+    planner = RecheckingPlanner(migrated_engine, acme, checked_at=datetime.now(UTC))
+
+    run_orchestration(migrated_engine, acme.id, planner)
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.run_id == stored["run"]["id"]  # the earlier result was kept
+
+
+def test_orchestration_after_checks_does_not_retry_the_planner(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+) -> None:
+    assert acme.id is not None
+    _analyze(auth_client, acme)
+    planner = StubPlanner(errors=[_transient()])
+
+    orchestrate_after_checks(migrated_engine, acme.id, planner)
+
+    view = _orchestration(auth_client, acme)
+    assert view is not None
+    assert planner.calls == 1
+    assert (view["status"], view["planner_steps"]) == ("failed", ["plan"])
+    assert view["error"]["code"] == "unavailable"
+
+
+def test_stale_after_a_recheck_without_new_orchestration(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+) -> None:
+    assert _analyze(auth_client, acme)["orchestration"]["stale"] is False
+    # A re-check whose orchestration never got stored (e.g. it failed unexpectedly).
+    _update_checks(migrated_engine, acme, checked_at=datetime.now(UTC))
+
+    reread = _orchestration(auth_client, acme)
+
+    assert reread is not None
+    assert reread["stale"] is True
 
 
 def test_stale_is_computed_on_read(

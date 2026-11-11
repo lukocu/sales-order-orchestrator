@@ -99,6 +99,8 @@ class InquiryOrchestration(SQLModel, table=True):
     )
     # The analysis version (corrected_at, else analyzed_at) the orchestration used.
     analysis_version: datetime = Field(sa_type=DateTime(timezone=True))
+    # `checked_at` of the check result the orchestration used; a re-check replaces it.
+    checks_checked_at: datetime = Field(sa_type=DateTime(timezone=True))
     status: OrchestrationStatus = Field(sa_type=String(ENUM_LENGTH))
     result: dict[str, Any] = Field(sa_type=JSONB)
     orchestrated_at: datetime = Field(sa_type=DateTime(timezone=True))

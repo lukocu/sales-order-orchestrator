@@ -3,9 +3,10 @@
 Stages run one after another; the tasks of a stage run in parallel, each in its own thread
 of a pool that is closed before the next stage starts (so every step is written before the
 run finishes). Each attempt is its own deterministic step `agent:<capability>`, the retry is
-`agent:<capability>#2`. Only transient database errors are retried, once; agents only read,
-so a retry has no side effects to repeat. A task whose prerequisite did not complete is
-skipped without a step. Agent exceptions never escape: they become a `failed` task.
+`agent:<capability>#2`. Only transient database errors (`OperationalError`) are retried, once;
+agents only read, so a retry has no side effects to repeat. A pool timeout is not retried: the
+pool is exhausted and a retry would only add load to it. A task whose prerequisite did not
+complete is skipped without a step. Agent exceptions never escape: they become a `failed` task.
 """
 
 import logging
@@ -16,7 +17,6 @@ from dataclasses import dataclass, replace
 
 from sqlalchemy import Engine
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from app.orchestration.agents import AgentInput
 from app.orchestration.planning import stages
@@ -26,7 +26,7 @@ from app.tracing import RunHandle
 
 logger = logging.getLogger(__name__)
 
-TRANSIENT_ERRORS: tuple[type[Exception], ...] = (OperationalError, PoolTimeoutError)
+TRANSIENT_ERRORS: tuple[type[Exception], ...] = (OperationalError,)
 MAX_ATTEMPTS = 2
 
 PlanItem = tuple[Capability, AgentSpec, str]  # capability, matched agent, planner's reason
@@ -55,6 +55,7 @@ def _run_task(
     capability: Capability,
     agent: AgentSpec,
     agent_input: AgentInput,
+    inquiry_id: int | None,
     retry_delay_s: float,
 ) -> _Attempts:
     steps: list[str] = []
@@ -75,7 +76,9 @@ def _run_task(
             error_type = type(exc).__name__
         else:
             return _Attempts("completed", steps, None, result)
-        logger.warning("Orchestration: %s failed with %s", name, error_type)
+        logger.warning(
+            "Orchestration of inquiry %s: %s failed with %s", inquiry_id, name, error_type
+        )
         return _Attempts("failed", steps, error_type, None)
     raise AssertionError("unreachable")  # pragma: no cover
 
@@ -86,9 +89,13 @@ def execute(
     plan: Sequence[PlanItem],
     agent_input: AgentInput,
     *,
+    inquiry_id: int | None = None,
     retry_delay_s: float = 0.5,
 ) -> list[TaskOutcome]:
-    """Run every planned task; outcomes are listed by stage, then in registry order."""
+    """Run every planned task; outcomes are listed by stage, then in registry order.
+
+    `inquiry_id` only labels the logs.
+    """
     planned = {capability: (agent, reason) for capability, agent, reason in plan}
     outcomes: dict[Capability, TaskOutcome] = {}
     results: dict[Capability, AgentResult] = {}
@@ -125,7 +132,14 @@ def execute(
                     upstream={d: results[d] for d in CAPABILITIES[capability].depends_on},
                 )
                 futures[capability] = pool.submit(
-                    _run_task, traced, engine, capability, agent, task_input, retry_delay_s
+                    _run_task,
+                    traced,
+                    engine,
+                    capability,
+                    agent,
+                    task_input,
+                    inquiry_id,
+                    retry_delay_s,
                 )
             attempts = {capability: future.result() for capability, future in futures.items()}
 

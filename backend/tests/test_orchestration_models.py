@@ -66,6 +66,7 @@ def _orchestration(inquiry: Inquiry, **overrides: object) -> InquiryOrchestratio
     values: dict[str, object] = {
         "inquiry_id": inquiry.id,
         "analysis_version": now,
+        "checks_checked_at": now,
         "status": "failed",
         "result": {"status": "failed"},
         "orchestrated_at": now,

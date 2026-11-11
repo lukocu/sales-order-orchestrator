@@ -269,8 +269,10 @@ variables:
 - `fake`: a rule-based planner (all four capabilities, without the substitute ones when the
   customer refused); its `plan` step is deterministic, with no tokens and no cost.
 - `groq` / `openrouter`: the same model and key as the analysis, with structured output. The
-  `plan` step is an `llm` step with tokens and cost; a transient failure (rate limit, timeout)
-  is retried once. Without `LLM_API_KEY` a re-run of the orchestrator ends `failed` with
+  `plan` step is an `llm` step with tokens and cost. A transient failure (rate limit, timeout)
+  is retried once on "Re-run orchestrator"; the orchestration that follows Analyze or a
+  correction calls the planner once, so it does not delay the request by a second timeout.
+  Without `LLM_API_KEY` a re-run of the orchestrator ends `failed` with
   `planner_failed: not_configured`.
 
 ## Step tracing
