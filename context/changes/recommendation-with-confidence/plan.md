@@ -654,25 +654,25 @@ Migracja 0009 dodaje kolumny `unit_cost` z backfillem i dopiero potem NOT NULL. 
 
 #### Automated
 
-- [x] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 4.2 Testy rekomendera LLM przechodzą
+- [x] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 58bba40
+- [x] 4.2 Testy rekomendera LLM przechodzą — 58bba40
 
 #### Manual
 
-- [x] 4.3 Lokalnie z Groq krok choose ma tokeny i koszt, a wybory przechodzą walidację
+- [x] 4.3 Lokalnie z Groq krok choose ma tokeny i koszt, a wybory przechodzą walidację — 58bba40
 
 ### Phase 5: Frontend i wdrożenie
 
 #### Automated
 
-- [ ] 5.1 Lint przechodzi: `cd frontend && npm run lint`
-- [ ] 5.2 Typy przechodzą: `cd frontend && npm run typecheck`
-- [ ] 5.3 Testy przechodzą: `cd frontend && npm test`
-- [ ] 5.4 Build przechodzi: `cd frontend && npm run build`
-- [ ] 5.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 5.6 Obraz się buduje: `docker build -t sales-order-orchestrator .`
+- [x] 5.1 Lint przechodzi: `cd frontend && npm run lint`
+- [x] 5.2 Typy przechodzą: `cd frontend && npm run typecheck`
+- [x] 5.3 Testy przechodzą: `cd frontend && npm test`
+- [x] 5.4 Build przechodzi: `cd frontend && npm run build`
+- [x] 5.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 5.6 Obraz się buduje: `docker build -t sales-order-orchestrator .`
 
 #### Manual
 
-- [ ] 5.7 Lokalnie w trybie fake trzy scenariusze, re-run i korekta działają zgodnie z planem
+- [x] 5.7 Lokalnie w trybie fake trzy scenariusze, re-run i korekta działają zgodnie z planem
 - [ ] 5.8 Na Render z Groq rekomendacja ACME przechodzi walidację z tokenami i kosztem

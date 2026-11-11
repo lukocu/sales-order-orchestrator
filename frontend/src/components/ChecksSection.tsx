@@ -11,23 +11,29 @@ import {
   type StockCheck,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
-import { formatDate, totalCost, totalDuration } from './format'
+import { formatDate, formatPercent, formatPln, totalCost, totalDuration } from './format'
 import OrchestrationSection from './OrchestrationSection'
+import RecommendationSection from './RecommendationSection'
 import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
   analysis: Analysis
-  // True while the panel analyzes, saves or re-runs the checks or the orchestrator.
+  // True while the panel analyzes, saves or re-runs the checks, the orchestrator or the
+  // recommendation.
   disabled: boolean
   // True while the panel re-runs the checks.
   running: boolean
   // True while the panel re-runs the orchestrator.
   orchestrating: boolean
+  // True while the panel re-runs the recommendation.
+  recommending: boolean
   // Re-runs the checks and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
   // Re-runs the orchestrator and shows the result; rejects when the re-run failed.
   onRerunOrchestration: () => Promise<void>
+  // Re-runs the recommendation and shows the result; rejects when the re-run failed.
+  onRerunRecommendation: () => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -43,16 +49,6 @@ const INPUT_LABEL: Record<CheckInput, string> = {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong'
-}
-
-// Decimal strings from the API, e.g. "5.00" → "5", "10.50" → "10.5".
-function formatPercent(value: string): string {
-  const trimmed = value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value
-  return `${trimmed}%`
-}
-
-function formatPln(value: string | null): string {
-  return value === null ? '—' : `${value} PLN`
 }
 
 function formatCount(value: number | null): string {
@@ -276,8 +272,10 @@ function ChecksSection({
   disabled,
   running,
   orchestrating,
+  recommending,
   onRerun,
   onRerunOrchestration,
+  onRerunRecommendation,
   onUnauthorized,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
@@ -333,6 +331,17 @@ function ChecksSection({
               disabled={disabled}
               running={orchestrating}
               onRerun={onRerunOrchestration}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+          {checks.outcome === 'exception' && (
+            <RecommendationSection
+              inquiryId={inquiryId}
+              recommendation={analysis.recommendation ?? null}
+              orchestration={analysis.orchestration}
+              disabled={disabled}
+              running={recommending}
+              onRerun={onRerunRecommendation}
               onUnauthorized={onUnauthorized}
             />
           )}

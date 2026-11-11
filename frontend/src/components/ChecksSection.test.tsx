@@ -216,8 +216,10 @@ function Harness({ initial, onUnauthorized }: { initial: Analysis; onUnauthorize
       disabled={busy !== null}
       running={busy === 'checking'}
       orchestrating={busy === 'orchestrating'}
+      recommending={false}
       onRerun={() => rerun('checking')}
       onRerunOrchestration={() => rerun('orchestrating')}
+      onRerunRecommendation={async () => {}}
       onUnauthorized={onUnauthorized}
     />
   )

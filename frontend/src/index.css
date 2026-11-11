@@ -659,3 +659,72 @@ button:disabled {
 .orchestration__result {
   display: block;
 }
+
+/* Recommendation */
+
+.recommendation__chosen {
+  display: grid;
+  gap: 0.5rem;
+  border-color: var(--ok);
+  border-width: 2px;
+}
+
+.recommendation__band {
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.recommendation__band--high {
+  color: var(--ok);
+}
+
+.recommendation__band--medium {
+  color: var(--warn);
+}
+
+.recommendation__band--low {
+  color: var(--error);
+}
+
+.recommendation__why {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+}
+
+.recommendation__signals {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.recommendation__signal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.recommendation__signal-list--positive > li > span[aria-hidden] {
+  color: var(--ok);
+}
+
+.recommendation__signal-list--risk > li > span[aria-hidden] {
+  color: var(--warn);
+}
+
+.recommendation__signal-list--info > li > span[aria-hidden] {
+  color: var(--muted);
+}
+
+.recommendation__cited {
+  font-weight: 600;
+}
+
+.recommendation__cited-tag {
+  font-weight: 400;
+  color: var(--muted);
+}

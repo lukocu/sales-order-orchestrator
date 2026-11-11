@@ -4,7 +4,14 @@ import {
   DELTA_ORCHESTRATION,
   OMEGA_ORCHESTRATION,
 } from '../test/orchestrationFixtures'
-import { isOrchestrationView, rerunOrchestration, type Analysis } from './analysis'
+import { ACME_RECOMMENDATION, DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
+import {
+  isOrchestrationView,
+  isRecommendationView,
+  rerunOrchestration,
+  rerunRecommendation,
+  type Analysis,
+} from './analysis'
 
 // JSON round trip, as the view arrives from the API.
 function wire(value: unknown): unknown {
@@ -149,5 +156,89 @@ describe('rerunOrchestration', () => {
     stubFetch({ ...ANALYSIS, orchestration: { ...ACME_ORCHESTRATION, status: 'done' } })
 
     await expect(rerunOrchestration(7)).rejects.toThrow('Invalid response body')
+  })
+})
+
+describe('isRecommendationView', () => {
+  it.each([
+    ['ACME', ACME_RECOMMENDATION],
+    ['Delta', DELTA_RECOMMENDATION],
+  ])('accepts the %s view', (_, view) => {
+    expect(isRecommendationView(wire(view))).toBe(true)
+  })
+
+  it('accepts a failed view with its error, a rejected choice and without a run', () => {
+    const view = {
+      ...ACME_RECOMMENDATION,
+      status: 'failed',
+      run: null,
+      error: { kind: 'choice_rejected', code: 'foreign_signal', message: 'Foreign signal' },
+    }
+    expect(isRecommendationView(wire(view))).toBe(true)
+  })
+
+  const option = ACME_RECOMMENDATION.options[0]
+  it.each([
+    ['an unknown status', { ...ACME_RECOMMENDATION, status: 'partial' }],
+    ['a missing stale flag', { ...ACME_RECOMMENDATION, stale: undefined }],
+    ['an unknown option kind', { ...ACME_RECOMMENDATION, options: [{ ...option, kind: 'x' }] }],
+    ['an unknown band', { ...ACME_RECOMMENDATION, options: [{ ...option, band: 'VERY_HIGH' }] }],
+    ['a numeric margin', { ...ACME_RECOMMENDATION, options: [{ ...option, margin_percent: 26 }] }],
+    [
+      'an unknown line source',
+      {
+        ...ACME_RECOMMENDATION,
+        options: [{ ...option, lines: [{ ...option.lines[0], source: 'warehouse' }] }],
+      },
+    ],
+    [
+      'an unknown signal polarity',
+      {
+        ...ACME_RECOMMENDATION,
+        options: [{ ...option, signals: [{ code: 'x', polarity: 'neutral', label: 'x' }] }],
+      },
+    ],
+    [
+      'cited signals that are not a list of codes',
+      { ...ACME_RECOMMENDATION, choice: { ...ACME_RECOMMENDATION.choice, cited_signals: 'x' } },
+    ],
+    [
+      'an unknown error kind',
+      { ...ACME_RECOMMENDATION, error: { kind: 'timeout', code: 'x', message: 'x' } },
+    ],
+  ])('rejects %s', (_, view) => {
+    expect(isRecommendationView(wire(view))).toBe(false)
+  })
+})
+
+describe('rerunRecommendation', () => {
+  const analysis = { ...ANALYSIS, recommendation: ACME_RECOMMENDATION }
+
+  it('posts to the recommendation endpoint and returns the analysis', async () => {
+    const fetchMock = stubFetch(analysis)
+
+    await expect(rerunRecommendation(7)).resolves.toEqual(analysis)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/inquiries/7/recommendation',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('accepts an older analysis without the recommendation field', async () => {
+    stubFetch(ANALYSIS)
+
+    await expect(rerunRecommendation(7)).resolves.toEqual(ANALYSIS)
+  })
+
+  it('rejects an analysis whose recommendation has an unknown band', async () => {
+    stubFetch({
+      ...analysis,
+      recommendation: {
+        ...ACME_RECOMMENDATION,
+        options: [{ ...ACME_RECOMMENDATION.options[0], band: 'SURE' }],
+      },
+    })
+
+    await expect(rerunRecommendation(7)).rejects.toThrow('Invalid response body')
   })
 })

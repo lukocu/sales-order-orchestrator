@@ -275,6 +275,121 @@ variables:
   Without `LLM_API_KEY` a re-run of the orchestrator ends `failed` with
   `planner_failed: not_configured`.
 
+## Recommendation
+
+After a `completed` or `partial` orchestration, the recommendation (`app.recommendation`)
+turns the agents' results into options of fulfilling the inquiry, in its own run with an
+`options` step and one `choose` step per recommender attempt:
+
+1. **Options.** Code builds every option from the requested product's own stock plus the
+   shortage taken from one source: `partial_delivery` (stock only), `substitute` (stock + a
+   compatible substitute in stock), `other_source` (stock + a supplier offer) and `combined`
+   (stock + substitute + supplier, only when neither covers the shortage alone). Substitutes
+   and offers come only from **completed** agent tasks (none when the customer refused a
+   substitute), so the coverage and date of an option are always known. The option id is
+   readable, e.g. `stock+ABC-110`, `stock+supplier:Hydro-Valve`.
+2. **Pricing.** Each line is priced at the list price of the product actually offered (a
+   substitute line uses the substitute's price) less the customer's standard discount:
+   `unit_price = list_price × (1 − discount / 100)`. The cost uses `unit_cost`: of the product
+   for own and substitute stock, of the supplier offer for a supplier line (both seeded by
+   migration `0009_recommendation_data`). The option shows its value, cost and margin
+   `(value − cost) / value` in percent; there is no margin threshold.
+3. **Confidence.** Code gives each option a band from explicit signals, never a number:
+   - any risk `incomplete_coverage` or `deadline_missed` → **LOW**;
+   - any other risk → **MEDIUM**;
+   - no risk → **HIGH**.
+
+   Signals have a stable code, a polarity (`positive`, `risk`, `info`) and a Polish label the
+   UI shows as is:
+
+   | Code                                   | Polarity           | When                                                              |
+   | -------------------------------------- | ------------------ | ----------------------------------------------------------------- |
+   | `full_coverage` / `incomplete_coverage` | positive / risk    | the option covers / does not cover the requested quantity         |
+   | `deadline_met` / `deadline_missed`      | positive / risk    | fulfilled on or before / after the deadline                       |
+   | `no_deadline`                           | info               | the inquiry has no deadline                                       |
+   | `compat_full` / `compat_partial`        | positive / risk    | substitute fully / only partially compatible (substitute options) |
+   | `consent_confirmed` / `consent_unconfirmed` | positive / risk | the customer's substitute consent (substitute options)            |
+   | `history_accepted` / `history_declined` | positive / risk    | the customer accepted / declined substitutes before               |
+   | `history_none`, `history_mixed`         | info               | no substitute history / both accepted and declined                |
+   | `two_sources`                           | risk               | a `combined` option fills the shortage from two sources           |
+   | `uncertain_input:<field>`               | risk               | the checks used an uncertain customer, product code or quantity   |
+   | `task_failed:<capability>` / `not_checked:<capability>` | risk | a check **the option relies on** failed / was not planned |
+   | `alternative_not_checked:<capability>`  | info               | a check of **another** source failed or was not planned           |
+
+   An option relies on the substitute checks (compatibility, availability, customer history)
+   when it has a substitute line and on `supplier-availability` when it has a supplier line.
+   A failed or skipped check is therefore a risk only for the options that use it; for the
+   others it stays visible as information. Substitute checks left out because the customer
+   refused a substitute give no signal.
+4. **Choice.** A **recommender** picks one option and writes the justification, citing
+   signal codes of that option. It never computes numbers: the UI shows value, margin, dates
+   and bands from the option, not from the text. Code **validates** the choice with
+   `validate_choice`, in this order: the option must exist (`unknown_option`), every cited
+   signal must belong to the chosen option (`foreign_signal`), the justification must not be
+   empty (`empty_justification`). A rejected choice ends the recommendation `failed` with
+   `choice_rejected` and its code; the options and their bands stay visible.
+
+The **Recommendation** section under the orchestration shows the recommended option (kind,
+lines with product, quantity, source and date, coverage, date against the deadline, value,
+cost, margin and the band as a badge), *Why this recommendation?* with the justification and
+the lists *Positive*, *Risks* and *Information*, the signals cited by the recommender marked
+*cited*. Below it the other options with the same fields and signals, the recommender's name
+and the metrics of the recommendation run.
+
+Expected recommendations with the rule-based recommender (seed prices, costs and discounts):
+
+| Inquiry         | Recommended option                                                         | Band | Coverage | Margin |
+| --------------- | -------------------------------------------------------------------------- | ---- | -------- | ------ |
+| ACME            | 50 × ABC-100 from stock + 30 × ABC-110 (substitute)                         | HIGH | 80/80    | 25.51% |
+| Technika Omega  | 60 × XYZ-300 from stock + 60 × XYZ-300 from Hydro-Valve (2026-11-10)        | HIGH | 120/120  | 23.75% |
+| Hurtownia Delta | 50 × ABC-100 from stock + 40 × ABC-110 + 200 × ABC-100 from Sensortech Polska | LOW  | 290/500  | 14.29% |
+| Biuro Max       | none (standard inquiry)                                                    | —    | —        | —      |
+
+**Incomplete data and errors.** A failed agent does not block the recommendation: options
+are built from the completed tasks and the missing check becomes a signal. No orchestration,
+a `failed` orchestration or one from an older analysis or check result means no
+recommendation: the stored one is removed and the section says why. A recommendation is
+pinned to the analysis version, the check result and the orchestration it was built from; a
+result computed from data that changed meanwhile is dropped, and an older stored one is
+marked stale. A recommender failure (no API key, rate limit, timeout, bad response) or a
+rejected choice is stored as `failed` with its kind and code (`recommender_failed:
+rate_limited`, `choice_rejected: foreign_signal`, …) and the options; there is no rule-based
+fallback, the choice is made by a re-run.
+
+The recommendation runs after every orchestration (after Analyze, a correction or **Re-run
+orchestrator**) with a single recommender attempt, so it does not delay the request by a
+second timeout. For a stale or `failed` result, or a current orchestration without a
+recommendation yet (*Recommendation not run yet*), the section offers **Re-run
+recommendation**, which calls:
+
+```sh
+curl -b cookies.txt -X POST http://localhost:8000/api/inquiries/1/recommendation
+```
+
+It recommends again in a new run for the current orchestration (a transient recommender
+error is retried once, as `choose#2`) and answers with the whole analysis (`recommendation`
+holds the options, the choice, the error, the status, `stale` and the run; amounts and
+percents are JSON strings). Without an analysis it answers `404 No analysis yet`, without a
+current exception with a `completed` or `partial` orchestration `409 Nothing to recommend`.
+
+The recommender follows `LLM_PROVIDER` (see [Analysis (LLM)](#analysis-llm)); there are no
+new variables:
+
+- `fake`: the `rule-based` recommender ranks the options by band (HIGH first), then covered
+  quantity, earlier date, higher margin and id, picks the first one and builds the
+  justification from a template, citing its positive signals and risks. Its `choose` step is
+  deterministic, with no tokens and no cost. The ranking is only this recommender's strategy,
+  not a rule for the LLM.
+- `groq` / `openrouter`: the same model and key as the analysis, at temperature 0. The model
+  sees the structured facts of the inquiry (product, quantities, deadline, consent, standard
+  discount, uncertain fields; never the e-mail) and the options in build order, which is not
+  a ranking. It answers `{option_id, justification, cited_signals}` under a strict JSON
+  schema built per request: `option_id` is an enum of this inquiry's option ids and each
+  cited signal an enum of their signal codes. `validate_choice` still checks that the cited
+  signals belong to the chosen option, which the schema cannot express. The `choose` step is
+  an `llm` step with tokens and cost. Without `LLM_API_KEY` the recommendation ends `failed`
+  with `recommender_failed: not_configured`.
+
 ## Step tracing
 
 Every processing run is recorded as a run with its steps (`app.tracing`). A step stores its

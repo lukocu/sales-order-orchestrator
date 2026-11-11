@@ -3,9 +3,10 @@ import { requestJson } from './client'
 // Mirrors AnalysisView in backend/app/parsing/service.py, ParsedFields in
 // backend/app/parsing/schema.py, RunSummary in backend/app/tracing/summary.py and
 // ChecksView / CheckResults in backend/app/checks/{service,schema}.py and OrchestrationView /
-// OrchestrationResult in backend/app/orchestration/{service,schema}.py.
-// Decimal values (price_value, cost_usd, amounts and percents of the checks) arrive as
-// JSON strings.
+// OrchestrationResult in backend/app/orchestration/{service,schema}.py and RecommendationView /
+// RecommendationResult in backend/app/recommendation/{service,schema}.py.
+// Decimal values (price_value, cost_usd, amounts and percents of the checks and the
+// recommendation) arrive as JSON strings.
 
 export type FieldName =
   | 'customer'
@@ -263,6 +264,78 @@ export type OrchestrationView = {
   run: RunSummary | null // null when the run could not be traced
 }
 
+export type OptionKind = 'partial_delivery' | 'substitute' | 'other_source' | 'combined'
+
+export type LineSource = 'stock' | 'substitute_stock' | 'supplier'
+
+export type SignalPolarity = 'positive' | 'risk' | 'info'
+
+export type ConfidenceBand = 'HIGH' | 'MEDIUM' | 'LOW'
+
+export type RecommendationStatus = 'completed' | 'failed'
+
+export type RecommendationErrorKind = 'recommender_failed' | 'choice_rejected'
+
+// One source of an option: a product, a quantity, where it comes from and when.
+export type OptionLine = {
+  product_code: string
+  product_name: string
+  source: LineSource
+  supplier: string | null // only for supplier lines
+  quantity: number
+  available_on: string // ISO date
+  unit_price: string // list price of the offered product less the customer's discount
+  unit_cost: string
+  value: string
+  cost: string
+}
+
+export type Signal = {
+  code: string // e.g. full_coverage, task_failed:customer-history
+  polarity: SignalPolarity
+  label: string // Polish text from the backend
+}
+
+export type RecommendationOption = {
+  id: string // e.g. stock+ABC-110, stock+supplier:Hydro-Valve
+  kind: OptionKind
+  lines: OptionLine[]
+  covered_quantity: number
+  requested_quantity: number
+  fulfilled_on: string // ISO date, the latest date of the lines
+  meets_deadline: boolean | null // null when the inquiry has no deadline
+  value: string
+  cost: string
+  margin_percent: string
+  band: ConfidenceBand
+  signals: Signal[]
+}
+
+// The recommender's raw answer, kept also when the choice was rejected.
+export type RecommenderChoice = {
+  option_id: string
+  justification: string
+  cited_signals: string[] // signal codes of the chosen option
+}
+
+export type RecommendationError = {
+  kind: RecommendationErrorKind
+  code: string // e.g. unknown_option, foreign_signal, rate_limited
+  message: string
+}
+
+export type RecommendationView = {
+  recommender: string // recommender name, e.g. rule-based, groq
+  options: RecommendationOption[] // in build order
+  choice: RecommenderChoice | null
+  choice_steps: string[] // trace step names, one per attempt
+  error: RecommendationError | null
+  status: RecommendationStatus
+  recommended_at: string
+  stale: boolean // computed from an analysis, check result or orchestration no longer current
+  run: RunSummary | null // null when the run could not be traced
+}
+
 export type Analysis = {
   inquiry_id: number
   extractor: Extractor
@@ -278,6 +351,8 @@ export type Analysis = {
   run: RunSummary | null // null when the run could not be traced
   checks: ChecksView | null // null until the checks succeeded once; has its own run
   orchestration: OrchestrationView | null // null until an exception was orchestrated; own run
+  // null without a recommendation; has its own run. Optional: older payloads lack it.
+  recommendation?: RecommendationView | null
 }
 
 export const FIELD_NAMES: readonly FieldName[] = [
@@ -328,6 +403,26 @@ const ERROR_KINDS: readonly OrchestrationErrorKind[] = [
   'planner_failed',
   'plan_rejected',
   'capability_mismatch',
+]
+
+const OPTION_KINDS: readonly OptionKind[] = [
+  'partial_delivery',
+  'substitute',
+  'other_source',
+  'combined',
+]
+
+const LINE_SOURCES: readonly LineSource[] = ['stock', 'substitute_stock', 'supplier']
+
+const POLARITIES: readonly SignalPolarity[] = ['positive', 'risk', 'info']
+
+const BANDS: readonly ConfidenceBand[] = ['HIGH', 'MEDIUM', 'LOW']
+
+const RECOMMENDATION_STATUSES: readonly RecommendationStatus[] = ['completed', 'failed']
+
+const RECOMMENDATION_ERROR_KINDS: readonly RecommendationErrorKind[] = [
+  'recommender_failed',
+  'choice_rejected',
 ]
 
 type Json = Record<string, unknown>
@@ -622,6 +717,85 @@ export function isOrchestrationView(value: unknown): value is OrchestrationView 
   )
 }
 
+function isOptionLine(value: unknown): value is OptionLine {
+  if (!isObject(value)) return false
+  return (
+    typeof value.product_code === 'string' &&
+    typeof value.product_name === 'string' &&
+    isOneOf(value.source, LINE_SOURCES) &&
+    isStringOrNull(value.supplier) &&
+    typeof value.quantity === 'number' &&
+    typeof value.available_on === 'string' &&
+    typeof value.unit_price === 'string' &&
+    typeof value.unit_cost === 'string' &&
+    typeof value.value === 'string' &&
+    typeof value.cost === 'string'
+  )
+}
+
+function isSignal(value: unknown): value is Signal {
+  if (!isObject(value)) return false
+  return (
+    typeof value.code === 'string' &&
+    isOneOf(value.polarity, POLARITIES) &&
+    typeof value.label === 'string'
+  )
+}
+
+function isRecommendationOption(value: unknown): value is RecommendationOption {
+  if (!isObject(value)) return false
+  return (
+    typeof value.id === 'string' &&
+    isOneOf(value.kind, OPTION_KINDS) &&
+    Array.isArray(value.lines) &&
+    value.lines.every(isOptionLine) &&
+    typeof value.covered_quantity === 'number' &&
+    typeof value.requested_quantity === 'number' &&
+    typeof value.fulfilled_on === 'string' &&
+    (typeof value.meets_deadline === 'boolean' || value.meets_deadline === null) &&
+    typeof value.value === 'string' &&
+    typeof value.cost === 'string' &&
+    typeof value.margin_percent === 'string' &&
+    isOneOf(value.band, BANDS) &&
+    Array.isArray(value.signals) &&
+    value.signals.every(isSignal)
+  )
+}
+
+function isRecommenderChoice(value: unknown): value is RecommenderChoice {
+  if (!isObject(value)) return false
+  return (
+    typeof value.option_id === 'string' &&
+    typeof value.justification === 'string' &&
+    isStringList(value.cited_signals)
+  )
+}
+
+function isRecommendationError(value: unknown): value is RecommendationError {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.kind, RECOMMENDATION_ERROR_KINDS) &&
+    typeof value.code === 'string' &&
+    typeof value.message === 'string'
+  )
+}
+
+export function isRecommendationView(value: unknown): value is RecommendationView {
+  if (!isObject(value)) return false
+  return (
+    typeof value.recommender === 'string' &&
+    Array.isArray(value.options) &&
+    value.options.every(isRecommendationOption) &&
+    (value.choice === null || isRecommenderChoice(value.choice)) &&
+    isStringList(value.choice_steps) &&
+    (value.error === null || isRecommendationError(value.error)) &&
+    isOneOf(value.status, RECOMMENDATION_STATUSES) &&
+    typeof value.recommended_at === 'string' &&
+    typeof value.stale === 'boolean' &&
+    (value.run === null || isRunSummary(value.run))
+  )
+}
+
 function isAnalysis(value: unknown): value is Analysis {
   if (!isObject(value)) return false
   return (
@@ -639,7 +813,10 @@ function isAnalysis(value: unknown): value is Analysis {
     isStringOrNull(value.corrected_by_name) &&
     (value.run === null || isRunSummary(value.run)) &&
     (value.checks === null || isChecksView(value.checks)) &&
-    (value.orchestration === null || isOrchestrationView(value.orchestration))
+    (value.orchestration === null || isOrchestrationView(value.orchestration)) &&
+    (value.recommendation === undefined ||
+      value.recommendation === null ||
+      isRecommendationView(value.recommendation))
   )
 }
 
@@ -688,4 +865,12 @@ export function rerunChecks(inquiryId: number): Promise<Analysis> {
 // analysis ApiError 404, without a current exception ApiError 409 "Nothing to orchestrate".
 export function rerunOrchestration(inquiryId: number): Promise<Analysis> {
   return requestJson(`/api/inquiries/${inquiryId}/orchestration`, isAnalysis, { method: 'POST' })
+}
+
+// POST: run only the recommendation again in a new run for the current orchestration (after a
+// stale or failed result, or none yet). Answers with the whole analysis; without an analysis
+// ApiError 404, without a current exception with a completed or partial orchestration
+// ApiError 409 "Nothing to recommend".
+export function rerunRecommendation(inquiryId: number): Promise<Analysis> {
+  return requestJson(`/api/inquiries/${inquiryId}/recommendation`, isAnalysis, { method: 'POST' })
 }

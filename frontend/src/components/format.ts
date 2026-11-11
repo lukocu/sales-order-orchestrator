@@ -15,6 +15,16 @@ export function formatUsd(value: string): string {
   return `$${whole}.${fraction.replace(/0+$/, '').padEnd(2, '0')}`
 }
 
+// Decimal strings from the API, e.g. "5.00" → "5%", "10.50" → "10.5%".
+export function formatPercent(value: string): string {
+  const trimmed = value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value
+  return `${trimmed}%`
+}
+
+export function formatPln(value: string | null): string {
+  return value === null ? '—' : `${value} PLN`
+}
+
 export function formatMs(ms: number): string {
   return `${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
 }
