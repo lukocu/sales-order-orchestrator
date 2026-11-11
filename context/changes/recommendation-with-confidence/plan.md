@@ -623,21 +623,21 @@ Migracja 0009 dodaje kolumny `unit_cost` z backfillem i dopiero potem NOT NULL. 
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 1.2 Testy modeli i seedu przechodzą
-- [x] 1.3 Modele zgadzają się z migracją: `docker compose run --rm backend uv run alembic check`
-- [x] 1.4 Downgrade do 0008 i ponowny upgrade do head działają
+- [x] 1.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 5c512f7
+- [x] 1.2 Testy modeli i seedu przechodzą — 5c512f7
+- [x] 1.3 Modele zgadzają się z migracją: `docker compose run --rm backend uv run alembic check` — 5c512f7
+- [x] 1.4 Downgrade do 0008 i ponowny upgrade do head działają — 5c512f7
 
 #### Manual
 
-- [x] 1.5 Koszty w lokalnej bazie zgadzają się z tabelą fazy
+- [x] 1.5 Koszty w lokalnej bazie zgadzają się z tabelą fazy — 5c512f7
 
 ### Phase 2: Rdzeń rekomendacji
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 2.2 Testy rdzenia przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 2.2 Testy rdzenia przechodzą
 
 ### Phase 3: Serwis, zapis i API
 
