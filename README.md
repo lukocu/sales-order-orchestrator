@@ -382,7 +382,7 @@ new variables:
   not a rule for the LLM.
 - `groq` / `openrouter`: the same model and key as the analysis, at temperature 0. The model
   sees the structured facts of the inquiry (product, quantities, deadline, consent, standard
-  discount, uncertain fields; never the e-mail) and the options in build order, which is not
+  discount, uncertain fields, customer substitute history; never the e-mail) and the options in build order, which is not
   a ranking. It answers `{option_id, justification, cited_signals}` under a strict JSON
   schema built per request: `option_id` is an enum of this inquiry's option ids and each
   cited signal an enum of their signal codes. `validate_choice` still checks that the cited

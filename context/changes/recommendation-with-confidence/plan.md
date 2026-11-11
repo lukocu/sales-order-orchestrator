@@ -607,6 +607,19 @@ Budowa opcji obsługuje najwyżej kilkanaście opcji na zapytanie (kandydaci × 
 
 Migracja 0009 dodaje kolumny `unit_cost` z backfillem i dopiero potem NOT NULL. Downgrade zdejmuje kolumny i tabelę. Istniejące orchestracje na Render nie mają rekomendacji, dopóki nie zostaną odświeżone. Panel pokazuje wtedy „not run yet” z przyciskiem re-run.
 
+## Deviations
+
+Odstępstwa od planu, przyjęte w trakcie implementacji i w impl-review (`reviews/impl-review.md`):
+
+- Problem z zadaniem zamiennika (`task_failed` / `not_checked`) jest ryzykiem tylko opcji, które używają tej możliwości; pozostałe opcje dostają info `alternative_not_checked:<cap>` (F2 z plan-review).
+- Odrzucony wybór rekomendera nie jest zapisywany (`choice = None`), więc UI nie pokazuje „Rejected choice”.
+- Dodatkowy sygnał info `history_mixed` (klient raz przyjmował, raz odrzucał zamienniki); nie obniża pasma.
+- UI po angielsku; obok list Positive i Risks jest lista Information dla sygnałów info. `formatPercent` / `formatPln` przeniesione do `format.ts`.
+- Pole `recommendation` w typie frontendu jest opcjonalne, żeby guard przyjmował starsze odpowiedzi.
+- `lock_analysis` i `current_checks` przeniesione do `checks/service.py`, bo używa ich też rekomendacja.
+- Błędy `Llm*` są rzucane `from error` (jak w `llm_planner.py`); ich komunikaty nie zawierają treści zapytania. Tylko `ValidationError` odpowiedzi idzie `from None`.
+- Po impl-review: `RecommendationFacts.customer_history` przekazuje modelowi sygnał historii klienta; ręczny re-run z 409 też usuwa nieaktualną rekomendację; migracja `0010_supplier_offer_unique` dodaje UNIQUE (product_id, supplier_name) na `supplier_offers`.
+
 ## References
 
 - Research: `context/changes/recommendation-with-confidence/research.md`

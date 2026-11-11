@@ -223,7 +223,7 @@ describe('RecommendationSection', () => {
     renderSection({
       ...ACME_RECOMMENDATION,
       status: 'failed',
-      choice: { ...ACME_RECOMMENDATION.choice!, cited_signals: ['deadline_missed'] },
+      choice: null, // a rejected choice is not stored
       error: {
         kind: 'choice_rejected',
         code: 'foreign_signal',
@@ -236,7 +236,6 @@ describe('RecommendationSection', () => {
     expect(
       screen.getByText('A cited signal does not belong to the chosen option'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Rejected choice: option stock+ABC-110')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Recommended option' })).not.toBeInTheDocument()
     expect(option('Options', 'stock+ABC-110')).toHaveTextContent('HIGH confidence')
     expect(option('Options', 'stock')).toHaveTextContent('LOW confidence')

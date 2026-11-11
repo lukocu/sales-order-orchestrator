@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.orchestration.schema import SubstituteConsent
+from app.orchestration.schema import HistorySignal, SubstituteConsent
 
 # `combined` takes the shortage from a substitute and a supplier together.
 OptionKind = Literal["partial_delivery", "substitute", "other_source", "combined"]
@@ -94,7 +94,7 @@ class RecommendationResult(BaseModel):
 
     recommender: str  # recommender name, e.g. rule-based, groq
     options: list[RecommendationOption] = Field(default_factory=list)
-    choice: RecommenderChoice | None = None  # kept also when the choice was rejected
+    choice: RecommenderChoice | None = None  # None when the choice was rejected
     choice_steps: list[str] = Field(default_factory=list)  # trace step names, one per attempt
     error: RecommendationError | None = None
 
@@ -114,3 +114,5 @@ class RecommendationFacts(BaseModel):
     substitute_consent: SubstituteConsent
     discount_percent: Decimal  # the customer's standard discount
     uncertain_inputs: list[str]  # uncertain analysis fields: customer, product_code, quantity
+    # None without a completed customer-history task.
+    customer_history: HistorySignal | None

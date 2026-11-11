@@ -17,6 +17,7 @@ from app.checks.rules import CENT, HUNDRED
 from app.orchestration.schema import (
     Capability,
     CustomerHistoryResult,
+    HistorySignal,
     SubstituteAvailabilityResult,
     SubstituteCompatibilityResult,
     SubstituteConsent,
@@ -68,9 +69,13 @@ def _completed[R: BaseModel](tasks: Sequence[TaskOutcome], result_type: type[R])
     return None
 
 
+def _history_signal(inputs: RecommendationInputs) -> HistorySignal | None:
+    history = _completed(inputs.tasks, CustomerHistoryResult)
+    return None if history is None else history.signal
+
+
 def confidence_context(inputs: RecommendationInputs) -> ConfidenceContext:
     compatibility = _completed(inputs.tasks, SubstituteCompatibilityResult)
-    history = _completed(inputs.tasks, CustomerHistoryResult)
     statuses: dict[Capability, TaskStatus] = {t.capability: t.status for t in inputs.tasks}
     return ConfidenceContext(
         deadline=inputs.deadline,
@@ -81,7 +86,7 @@ def confidence_context(inputs: RecommendationInputs) -> ConfidenceContext:
             if compatibility is None
             else {c.code: c.compatibility for c in compatibility.candidates}
         ),
-        history=None if history is None else history.signal,
+        history=_history_signal(inputs),
         uncertain_inputs=list(inputs.uncertain_inputs),
     )
 
@@ -98,6 +103,7 @@ def recommendation_facts(inputs: RecommendationInputs) -> RecommendationFacts:
         substitute_consent=inputs.consent,
         discount_percent=inputs.discount_percent,
         uncertain_inputs=list(inputs.uncertain_inputs),
+        customer_history=_history_signal(inputs),
     )
 
 

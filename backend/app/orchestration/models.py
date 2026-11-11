@@ -46,6 +46,10 @@ class SupplierOffer(SQLModel, table=True):
         CheckConstraint("quantity > 0", name="ck_supplier_offers_quantity"),
         CheckConstraint("lead_time_days >= 0", name="ck_supplier_offers_lead_time_days"),
         CheckConstraint("unit_cost > 0", name="ck_supplier_offers_unit_cost"),
+        # One offer per supplier and product: option ids and costs are keyed by the pair.
+        UniqueConstraint(
+            "product_id", "supplier_name", name="uq_supplier_offers_product_id_supplier_name"
+        ),
     )
 
     id: int | None = Field(default=None, primary_key=True)

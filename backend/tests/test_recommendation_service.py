@@ -299,6 +299,28 @@ def test_failed_orchestration_gives_no_recommendation(
     assert response.json() == {"detail": "Nothing to recommend"}
 
 
+def test_rerun_without_anything_to_recommend_drops_the_outdated_recommendation(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+) -> None:
+    assert _analyze(auth_client, acme)["recommendation"] is not None
+    with Session(migrated_engine) as session:
+        # The orchestration failed after the recommendation was stored.
+        session.execute(
+            update(InquiryOrchestration)
+            .where(col(InquiryOrchestration.inquiry_id) == acme.id)
+            .values(status="failed")
+        )
+        session.commit()
+
+    response = auth_client.post(_path(acme.id))
+
+    assert response.status_code == 409
+    assert _stored(migrated_engine, acme) is None
+
+
 def _set_orchestrated_at(engine: Engine, inquiry: Inquiry) -> None:
     with Session(engine) as session:
         session.execute(

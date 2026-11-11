@@ -107,6 +107,18 @@ def test_supplier_offer_unit_cost_must_be_positive(
     _assert_rejected(migrated_engine, row, "ck_supplier_offers_unit_cost")
 
 
+def test_one_offer_per_supplier_and_product(migrated_engine: Engine) -> None:
+    row = SupplierOffer(
+        product_id=_product_ids(migrated_engine)["ABC-100"],
+        supplier_name="Sensortech Polska",  # already offers ABC-100 in the seed
+        quantity=10,
+        lead_time_days=3,
+        unit_cost=Decimal("95.00"),
+    )
+
+    _assert_rejected(migrated_engine, row, "uq_supplier_offers_product_id_supplier_name")
+
+
 def test_recommendation_status_rejects_unknown_value(
     migrated_engine: Engine, make_inquiry: InquiryFactory
 ) -> None:

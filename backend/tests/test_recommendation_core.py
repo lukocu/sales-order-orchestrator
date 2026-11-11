@@ -607,3 +607,10 @@ def test_result_round_trips_through_json_with_decimal_strings() -> None:
     assert substitute["margin_percent"] == "25.51"
     assert substitute["lines"][1]["unit_price"] == "118.75"
     assert RecommendationResult.model_validate(dumped) == result
+
+
+def test_facts_carry_the_customer_history_signal() -> None:
+    assert recommendation_facts(_acme()).customer_history == "accepted_before"
+    assert recommendation_facts(_omega()).customer_history == "declined_before"
+    without_history = [t for t in _acme().tasks if t.capability != "customer-history"]
+    assert recommendation_facts(_acme(tasks=without_history)).customer_history is None

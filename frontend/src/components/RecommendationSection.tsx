@@ -8,7 +8,6 @@ import type {
   RecommendationErrorKind,
   RecommendationOption,
   RecommendationView,
-  RecommenderChoice,
   Signal,
   SignalPolarity,
 } from '../api/analysis'
@@ -179,22 +178,13 @@ function OptionCard({ option, cited = [], justification }: OptionCardProps) {
   )
 }
 
-function ErrorBox({
-  error,
-  choice,
-}: {
-  error: RecommendationError
-  choice: RecommenderChoice | null
-}) {
+function ErrorBox({ error }: { error: RecommendationError }) {
   return (
     <div className="orchestration__error">
       <p className="checks__outcome">
         {ERROR_KIND[error.kind]}: {error.code}
       </p>
       <p className="checks__line">{error.message}</p>
-      {error.kind === 'choice_rejected' && choice !== null && (
-        <p className="checks__line">Rejected choice: option {choice.option_id}</p>
-      )}
     </div>
   )
 }
@@ -291,7 +281,7 @@ function RecommendationResult({ recommendation }: { recommendation: Recommendati
       </p>
 
       {recommendation.error !== null && (
-        <ErrorBox error={recommendation.error} choice={choice} />
+        <ErrorBox error={recommendation.error} />
       )}
 
       {chosen !== null && choice !== null && (

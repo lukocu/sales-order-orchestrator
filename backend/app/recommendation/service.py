@@ -104,12 +104,17 @@ def run_recommendation(
     """Recommend for the current orchestration in a new run and store the result if current.
 
     Raises `NothingToRecommend` when there is no current exception with a `completed` or
-    `partial` orchestration. Unexpected errors propagate after the run is recorded as failed;
-    the stored result stays as it was. `attempts` bounds the recommender calls (a transient
-    error is retried while attempts remain).
+    `partial` orchestration, after dropping a stored recommendation of old data. Unexpected
+    errors propagate after the run is recorded as failed; the stored result stays as it was.
+    `attempts` bounds the recommender calls (a transient error is retried while attempts
+    remain).
     """
-    with Session(engine) as session:
-        inputs = _read_inputs(session, inquiry_id)
+    try:
+        with Session(engine) as session:
+            inputs = _read_inputs(session, inquiry_id)
+    except NothingToRecommend:
+        _drop_outdated(engine, inquiry_id)
+        raise
 
     with run(engine, subject_type=SUBJECT_TYPE, subject_id=str(inquiry_id)) as traced:
         result = _recommend(traced, recommender, inquiry_id, inputs, attempts, retry_delay_s)
@@ -128,10 +133,9 @@ def recommend_after_orchestration(
     stored recommendation as it was.
     """
     try:
-        try:
-            run_recommendation(engine, inquiry_id, recommender, attempts=1)
-        except NothingToRecommend:
-            _drop_outdated(engine, inquiry_id)
+        run_recommendation(engine, inquiry_id, recommender, attempts=1)
+    except NothingToRecommend:
+        pass  # run_recommendation already dropped a recommendation of old data
     except Exception as error:
         logger.warning("Recommendation failed for inquiry %s: %s", inquiry_id, type(error).__name__)
 

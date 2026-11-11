@@ -46,7 +46,9 @@ Wiadomość użytkownika (JSON) ma dwa pola:
 available, shortage (zamawiana ilość, stan magazynu, brak w sztukach), deadline (termin \
 klienta, null gdy brak), reference_date (data, od której dostępny jest stan własny), \
 substitute_consent (zgoda na zamiennik: "confirmed", "refused", "unconfirmed"), \
-discount_percent (standardowy rabat klienta), uncertain_inputs (niepewnie odczytane pola).
+discount_percent (standardowy rabat klienta), uncertain_inputs (niepewnie odczytane pola), \
+customer_history (historia zamienników klienta: "accepted_before", "declined_before", \
+"mixed", "no_substitute_history", null gdy nie sprawdzono).
 - options: opcje w kolejności, w jakiej je zbudowano (kolejność nie jest rankingiem). \
 Każda ma: id, kind (partial_delivery, substitute, other_source, combined), lines (produkt, \
 źródło, dostawca, ilość, data dostępności), covered_quantity i requested_quantity \
