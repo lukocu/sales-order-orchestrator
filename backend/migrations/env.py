@@ -9,6 +9,7 @@ import app.checks.models  # noqa: F401
 import app.inquiries.models  # noqa: F401
 import app.orchestration.models  # noqa: F401
 import app.parsing.models  # noqa: F401
+import app.policy.models  # noqa: F401
 import app.recommendation.models  # noqa: F401
 import app.tracing.models  # noqa: F401
 from app.settings import get_settings
