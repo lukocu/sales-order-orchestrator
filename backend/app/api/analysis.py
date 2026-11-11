@@ -10,6 +10,8 @@ from app.api.errors import database_unavailable
 from app.auth.deps import AuthUser, get_current_user
 from app.checks.service import NoAnalysis
 from app.db import get_engine
+from app.orchestration.planning import Planner, get_planner
+from app.orchestration.service import NothingToOrchestrate
 from app.parsing.extractor import (
     ExtractionError,
     ExtractionNotConfigured,
@@ -26,6 +28,7 @@ from app.parsing.service import (
     analyze_inquiry,
     get_analysis,
     recheck_inquiry,
+    reorchestrate_inquiry,
     save_corrections,
 )
 
@@ -35,6 +38,7 @@ router = APIRouter()
 
 PATH = "/inquiries/{inquiry_id}/analysis"
 CHECKS_PATH = "/inquiries/{inquiry_id}/checks"
+ORCHESTRATION_PATH = "/inquiries/{inquiry_id}/orchestration"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -68,6 +72,16 @@ def _checks_failed(inquiry_id: int, error: Exception) -> HTTPException:
     # Class and inquiry id only: the message could quote inquiry content.
     logger.error("Analysis API: checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)
     return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Checks failed")
+
+
+def _orchestration_failed(inquiry_id: int, error: Exception) -> HTTPException:
+    # Class and inquiry id only: the message could quote inquiry content.
+    logger.error(
+        "Analysis API: orchestration failed for inquiry %s: %s", inquiry_id, type(error).__name__
+    )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Orchestration failed"
+    )
 
 
 def _extraction_error(error: ExtractionError) -> HTTPException:
@@ -106,11 +120,12 @@ def analyze(
     inquiry_id: InquiryId,
     engine: Annotated[Engine, Depends(get_engine)],
     extractor: Annotated[InquiryExtractor, Depends(get_extractor)],
+    planner: Annotated[Planner, Depends(get_planner)],
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> AnalysisView:
     """Analyze the inquiry, replacing its analysis and corrections; on failure nothing changes."""
     try:
-        return analyze_inquiry(engine, extractor, inquiry_id, user)
+        return analyze_inquiry(engine, extractor, inquiry_id, user, planner)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except ExtractionError as error:
@@ -134,6 +149,7 @@ def correct(
     inquiry_id: InquiryId,
     corrections: CorrectionRequest,
     engine: Annotated[Engine, Depends(get_engine)],
+    planner: Annotated[Planner, Depends(get_planner)],
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> AnalysisView:
     """Save the user's field values; 409 when the analysis was replaced in the meantime."""
@@ -145,6 +161,7 @@ def correct(
             corrections.reviewed,
             corrections.analyzed_at,
             user,
+            planner,
         )
     except AnalysisNotFound:
         raise _no_analysis() from None
@@ -162,10 +179,14 @@ def correct(
 
 
 @router.post(CHECKS_PATH, response_model=AnalysisView)
-def recheck(inquiry_id: InquiryId, engine: Annotated[Engine, Depends(get_engine)]) -> AnalysisView:
+def recheck(
+    inquiry_id: InquiryId,
+    engine: Annotated[Engine, Depends(get_engine)],
+    planner: Annotated[Planner, Depends(get_planner)],
+) -> AnalysisView:
     """Run the checks again for the current analysis (after a stale or failed result)."""
     try:
-        return recheck_inquiry(engine, inquiry_id)
+        return recheck_inquiry(engine, inquiry_id, planner)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except NoAnalysis:
@@ -177,3 +198,29 @@ def recheck(inquiry_id: InquiryId, engine: Annotated[Engine, Depends(get_engine)
         raise database_unavailable() from None
     except Exception as error:  # a failing check; its run and step are recorded as failed
         raise _checks_failed(inquiry_id, error) from None
+
+
+@router.post(ORCHESTRATION_PATH, response_model=AnalysisView)
+def reorchestrate(
+    inquiry_id: InquiryId,
+    engine: Annotated[Engine, Depends(get_engine)],
+    planner: Annotated[Planner, Depends(get_planner)],
+) -> AnalysisView:
+    """Run only the orchestration again (after a stale, failed or partial result)."""
+    try:
+        return reorchestrate_inquiry(engine, inquiry_id, planner)
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except NothingToOrchestrate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Nothing to orchestrate"
+        ) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+    except Exception as error:  # its run and failed step are recorded
+        raise _orchestration_failed(inquiry_id, error) from None

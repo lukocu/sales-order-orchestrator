@@ -7,7 +7,9 @@ execution order from the registry's dependency edges.
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Annotated, Literal, Protocol
+
+from fastapi import Depends
 
 from app.orchestration.registry import CAPABILITIES
 from app.orchestration.schema import (
@@ -17,6 +19,7 @@ from app.orchestration.schema import (
     PlannerChoice,
     SubstituteConsent,
 )
+from app.settings import Settings, get_settings
 from app.tracing.models import StepKind
 from app.tracing.pricing import LlmUsage
 
@@ -124,6 +127,15 @@ class RuleBasedPlanner:
                 "history are checked."
             )
         return PlanningResult(choice=PlannerChoice(tasks=tasks, summary=summary), usage=None)
+
+
+def get_planner(settings: Annotated[Settings, Depends(get_settings)]) -> Planner:
+    """Planner selected by settings; also a FastAPI dependency overridable in tests.
+
+    Always the rule-based planner until the LLM planner exists.
+    """
+    del settings  # selects the provider once the LLM planner exists
+    return RuleBasedPlanner()
 
 
 class PlanRejected(Exception):

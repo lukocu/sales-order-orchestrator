@@ -8,6 +8,7 @@ from sqlmodel import Session, col, select
 from app.auth.deps import AuthUser
 from app.auth.models import User
 from app.inquiries.models import Inquiry
+from app.orchestration.planning import RuleBasedPlanner
 from app.parsing.fake import RuleBasedExtractor
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
@@ -57,7 +58,9 @@ def test_reference_date_is_warsaw_day() -> None:
 
 def _analyze(engine: Engine, inquiry: Inquiry, user: User) -> None:
     assert inquiry.id is not None
-    analyze_inquiry(engine, RuleBasedExtractor(), inquiry.id, AuthUser.from_user(user))
+    analyze_inquiry(
+        engine, RuleBasedExtractor(), inquiry.id, AuthUser.from_user(user), RuleBasedPlanner()
+    )
 
 
 def test_deleting_inquiry_deletes_analysis(

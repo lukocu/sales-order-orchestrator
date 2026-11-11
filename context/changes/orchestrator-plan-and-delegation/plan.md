@@ -654,19 +654,19 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 2.2 Testy rdzenia przechodzą: `docker compose run --rm backend uv run pytest tests/test_orchestration_core.py tests/test_orchestration_agents.py`
+- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — b4dd344
+- [x] 2.2 Testy rdzenia przechodzą: `docker compose run --rm backend uv run pytest tests/test_orchestration_core.py tests/test_orchestration_agents.py` — b4dd344
 
 ### Phase 3: Serwis, zapis i API
 
 #### Automated
 
-- [ ] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 3.2 Testy orchestracji i regresji przechodzą
+- [x] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 3.2 Testy orchestracji i regresji przechodzą
 
 #### Manual
 
-- [ ] 3.3 Lokalny cykl przez curl w trybie fake pokazuje plany i ślad z tabeli
+- [x] 3.3 Lokalny cykl przez curl w trybie fake pokazuje plany i ślad z tabeli
 
 ### Phase 4: Planner LLM
 

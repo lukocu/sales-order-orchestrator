@@ -15,6 +15,7 @@ from app.auth.passwords import hash_password
 from app.db import build_engine, get_engine
 from app.inquiries.models import Inquiry
 from app.main import app
+from app.orchestration.planning import Planner, RuleBasedPlanner, get_planner
 from app.parsing.extractor import (
     ExtractionError,
     ExtractionResult,
@@ -79,6 +80,7 @@ class StubExtractor:
 
 
 ExtractorSetter = Callable[[InquiryExtractor], None]
+PlannerSetter = Callable[[Planner], None]
 
 
 @pytest.fixture(scope="session")
@@ -173,6 +175,22 @@ def use_extractor() -> Iterator[ExtractorSetter]:
     use(RuleBasedExtractor())
     yield use
     app.dependency_overrides.pop(get_extractor, None)
+
+
+@pytest.fixture(autouse=True)
+def use_planner() -> Iterator[PlannerSetter]:
+    """Override `get_planner`: the rule-based planner until the test sets another one.
+
+    Autouse, so every API test orchestrates with the rule-based planner whatever
+    `LLM_PROVIDER` says.
+    """
+
+    def use(planner: Planner) -> None:
+        app.dependency_overrides[get_planner] = lambda: planner
+
+    use(RuleBasedPlanner())
+    yield use
+    app.dependency_overrides.pop(get_planner, None)
 
 
 def _client_with(engine: Engine) -> Iterator[TestClient]:
