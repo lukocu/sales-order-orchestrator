@@ -683,14 +683,14 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
 
 #### Automated
 
-- [x] 5.1 Lint przechodzi: `cd frontend && npm run lint`
-- [x] 5.2 Typy przechodzą: `cd frontend && npm run typecheck`
-- [x] 5.3 Testy przechodzą: `cd frontend && npm test`
-- [x] 5.4 Build przechodzi: `cd frontend && npm run build`
-- [x] 5.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 5.6 Obraz się buduje: `docker build -t sales-order-orchestrator .`
+- [x] 5.1 Lint przechodzi: `cd frontend && npm run lint` — 6c4071d
+- [x] 5.2 Typy przechodzą: `cd frontend && npm run typecheck` — 6c4071d
+- [x] 5.3 Testy przechodzą: `cd frontend && npm test` — 6c4071d
+- [x] 5.4 Build przechodzi: `cd frontend && npm run build` — 6c4071d
+- [x] 5.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 6c4071d
+- [x] 5.6 Obraz się buduje: `docker build -t sales-order-orchestrator .` — 6c4071d
 
 #### Manual
 
-- [x] 5.7 Lokalnie w trybie fake trzy scenariusze i korekty działają zgodnie z planem
-- [ ] 5.8 Na Render z Groq plan ACME przechodzi walidację z tokenami i kosztem
+- [x] 5.7 Lokalnie w trybie fake trzy scenariusze i korekty działają zgodnie z planem — 6c4071d
+- [x] 5.8 Na Render z Groq plan ACME przechodzi walidację z tokenami i kosztem

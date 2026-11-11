@@ -1,7 +1,7 @@
 ---
 change_id: orchestrator-plan-and-delegation
 title: Orchestrator plan and delegation
-status: implementing
+status: implemented
 created: 2026-11-11
 updated: 2026-11-11
 archived_at: null
