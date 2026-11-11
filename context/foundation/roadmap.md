@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-10
+updated: 2026-11-11
 prd_version: 1
 main_goal: quality
 top_blocker: decisions
@@ -46,7 +46,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-01 | login-and-inbox                    | handlowiec loguje się kontem testowym i widzi skrzynkę zapytań                        | F-01, seeded test accounts with roles, seeded sample inquiries | FR-001, Access Control | done |
 | S-02 | parse-inquiry                      | handlowiec uruchamia analizę i poprawia sparsowane pola zapytania                     | S-01, F-02    | FR-002, US-01, NFR               | done        |
 | S-03 | deterministic-checks-and-exception | handlowiec widzi sprawdzenia bez agentów i wykryty wyjątek albo zakończenie standardowe | S-02, seeded mock company data (customers, products, stock, prices, discounts, credit status) | FR-003, FR-004, US-01 | done |
-| S-04 | orchestrator-plan-and-delegation   | handlowiec widzi plan orchestratora i wyniki delegowanych sprawdzeń                   | S-03, seeded substitute catalog and customer order history | FR-005, FR-006, FR-014, US-01, NFR | proposed |
+| S-04 | orchestrator-plan-and-delegation   | handlowiec widzi plan orchestratora i wyniki delegowanych sprawdzeń                   | S-03, seeded substitute catalog and customer order history | FR-005, FR-006, FR-014, US-01, NFR | in-progress |
 | S-05 | recommendation-with-confidence     | handlowiec widzi rekomendację z uzasadnieniem i pewnością                              | S-04          | FR-007, US-01                    | proposed |
 | S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | proposed |
 | S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | proposed |
@@ -155,7 +155,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Jak plan różni się dla typów wyjątków innych niż brak ilości? (Open Roadmap Question 4) — Owner: autor. Block: no (wariant „bez zgody na zamiennik → bez sprawdzenia zamiennika” wystarcza, by plan zależał od danych).
 - **Risk:** Największe ryzyko techniczne kamienia milowego — plan nie może być pozorny, a zależności (zamiennik przed dostępnością zamiennika) muszą być respektowane; brak dopasowania kompetencji to jawny błąd.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-05: Rekomendacja z uzasadnieniem i pewnością
 
