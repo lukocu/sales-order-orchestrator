@@ -2,7 +2,8 @@ import { requestJson } from './client'
 
 // Mirrors AnalysisView in backend/app/parsing/service.py, ParsedFields in
 // backend/app/parsing/schema.py, RunSummary in backend/app/tracing/summary.py and
-// ChecksView / CheckResults in backend/app/checks/{service,schema}.py.
+// ChecksView / CheckResults in backend/app/checks/{service,schema}.py and OrchestrationView /
+// OrchestrationResult in backend/app/orchestration/{service,schema}.py.
 // Decimal values (price_value, cost_usd, amounts and percents of the checks) arrive as
 // JSON strings.
 
@@ -145,6 +146,123 @@ export type ChecksView = {
   run: RunSummary | null // null when the run could not be traced
 }
 
+export type Capability =
+  | 'substitute-compatibility'
+  | 'substitute-availability'
+  | 'supplier-availability'
+  | 'customer-history'
+
+// From the analysis' substitute_allowed: true / false / null.
+export type SubstituteConsent = 'confirmed' | 'refused' | 'unconfirmed'
+
+export type OrchestrationStatus = 'completed' | 'partial' | 'failed'
+
+export type TaskStatus = 'completed' | 'failed' | 'skipped'
+
+export type Compatibility = 'full' | 'partial'
+
+export type HistorySignal =
+  | 'accepted_before'
+  | 'declined_before'
+  | 'mixed'
+  | 'no_substitute_history'
+
+export type OrchestrationErrorKind = 'planner_failed' | 'plan_rejected' | 'capability_mismatch'
+
+export type PlannedTask = {
+  capability: Capability
+  reason: string
+}
+
+// The planner's raw answer, kept also when the plan was rejected.
+export type PlannerChoice = {
+  tasks: PlannedTask[]
+  summary: string
+}
+
+export type SubstituteCandidate = {
+  code: string
+  name: string
+  compatibility: Compatibility
+  note: string
+}
+
+export type SubstituteCompatibilityResult = {
+  capability: 'substitute-compatibility'
+  candidates: SubstituteCandidate[]
+}
+
+export type SubstituteStock = {
+  code: string
+  stock: number
+  covers_shortage: boolean
+}
+
+export type SubstituteAvailabilityResult = {
+  capability: 'substitute-availability'
+  candidates: SubstituteStock[]
+}
+
+export type SupplierDelivery = {
+  supplier: string
+  quantity: number
+  lead_time_days: number
+  available_on: string // ISO date
+  meets_deadline: boolean | null // null when the inquiry has no deadline
+  covers_shortage: boolean
+}
+
+export type SupplierAvailabilityResult = {
+  capability: 'supplier-availability'
+  offers: SupplierDelivery[]
+}
+
+export type CustomerHistoryResult = {
+  capability: 'customer-history'
+  orders_count: number
+  substitutes_offered: number
+  substitutes_accepted: number
+  signal: HistorySignal
+}
+
+// Told apart by `capability`.
+export type AgentResult =
+  | SubstituteCompatibilityResult
+  | SubstituteAvailabilityResult
+  | SupplierAvailabilityResult
+  | CustomerHistoryResult
+
+export type TaskOutcome = {
+  capability: Capability
+  agent: string
+  reason: string // the planner's reason
+  depends_on: Capability[]
+  stage: number // 1-based
+  status: TaskStatus
+  steps: string[] // trace step names, one per attempt; empty when skipped
+  error_type: string | null // exception class name only
+  result: AgentResult | null
+}
+
+export type OrchestrationError = {
+  kind: OrchestrationErrorKind
+  code: string // e.g. substitute_refused, missing_prerequisite, no_agent, rate_limited
+  message: string
+}
+
+export type OrchestrationView = {
+  status: OrchestrationStatus
+  consent: SubstituteConsent
+  planner: string // planner name, e.g. fake, groq
+  planner_choice: PlannerChoice | null // kept also when the plan was rejected
+  planner_steps: string[]
+  tasks: TaskOutcome[]
+  error: OrchestrationError | null
+  orchestrated_at: string
+  stale: boolean // computed from an analysis version that is no longer current
+  run: RunSummary | null // null when the run could not be traced
+}
+
 export type Analysis = {
   inquiry_id: number
   extractor: Extractor
@@ -159,6 +277,7 @@ export type Analysis = {
   corrected_by_name: string | null
   run: RunSummary | null // null when the run could not be traced
   checks: ChecksView | null // null until the checks succeeded once; has its own run
+  orchestration: OrchestrationView | null // null until an exception was orchestrated; own run
 }
 
 export const FIELD_NAMES: readonly FieldName[] = [
@@ -184,6 +303,32 @@ const NEEDS_INPUT_REASONS: readonly NeedsInputReason[] = [
 ]
 
 const CHECK_INPUTS: readonly CheckInput[] = ['customer', 'product_code', 'quantity']
+
+const CAPABILITIES: readonly Capability[] = [
+  'substitute-compatibility',
+  'substitute-availability',
+  'supplier-availability',
+  'customer-history',
+]
+
+const CONSENTS: readonly SubstituteConsent[] = ['confirmed', 'refused', 'unconfirmed']
+
+const ORCHESTRATION_STATUSES: readonly OrchestrationStatus[] = ['completed', 'partial', 'failed']
+
+const TASK_STATUSES: readonly TaskStatus[] = ['completed', 'failed', 'skipped']
+
+const HISTORY_SIGNALS: readonly HistorySignal[] = [
+  'accepted_before',
+  'declined_before',
+  'mixed',
+  'no_substitute_history',
+]
+
+const ERROR_KINDS: readonly OrchestrationErrorKind[] = [
+  'planner_failed',
+  'plan_rejected',
+  'capability_mismatch',
+]
 
 type Json = Record<string, unknown>
 
@@ -367,6 +512,116 @@ function isChecksView(value: unknown): value is ChecksView {
   )
 }
 
+function isCapability(value: unknown): value is Capability {
+  return isOneOf(value, CAPABILITIES)
+}
+
+function isPlannerChoice(value: unknown): value is PlannerChoice {
+  if (!isObject(value)) return false
+  return (
+    Array.isArray(value.tasks) &&
+    value.tasks.every(
+      (task) => isObject(task) && isCapability(task.capability) && typeof task.reason === 'string',
+    ) &&
+    typeof value.summary === 'string'
+  )
+}
+
+function isSubstituteCandidate(value: unknown): value is SubstituteCandidate {
+  if (!isObject(value)) return false
+  return (
+    typeof value.code === 'string' &&
+    typeof value.name === 'string' &&
+    (value.compatibility === 'full' || value.compatibility === 'partial') &&
+    typeof value.note === 'string'
+  )
+}
+
+function isSubstituteStock(value: unknown): value is SubstituteStock {
+  if (!isObject(value)) return false
+  return (
+    typeof value.code === 'string' &&
+    typeof value.stock === 'number' &&
+    typeof value.covers_shortage === 'boolean'
+  )
+}
+
+function isSupplierDelivery(value: unknown): value is SupplierDelivery {
+  if (!isObject(value)) return false
+  return (
+    typeof value.supplier === 'string' &&
+    typeof value.quantity === 'number' &&
+    typeof value.lead_time_days === 'number' &&
+    typeof value.available_on === 'string' &&
+    (typeof value.meets_deadline === 'boolean' || value.meets_deadline === null) &&
+    typeof value.covers_shortage === 'boolean'
+  )
+}
+
+// Told apart by `capability`, like the discriminated union of the backend.
+function isAgentResult(value: unknown): value is AgentResult {
+  if (!isObject(value)) return false
+  switch (value.capability) {
+    case 'substitute-compatibility':
+      return Array.isArray(value.candidates) && value.candidates.every(isSubstituteCandidate)
+    case 'substitute-availability':
+      return Array.isArray(value.candidates) && value.candidates.every(isSubstituteStock)
+    case 'supplier-availability':
+      return Array.isArray(value.offers) && value.offers.every(isSupplierDelivery)
+    case 'customer-history':
+      return (
+        typeof value.orders_count === 'number' &&
+        typeof value.substitutes_offered === 'number' &&
+        typeof value.substitutes_accepted === 'number' &&
+        isOneOf(value.signal, HISTORY_SIGNALS)
+      )
+    default:
+      return false
+  }
+}
+
+function isTaskOutcome(value: unknown): value is TaskOutcome {
+  if (!isObject(value)) return false
+  return (
+    isCapability(value.capability) &&
+    typeof value.agent === 'string' &&
+    typeof value.reason === 'string' &&
+    Array.isArray(value.depends_on) &&
+    value.depends_on.every(isCapability) &&
+    typeof value.stage === 'number' &&
+    isOneOf(value.status, TASK_STATUSES) &&
+    isStringList(value.steps) &&
+    isStringOrNull(value.error_type) &&
+    (value.result === null || isAgentResult(value.result))
+  )
+}
+
+function isOrchestrationError(value: unknown): value is OrchestrationError {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.kind, ERROR_KINDS) &&
+    typeof value.code === 'string' &&
+    typeof value.message === 'string'
+  )
+}
+
+export function isOrchestrationView(value: unknown): value is OrchestrationView {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.status, ORCHESTRATION_STATUSES) &&
+    isOneOf(value.consent, CONSENTS) &&
+    typeof value.planner === 'string' &&
+    (value.planner_choice === null || isPlannerChoice(value.planner_choice)) &&
+    isStringList(value.planner_steps) &&
+    Array.isArray(value.tasks) &&
+    value.tasks.every(isTaskOutcome) &&
+    (value.error === null || isOrchestrationError(value.error)) &&
+    typeof value.orchestrated_at === 'string' &&
+    typeof value.stale === 'boolean' &&
+    (value.run === null || isRunSummary(value.run))
+  )
+}
+
 function isAnalysis(value: unknown): value is Analysis {
   if (!isObject(value)) return false
   return (
@@ -383,7 +638,8 @@ function isAnalysis(value: unknown): value is Analysis {
     isStringOrNull(value.corrected_at) &&
     isStringOrNull(value.corrected_by_name) &&
     (value.run === null || isRunSummary(value.run)) &&
-    (value.checks === null || isChecksView(value.checks))
+    (value.checks === null || isChecksView(value.checks)) &&
+    (value.orchestration === null || isOrchestrationView(value.orchestration))
   )
 }
 
@@ -425,4 +681,11 @@ export function saveCorrections(
 // missing result). Answers with the whole analysis; without an analysis ApiError 404.
 export function rerunChecks(inquiryId: number): Promise<Analysis> {
   return requestJson(`/api/inquiries/${inquiryId}/checks`, isAnalysis, { method: 'POST' })
+}
+
+// POST: run only the orchestration again in a new run for the current analysis (after a
+// stale, failed or partial result, or none yet). Answers with the whole analysis; without an
+// analysis ApiError 404, without a current exception ApiError 409 "Nothing to orchestrate".
+export function rerunOrchestration(inquiryId: number): Promise<Analysis> {
+  return requestJson(`/api/inquiries/${inquiryId}/orchestration`, isAnalysis, { method: 'POST' })
 }

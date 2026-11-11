@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields, RunSummary } from '../api/analysis'
+import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import AnalysisPanel from './AnalysisPanel'
 
 type Handler = () => Response | Promise<Response>
@@ -8,6 +9,7 @@ type Routes = Record<string, Handler | Handler[]>
 
 const PATH = '/api/inquiries/7/analysis'
 const CHECKS_PATH = '/api/inquiries/7/checks'
+const ORCHESTRATION_PATH = '/api/inquiries/7/orchestration'
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -180,6 +182,7 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
     corrected_by_name: null,
     run: LLM_RUN,
     checks: null,
+    orchestration: null,
     ...overrides,
   }
 }
@@ -492,6 +495,64 @@ describe('AnalysisPanel', () => {
     expect(await screen.findByRole('button', { name: 'Save corrections' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Running checks…' })).not.toBeInTheDocument()
+  })
+
+  it('re-runs the orchestrator with every button disabled and keeps unsaved edits', async () => {
+    let answer: (response: Response) => void = () => {}
+    const fetchMock = stubApi({
+      [`GET ${PATH}`]: () =>
+        json(
+          200,
+          analysis({
+            checks: EXCEPTION,
+            orchestration: {
+              ...ACME_ORCHESTRATION,
+              status: 'failed',
+              tasks: [],
+              error: { kind: 'planner_failed', code: 'unavailable', message: 'Planner unavailable' },
+            },
+          }),
+        ),
+      [`POST ${ORCHESTRATION_PATH}`]: () => new Promise<Response>((resolve) => (answer = resolve)),
+    })
+
+    renderPanel()
+    fireEvent.change(await screen.findByLabelText('Customer'), { target: { value: 'ACME SA' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Re-run orchestrator' }))
+
+    expect(await screen.findByRole('button', { name: 'Running orchestrator…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save corrections' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeDisabled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      ORCHESTRATION_PATH,
+      expect.objectContaining({ method: 'POST' }),
+    )
+    answer(json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
+
+    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled()
+    expect(screen.getByLabelText('Customer')).toHaveValue('ACME SA')
+    expect(screen.getByRole('region', { name: 'Orchestration metrics' })).toBeInTheDocument()
+  })
+
+  it('shows a failed orchestrator re-run with retry', async () => {
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
+      [`POST ${ORCHESTRATION_PATH}`]: [
+        () => json(503, { detail: 'Database unavailable' }),
+        () => json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })),
+      ],
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: 'Re-run orchestrator' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Re-running the orchestrator failed: Database unavailable')
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
+
+    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('calls onUnauthorized when the API answers 401', async () => {

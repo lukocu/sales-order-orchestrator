@@ -12,17 +12,22 @@ import {
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
 import { formatDate, totalCost, totalDuration } from './format'
+import OrchestrationSection from './OrchestrationSection'
 import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
   analysis: Analysis
-  // True while the panel analyzes, saves or re-runs the checks.
+  // True while the panel analyzes, saves or re-runs the checks or the orchestrator.
   disabled: boolean
   // True while the panel re-runs the checks.
   running: boolean
+  // True while the panel re-runs the orchestrator.
+  orchestrating: boolean
   // Re-runs the checks and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
+  // Re-runs the orchestrator and shows the result; rejects when the re-run failed.
+  onRerunOrchestration: () => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -110,7 +115,6 @@ function Banner({ checks, analysis }: { checks: ChecksView; analysis: Analysis }
           Exception: insufficient stock — requested {formatCount(stock.requested)}, available{' '}
           {formatCount(stock.available)} (short {formatCount(stock.shortage)})
         </p>
-        <p className="checks__line">Handed over to orchestration (not available yet)</p>
         <p className="checks__line">{substituteText(analysis.fields.substitute_allowed)}</p>
       </div>
     )
@@ -266,7 +270,16 @@ function CreditItem({ check }: { check: CreditCheck }) {
   )
 }
 
-function ChecksSection({ inquiryId, analysis, disabled, running, onRerun, onUnauthorized }: Props) {
+function ChecksSection({
+  inquiryId,
+  analysis,
+  disabled,
+  running,
+  orchestrating,
+  onRerun,
+  onRerunOrchestration,
+  onUnauthorized,
+}: Props) {
   const [error, setError] = useState<string | null>(null)
   const checks = analysis.checks
   const headingId = `checks-${inquiryId}-heading`
@@ -313,6 +326,16 @@ function ChecksSection({ inquiryId, analysis, disabled, running, onRerun, onUnau
       {checks !== null && (
         <>
           <Banner checks={checks} analysis={analysis} />
+          {checks.outcome === 'exception' && (
+            <OrchestrationSection
+              inquiryId={inquiryId}
+              orchestration={analysis.orchestration}
+              disabled={disabled}
+              running={orchestrating}
+              onRerun={onRerunOrchestration}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
           {checks.uncertain_inputs.length > 0 && (
             <p className="checks__uncertain">
               Based on uncertain fields:{' '}

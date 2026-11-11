@@ -602,3 +602,60 @@ button:disabled {
 .check__status--muted {
   color: var(--muted);
 }
+
+/* Orchestration */
+
+.orchestration {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.orchestration .analysis__subheading {
+  margin: 0;
+}
+
+.orchestration__banner--ok {
+  border-left-color: var(--ok);
+}
+
+.orchestration__banner--warn {
+  border-left-color: var(--warn);
+}
+
+.orchestration__banner--error {
+  border-left-color: var(--error);
+}
+
+.orchestration__consent {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.orchestration__error {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--error);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.orchestration__stage {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.orchestration__stage-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.orchestration__result {
+  display: block;
+}

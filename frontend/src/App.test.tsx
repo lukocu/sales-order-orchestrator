@@ -107,6 +107,7 @@ const OLDER_ANALYSIS: Analysis = {
   corrected_by_name: null,
   run: null,
   checks: STANDARD,
+  orchestration: null,
 }
 
 function summary({ body: _body, ...rest }: InquiryDetail) {

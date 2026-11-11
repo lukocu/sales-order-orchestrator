@@ -672,25 +672,25 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
 
 #### Automated
 
-- [x] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 4.2 Testy klienta i plannera przechodzą
+- [x] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 228856a
+- [x] 4.2 Testy klienta i plannera przechodzą — 228856a
 
 #### Manual
 
-- [x] 4.3 Lokalnie z Groq krok plan ma tokeny i koszt, a plany przechodzą walidację
+- [x] 4.3 Lokalnie z Groq krok plan ma tokeny i koszt, a plany przechodzą walidację — 228856a
 
 ### Phase 5: Frontend i wdrożenie
 
 #### Automated
 
-- [ ] 5.1 Lint przechodzi: `cd frontend && npm run lint`
-- [ ] 5.2 Typy przechodzą: `cd frontend && npm run typecheck`
-- [ ] 5.3 Testy przechodzą: `cd frontend && npm test`
-- [ ] 5.4 Build przechodzi: `cd frontend && npm run build`
-- [ ] 5.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 5.6 Obraz się buduje: `docker build -t sales-order-orchestrator .`
+- [x] 5.1 Lint przechodzi: `cd frontend && npm run lint`
+- [x] 5.2 Typy przechodzą: `cd frontend && npm run typecheck`
+- [x] 5.3 Testy przechodzą: `cd frontend && npm test`
+- [x] 5.4 Build przechodzi: `cd frontend && npm run build`
+- [x] 5.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 5.6 Obraz się buduje: `docker build -t sales-order-orchestrator .`
 
 #### Manual
 
-- [ ] 5.7 Lokalnie w trybie fake trzy scenariusze i korekty działają zgodnie z planem
+- [x] 5.7 Lokalnie w trybie fake trzy scenariusze i korekty działają zgodnie z planem
 - [ ] 5.8 Na Render z Groq plan ACME przechodzi walidację z tokenami i kosztem

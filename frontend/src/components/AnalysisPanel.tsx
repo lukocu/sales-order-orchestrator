@@ -3,6 +3,7 @@ import {
   analyzeInquiry,
   fetchAnalysis,
   rerunChecks,
+  rerunOrchestration,
   saveCorrections,
   type Analysis,
   type FieldName,
@@ -206,7 +207,9 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [reviewed, setReviewed] = useState<FieldName[]>([])
-  const [busy, setBusy] = useState<'analyzing' | 'saving' | 'checking' | null>(null)
+  const [busy, setBusy] = useState<
+    'analyzing' | 'saving' | 'checking' | 'orchestrating' | null
+  >(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -267,6 +270,16 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
     setBusy('checking')
     try {
       showChecked(await rerunChecks(inquiryId))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // Errors are left to OrchestrationSection, which shows them next to its button.
+  async function rerunOrchestrator() {
+    setBusy('orchestrating')
+    try {
+      showChecked(await rerunOrchestration(inquiryId))
     } finally {
       setBusy(null)
     }
@@ -475,7 +488,9 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
           analysis={analysis}
           disabled={busy !== null}
           running={busy === 'checking'}
+          orchestrating={busy === 'orchestrating'}
           onRerun={rerun}
+          onRerunOrchestration={rerunOrchestrator}
           onUnauthorized={onUnauthorized}
         />
       </>

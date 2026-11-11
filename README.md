@@ -167,8 +167,9 @@ without a match does not fall back to the e-mail. The outcome is decided in this
 1. **Needs input** when the customer is missing, not found or ambiguous, the product code is
    missing or not in the catalogue, or the quantity is missing. The UI lists the reasons.
 2. **Exception** (`insufficient_stock`) when the quantity is greater than the stock (equal is
-   still standard). The inquiry is meant to be handed over to orchestration (not available
-   yet); the UI shows the shortage and whether the customer accepts a substitute.
+   still standard). The UI shows the shortage and whether the customer accepts a substitute,
+   and the inquiry is handed over to the orchestrator (see
+   [Orchestration](#orchestration)).
 3. **Standard** otherwise: completed without agents.
 
 The price (list price less the customer's standard discount, value in PLN), a requested
@@ -204,6 +205,73 @@ amounts and percents are JSON strings). Without an analysis it answers `404 No a
 
 The feature is deployed like everything else, by a merge to `main` (see [Deploy](#deploy)):
 the container applies migration `0006` with the seed data when it starts.
+
+## Orchestration
+
+When the checks end in an `insufficient_stock` exception, the orchestrator takes over
+(`app.orchestration`), in its own run:
+
+1. A **planner** picks the capabilities the inquiry needs from a closed list
+   (`substitute-compatibility`, `substitute-availability`, `supplier-availability`,
+   `customer-history`), each with a reason. It sees structured facts only (product, shortage,
+   whether there is a deadline, the substitute consent, whether the customer is known), never
+   the e-mail.
+2. Code **validates** the plan (no empty plan, no duplicates, no substitute checks when the
+   customer refused one, every prerequisite present), **matches** each capability to exactly
+   one agent of the static registry and orders the tasks into **stages** by the dependencies
+   of the registry.
+3. Stages run one after another; the tasks of a stage run **in parallel**. The four agents
+   (`catalog-agent`, `warehouse-agent`, `supplier-agent`, `history-agent`) are deterministic and
+   only read company data; a transient database error is retried once.
+
+The **Orchestration** section under the exception banner shows the status (`completed`,
+`partial`, `failed`), the substitute consent (with the note *Customer consent to a substitute
+not confirmed* when the inquiry does not say), the planner's summary, the stages
+(*Stage 1 — in parallel*, *Stage 2 — after: substitute-compatibility*) and per task the
+capability → agent, the planner's reason, the status, the attempts, the duration and the
+agent's result. Below them the metrics of the orchestration run and the line
+*Wall time X ms · sum of steps Y ms*. Parallel stages save the time their tasks overlap,
+but recording each step adds a little overhead outside the steps; the seed agents take
+milliseconds, so the wall time can come out slightly larger than the sum. A failed agent (after its retry) makes the result `partial` and the tasks that
+depend on it `skipped`; a planner failure, a rejected plan (with the planner's rejected choice)
+or a capability without an agent makes it `failed` with the kind, code and message.
+
+Agent data is a sample seeded by migration `0007_orchestration_data` (substitutes
+`ABC-110` for `ABC-100` and `XYZ-310` for `XYZ-300`, supplier offers and order history).
+Expected plans with the fake planner:
+
+| Inquiry         | Consent       | Plan                                                                                                      | Results                                                                                   |
+| --------------- | ------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ACME            | `confirmed`   | 4 tasks in 2 stages: stage 1 in parallel `substitute-compatibility`, `supplier-availability`, `customer-history`; stage 2 `substitute-availability` | Substitute `ABC-110` (full compatibility) covers the shortage of 30; the supplier delivers on 2026-11-09, after Friday's deadline; the customer accepted substitutes before |
+| Technika Omega  | `refused`     | 2 tasks in 1 stage: `supplier-availability`, `customer-history`; no substitute tasks                      | The supplier delivers on 2026-11-10, before the deadline of 2026-11-12, and covers the shortage |
+| Hurtownia Delta | `unconfirmed` | 4 tasks as for ACME, with the consent note                                                                | Neither the substitute (40 in stock) nor the delivery (200) covers the shortage of 450     |
+| Biuro Max       | —             | none (standard inquiry)                                                                                   | —                                                                                         |
+
+The orchestration runs after every stored check result. A correction can change the plan
+(ACME's substitute set to *No* drops the substitute tasks); a correction that removes the
+exception removes the orchestration. A result computed from an older version of the analysis
+is marked stale. For a stale, `failed` or `partial` result, or an exception without an
+orchestration yet (*Orchestration not run yet*), the section offers **Re-run orchestrator**,
+which calls:
+
+```sh
+curl -b cookies.txt -X POST http://localhost:8000/api/inquiries/1/orchestration
+```
+
+It orchestrates again in a new run for the current analysis and answers with the whole
+analysis (`orchestration` holds the status, consent, planner choice, tasks with their agent
+results, the error and the run). Without an analysis it answers `404 No analysis yet`, without
+a current exception `409 Nothing to orchestrate`.
+
+The planner follows `LLM_PROVIDER` (see [Analysis (LLM)](#analysis-llm)); there are no new
+variables:
+
+- `fake`: a rule-based planner (all four capabilities, without the substitute ones when the
+  customer refused); its `plan` step is deterministic, with no tokens and no cost.
+- `groq` / `openrouter`: the same model and key as the analysis, with structured output. The
+  `plan` step is an `llm` step with tokens and cost; a transient failure (rate limit, timeout)
+  is retried once. Without `LLM_API_KEY` a re-run of the orchestrator ends `failed` with
+  `planner_failed: not_configured`.
 
 ## Step tracing
 
