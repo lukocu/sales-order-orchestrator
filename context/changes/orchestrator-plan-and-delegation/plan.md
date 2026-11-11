@@ -641,21 +641,21 @@ Render nie wymaga nowych zmiennych, bo planner używa `LLM_*`.
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 1.2 Testy modeli i seedu przechodzą: `docker compose run --rm backend uv run pytest tests/test_orchestration_models.py tests/test_checks_rules.py`
-- [x] 1.3 Modele zgadzają się z migracją: `docker compose run --rm backend uv run alembic check`
-- [x] 1.4 Downgrade i ponowny upgrade działają
+- [x] 1.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 5fb69bd
+- [x] 1.2 Testy modeli i seedu przechodzą: `docker compose run --rm backend uv run pytest tests/test_orchestration_models.py tests/test_checks_rules.py` — 5fb69bd
+- [x] 1.3 Modele zgadzają się z migracją: `docker compose run --rm backend uv run alembic check` — 5fb69bd
+- [x] 1.4 Downgrade i ponowny upgrade działają — 5fb69bd
 
 #### Manual
 
-- [x] 1.5 Seed w lokalnej bazie zgadza się z tabelą fazy
+- [x] 1.5 Seed w lokalnej bazie zgadza się z tabelą fazy — 5fb69bd
 
 ### Phase 2: Rdzeń orchestratora
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 2.2 Testy rdzenia przechodzą: `docker compose run --rm backend uv run pytest tests/test_orchestration_core.py tests/test_orchestration_agents.py`
+- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 2.2 Testy rdzenia przechodzą: `docker compose run --rm backend uv run pytest tests/test_orchestration_core.py tests/test_orchestration_agents.py`
 
 ### Phase 3: Serwis, zapis i API
 

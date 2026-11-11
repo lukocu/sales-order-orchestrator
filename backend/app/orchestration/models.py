@@ -1,15 +1,15 @@
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Any
 
 from sqlalchemy import CheckConstraint, DateTime, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-# Enum-like columns are VARCHAR with a CHECK constraint; the Literals mirror them.
-ENUM_LENGTH = 30
+from app.orchestration.schema import Compatibility, OrchestrationStatus
 
-Compatibility = Literal["full", "partial"]
-OrchestrationStatus = Literal["completed", "partial", "failed"]
+# Enum-like columns are VARCHAR with a CHECK constraint; Compatibility and OrchestrationStatus
+# mirror them.
+ENUM_LENGTH = 30
 
 
 class ProductSubstitute(SQLModel, table=True):
