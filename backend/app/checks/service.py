@@ -65,6 +65,29 @@ def analysis_version(analysis: InquiryAnalysis) -> datetime:
     return analysis.corrected_at if analysis.corrected_at is not None else analysis.analyzed_at
 
 
+def lock_analysis(session: Session, inquiry_id: int) -> InquiryAnalysis | None:
+    """The inquiry's analysis, locked until the session commits (SELECT ... FOR UPDATE).
+
+    The later stages (orchestration, recommendation) take this lock to check that their
+    inputs are still current before they write, and the checks take it to store theirs.
+    """
+    return session.exec(
+        select(InquiryAnalysis)
+        .where(col(InquiryAnalysis.inquiry_id) == inquiry_id)
+        .with_for_update()
+    ).first()
+
+
+def current_checks(session: Session, inquiry_id: int, version: datetime) -> InquiryChecks | None:
+    """The check result computed from `version`; None when there is none."""
+    return session.exec(
+        select(InquiryChecks).where(
+            col(InquiryChecks.inquiry_id) == inquiry_id,
+            col(InquiryChecks.analysis_version) == version,
+        )
+    ).first()
+
+
 def run_checks(engine: Engine, inquiry_id: int) -> None:
     """Check the current analysis in a new run and store the result if it is still current.
 

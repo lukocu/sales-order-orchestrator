@@ -29,8 +29,11 @@ from app.parsing.service import (
     get_analysis,
     recheck_inquiry,
     reorchestrate_inquiry,
+    rerecommend_inquiry,
     save_corrections,
 )
+from app.recommendation.recommender import Recommender, get_recommender
+from app.recommendation.service import NothingToRecommend
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,7 @@ router = APIRouter()
 PATH = "/inquiries/{inquiry_id}/analysis"
 CHECKS_PATH = "/inquiries/{inquiry_id}/checks"
 ORCHESTRATION_PATH = "/inquiries/{inquiry_id}/orchestration"
+RECOMMENDATION_PATH = "/inquiries/{inquiry_id}/recommendation"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -84,6 +88,16 @@ def _orchestration_failed(inquiry_id: int, error: Exception) -> HTTPException:
     )
 
 
+def _recommendation_failed(inquiry_id: int, error: Exception) -> HTTPException:
+    # Class and inquiry id only: the message could quote inquiry content.
+    logger.error(
+        "Analysis API: recommendation failed for inquiry %s: %s", inquiry_id, type(error).__name__
+    )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Recommendation failed"
+    )
+
+
 def _extraction_error(error: ExtractionError) -> HTTPException:
     if isinstance(error, ExtractionNotConfigured):
         return HTTPException(
@@ -121,11 +135,12 @@ def analyze(
     engine: Annotated[Engine, Depends(get_engine)],
     extractor: Annotated[InquiryExtractor, Depends(get_extractor)],
     planner: Annotated[Planner, Depends(get_planner)],
+    recommender: Annotated[Recommender, Depends(get_recommender)],
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> AnalysisView:
     """Analyze the inquiry, replacing its analysis and corrections; on failure nothing changes."""
     try:
-        return analyze_inquiry(engine, extractor, inquiry_id, user, planner)
+        return analyze_inquiry(engine, extractor, inquiry_id, user, planner, recommender)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except ExtractionError as error:
@@ -150,6 +165,7 @@ def correct(
     corrections: CorrectionRequest,
     engine: Annotated[Engine, Depends(get_engine)],
     planner: Annotated[Planner, Depends(get_planner)],
+    recommender: Annotated[Recommender, Depends(get_recommender)],
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> AnalysisView:
     """Save the user's field values; 409 when the analysis was replaced in the meantime."""
@@ -162,6 +178,7 @@ def correct(
             corrections.analyzed_at,
             user,
             planner,
+            recommender,
         )
     except AnalysisNotFound:
         raise _no_analysis() from None
@@ -183,10 +200,11 @@ def recheck(
     inquiry_id: InquiryId,
     engine: Annotated[Engine, Depends(get_engine)],
     planner: Annotated[Planner, Depends(get_planner)],
+    recommender: Annotated[Recommender, Depends(get_recommender)],
 ) -> AnalysisView:
     """Run the checks again for the current analysis (after a stale or failed result)."""
     try:
-        return recheck_inquiry(engine, inquiry_id, planner)
+        return recheck_inquiry(engine, inquiry_id, planner, recommender)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except NoAnalysis:
@@ -205,10 +223,12 @@ def reorchestrate(
     inquiry_id: InquiryId,
     engine: Annotated[Engine, Depends(get_engine)],
     planner: Annotated[Planner, Depends(get_planner)],
+    recommender: Annotated[Recommender, Depends(get_recommender)],
 ) -> AnalysisView:
-    """Run only the orchestration again (after a stale, failed or partial result)."""
+    """Run the orchestration again (after a stale, failed or partial result), then the
+    recommendation."""
     try:
-        return reorchestrate_inquiry(engine, inquiry_id, planner)
+        return reorchestrate_inquiry(engine, inquiry_id, planner, recommender)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -224,3 +244,29 @@ def reorchestrate(
         raise database_unavailable() from None
     except Exception as error:  # its run and failed step are recorded
         raise _orchestration_failed(inquiry_id, error) from None
+
+
+@router.post(RECOMMENDATION_PATH, response_model=AnalysisView)
+def rerecommend(
+    inquiry_id: InquiryId,
+    engine: Annotated[Engine, Depends(get_engine)],
+    recommender: Annotated[Recommender, Depends(get_recommender)],
+) -> AnalysisView:
+    """Run only the recommendation again (after a stale or failed result)."""
+    try:
+        return rerecommend_inquiry(engine, inquiry_id, recommender)
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except NothingToRecommend:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Nothing to recommend"
+        ) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+    except Exception as error:  # its run and failed step are recorded
+        raise _recommendation_failed(inquiry_id, error) from None

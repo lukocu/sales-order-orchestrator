@@ -636,19 +636,19 @@ Migracja 0009 dodaje kolumny `unit_cost` z backfillem i dopiero potem NOT NULL. 
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 2.2 Testy rdzenia przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 344e1f0
+- [x] 2.2 Testy rdzenia przechodzą — 344e1f0
 
 ### Phase 3: Serwis, zapis i API
 
 #### Automated
 
-- [ ] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 3.2 Testy rekomendacji i regresji orchestracji przechodzą
+- [x] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 3.2 Testy rekomendacji i regresji orchestracji przechodzą
 
 #### Manual
 
-- [ ] 3.3 Lokalny cykl przez curl w trybie fake daje wybory i pasma z tabeli
+- [x] 3.3 Lokalny cykl przez curl w trybie fake daje wybory i pasma z tabeli
 
 ### Phase 4: Rekomender LLM
 

@@ -27,7 +27,7 @@ from sqlmodel import Session, col, select
 
 from app.checks.models import InquiryChecks, Product
 from app.checks.schema import CheckResults
-from app.checks.service import analysis_version
+from app.checks.service import analysis_version, current_checks, lock_analysis
 from app.orchestration.agents import AgentInput
 from app.orchestration.executor import PlanItem, execute
 from app.orchestration.models import InquiryOrchestration
@@ -51,6 +51,9 @@ from app.orchestration.schema import (
 )
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
+from app.recommendation.models import InquiryRecommendation
+from app.recommendation.recommender import Recommender
+from app.recommendation.service import recommend_after_orchestration
 from app.tracing import RunHandle, run
 from app.tracing.summary import RunSummary, get_run_summary
 
@@ -116,21 +119,25 @@ def run_orchestration(
     _store(engine, inquiry_id, inputs, traced.id, _status(result), result)
 
 
-def orchestrate_after_checks(engine: Engine, inquiry_id: int, planner: Planner) -> None:
+def orchestrate_after_checks(
+    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+) -> None:
     """After a stored check result: orchestrate an exception, else drop the old orchestration.
 
     Runs inside the analysis and correction requests, so the planner gets a single attempt:
     a transient planner error ends in `failed` and "Re-run orchestrator" retries it.
     Never raises: unexpected errors are logged (class and inquiry id only) and leave the
-    stored orchestration as it was.
+    stored orchestration as it was. Then the recommendation follows the orchestration: it
+    runs again, or is dropped when there is no current orchestration to recommend from.
     """
     try:
         if _drop_unless_exception(engine, inquiry_id):
             run_orchestration(engine, inquiry_id, planner, planner_attempts=1)
     except NothingToOrchestrate:
-        return  # the analysis or its checks changed meanwhile; that newer run decides
+        pass  # the analysis or its checks changed meanwhile; that newer run decides
     except Exception as error:
         logger.warning("Orchestration failed for inquiry %s: %s", inquiry_id, type(error).__name__)
+    recommend_after_orchestration(engine, inquiry_id, recommender)
 
 
 def get_orchestration_view(session: Session, analysis: InquiryAnalysis) -> OrchestrationView | None:
@@ -359,26 +366,6 @@ def _status(result: OrchestrationResult) -> OrchestrationStatus:
     return "completed"
 
 
-def _lock_analysis(session: Session, inquiry_id: int) -> InquiryAnalysis | None:
-    # Locked, so the analysis and its check result cannot change until the commit: the checks
-    # take the same lock to store their result.
-    return session.exec(
-        select(InquiryAnalysis)
-        .where(col(InquiryAnalysis.inquiry_id) == inquiry_id)
-        .with_for_update()
-    ).first()
-
-
-def _current_checks(session: Session, inquiry_id: int, version: datetime) -> InquiryChecks | None:
-    """The check result computed from `version`; None when there is none."""
-    return session.exec(
-        select(InquiryChecks).where(
-            col(InquiryChecks.inquiry_id) == inquiry_id,
-            col(InquiryChecks.analysis_version) == version,
-        )
-    ).first()
-
-
 def _store(
     engine: Engine,
     inquiry_id: int,
@@ -402,10 +389,10 @@ def _store(
         set_={name: statement.excluded[name] for name in values if name != "inquiry_id"},
     )
     with Session(engine) as session:
-        current = _lock_analysis(session, inquiry_id)
+        current = lock_analysis(session, inquiry_id)
         if current is None or analysis_version(current) != inputs.version:
             return  # replaced or corrected meanwhile: that newer version gets its own run
-        checks = _current_checks(session, inquiry_id, inputs.version)
+        checks = current_checks(session, inquiry_id, inputs.version)
         if checks is None or checks.outcome != "exception":
             return  # re-checked meanwhile without an exception
         if checks.checked_at != inputs.checks_checked_at:
@@ -417,21 +404,26 @@ def _store(
 def _drop_unless_exception(engine: Engine, inquiry_id: int) -> bool:
     """True when the current check result is an exception (so it should be orchestrated).
 
-    When the current analysis version has another outcome, its orchestration is deleted.
-    Without a check result for the current version nothing changes (the stored orchestration
-    is shown as stale).
+    When the current analysis version has another outcome, its orchestration and the
+    recommendation made from it are deleted. Without a check result for the current version
+    nothing changes (the stored orchestration is shown as stale).
     """
     with Session(engine) as session:
-        analysis = _lock_analysis(session, inquiry_id)
+        analysis = lock_analysis(session, inquiry_id)
         if analysis is None:
             return False
-        checks = _current_checks(session, inquiry_id, analysis_version(analysis))
+        checks = current_checks(session, inquiry_id, analysis_version(analysis))
         if checks is not None and checks.outcome == "exception":
             return True
         if checks is not None:
             session.exec(
                 delete(InquiryOrchestration).where(
                     col(InquiryOrchestration.inquiry_id) == inquiry_id
+                )
+            )
+            session.exec(
+                delete(InquiryRecommendation).where(
+                    col(InquiryRecommendation.inquiry_id) == inquiry_id
                 )
             )
             session.commit()

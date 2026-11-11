@@ -20,6 +20,7 @@ from app.orchestration.registry import AGENTS, AgentSpec
 from app.orchestration.schema import AgentResult, PlanFacts
 from app.orchestration.service import orchestrate_after_checks, run_orchestration
 from app.parsing.models import InquiryAnalysis
+from app.recommendation.recommender import FakeRecommender
 from app.tracing.models import StepKind, TraceRun
 from tests.conftest import ExtractorSetter, InquiryFactory
 from tests.test_parsing_extractors import ACME, BIURO_MAX, DELTA, OMEGA
@@ -566,7 +567,7 @@ def test_orchestration_after_checks_does_not_retry_the_planner(
     _analyze(auth_client, acme)
     planner = StubPlanner(errors=[_transient()])
 
-    orchestrate_after_checks(migrated_engine, acme.id, planner)
+    orchestrate_after_checks(migrated_engine, acme.id, planner, FakeRecommender())
 
     view = _orchestration(auth_client, acme)
     assert view is not None

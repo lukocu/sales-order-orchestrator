@@ -13,6 +13,7 @@ from app.parsing.fake import RuleBasedExtractor
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
 from app.parsing.service import analyze_inquiry, changed_fields, reference_date_of
+from app.recommendation.recommender import FakeRecommender
 from app.tracing.models import TraceRun
 from tests.conftest import InquiryFactory, UserFactory
 
@@ -59,7 +60,12 @@ def test_reference_date_is_warsaw_day() -> None:
 def _analyze(engine: Engine, inquiry: Inquiry, user: User) -> None:
     assert inquiry.id is not None
     analyze_inquiry(
-        engine, RuleBasedExtractor(), inquiry.id, AuthUser.from_user(user), RuleBasedPlanner()
+        engine,
+        RuleBasedExtractor(),
+        inquiry.id,
+        AuthUser.from_user(user),
+        RuleBasedPlanner(),
+        FakeRecommender(),
     )
 
 

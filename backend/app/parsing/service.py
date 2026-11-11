@@ -3,8 +3,9 @@
 No database connection is held while the extractor runs: the inquiry is read in one short
 session, the extraction runs inside a tracing run, and the result is written in another
 short session. After every stored analysis or correction the checks run in their own run
-(`app.checks.service`), and after a stored check result the orchestration runs in another
-(`app.orchestration.service`); their failure never undoes the stored analysis.
+(`app.checks.service`), after a stored check result the orchestration runs in another
+(`app.orchestration.service`), and after it the recommendation in a third
+(`app.recommendation.service`); their failure never undoes the stored analysis.
 """
 
 import logging
@@ -32,6 +33,13 @@ from app.parsing.analyze import build_parsed
 from app.parsing.extractor import ExtractionError, ExtractionResult, InquiryExtractor
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import FieldName, ParsedFields
+from app.recommendation.recommender import Recommender
+from app.recommendation.service import (
+    RecommendationView,
+    get_recommendation_view,
+    recommend_after_orchestration,
+    run_recommendation,
+)
 from app.settings import LlmProvider
 from app.tracing import run
 from app.tracing.summary import RunSummary, get_run_summary
@@ -83,6 +91,8 @@ class AnalysisView(BaseModel):
     checks: ChecksView | None  # None until checks succeeded once; has its own run
     # None until an exception was orchestrated, and again once the checks find none
     orchestration: OrchestrationView | None
+    # None until an orchestration could be recommended from, and again once it is gone
+    recommendation: RecommendationView | None
 
 
 def reference_date_of(received_at: datetime) -> date:
@@ -104,6 +114,7 @@ def analyze_inquiry(
     inquiry_id: int,
     user: AuthUser,
     planner: Planner,
+    recommender: Recommender,
 ) -> AnalysisView:
     """Analyze the inquiry and replace its current analysis (corrections are dropped).
 
@@ -154,7 +165,7 @@ def analyze_inquiry(
     with Session(engine) as session:
         session.exec(statement)
         session.commit()
-    _run_checks_after_save(engine, inquiry_id, planner)
+    _run_checks_after_save(engine, inquiry_id, planner, recommender)
     return _current_view(engine, inquiry_id)
 
 
@@ -177,6 +188,7 @@ def save_corrections(
     analyzed_at: datetime,
     user: AuthUser,
     planner: Planner,
+    recommender: Recommender,
 ) -> AnalysisView:
     """Store the user's values for the analysis read at `analyzed_at`.
 
@@ -202,15 +214,18 @@ def save_corrections(
         session.add(analysis)
         session.commit()
     # Outside the lock: the checks lock the analysis again only to store their result.
-    _run_checks_after_save(engine, inquiry_id, planner)
+    _run_checks_after_save(engine, inquiry_id, planner, recommender)
     return _current_view(engine, inquiry_id)
 
 
-def recheck_inquiry(engine: Engine, inquiry_id: int, planner: Planner) -> AnalysisView:
-    """Run the checks again in a new run for the current analysis, then the orchestration.
+def recheck_inquiry(
+    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+) -> AnalysisView:
+    """Run the checks again in a new run for the current analysis, then the orchestration
+    and the recommendation.
 
     Raises `InquiryNotFound`, `NoAnalysis` without an analysis, and whatever the checks raise.
-    A failing orchestration is only logged.
+    A failing orchestration or recommendation is only logged.
     """
     try:
         run_checks(engine, inquiry_id)
@@ -219,12 +234,15 @@ def recheck_inquiry(engine: Engine, inquiry_id: int, planner: Planner) -> Analys
             if session.get(Inquiry, inquiry_id) is None:
                 raise InquiryNotFound from None
         raise
-    orchestrate_after_checks(engine, inquiry_id, planner)
+    orchestrate_after_checks(engine, inquiry_id, planner, recommender)
     return _current_view(engine, inquiry_id)
 
 
-def reorchestrate_inquiry(engine: Engine, inquiry_id: int, planner: Planner) -> AnalysisView:
-    """Run only the orchestration again in a new run for the current analysis.
+def reorchestrate_inquiry(
+    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+) -> AnalysisView:
+    """Run the orchestration again in a new run for the current analysis, then the
+    recommendation (a single recommender attempt; its failure is only logged).
 
     Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToOrchestrate`
     when its current check result is not an exception, and unexpected orchestration errors.
@@ -235,11 +253,31 @@ def reorchestrate_inquiry(engine: Engine, inquiry_id: int, planner: Planner) -> 
                 raise InquiryNotFound
             raise AnalysisNotFound
     run_orchestration(engine, inquiry_id, planner)
+    recommend_after_orchestration(engine, inquiry_id, recommender)
     return _current_view(engine, inquiry_id)
 
 
-def _run_checks_after_save(engine: Engine, inquiry_id: int, planner: Planner) -> None:
-    """Checks, then the orchestration, after a saved analysis or correction.
+def rerecommend_inquiry(engine: Engine, inquiry_id: int, recommender: Recommender) -> AnalysisView:
+    """Run only the recommendation again in a new run for the current orchestration.
+
+    Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToRecommend`
+    without a current exception with a `completed` or `partial` orchestration, and unexpected
+    recommendation errors.
+    """
+    with Session(engine) as session:
+        if _find(session, inquiry_id) is None:
+            if session.get(Inquiry, inquiry_id) is None:
+                raise InquiryNotFound
+            raise AnalysisNotFound
+    run_recommendation(engine, inquiry_id, recommender)
+    return _current_view(engine, inquiry_id)
+
+
+def _run_checks_after_save(
+    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+) -> None:
+    """Checks, then the orchestration and the recommendation, after a saved analysis or
+    correction.
 
     A failure leaves the result stale or empty and is only logged.
     """
@@ -249,7 +287,7 @@ def _run_checks_after_save(engine: Engine, inquiry_id: int, planner: Planner) ->
         # Class and inquiry id only: the message could quote inquiry content.
         logger.warning("Checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)
         return
-    orchestrate_after_checks(engine, inquiry_id, planner)
+    orchestrate_after_checks(engine, inquiry_id, planner, recommender)
 
 
 def _current_view(engine: Engine, inquiry_id: int) -> AnalysisView:
@@ -292,4 +330,5 @@ def _view(session: Session, analysis: InquiryAnalysis) -> AnalysisView:
         run=None if analysis.run_id is None else get_run_summary(session, analysis.run_id),
         checks=get_checks_view(session, analysis),
         orchestration=get_orchestration_view(session, analysis),
+        recommendation=get_recommendation_view(session, analysis),
     )

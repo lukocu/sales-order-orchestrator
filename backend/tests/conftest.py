@@ -23,6 +23,7 @@ from app.parsing.extractor import (
     get_extractor,
 )
 from app.parsing.fake import RuleBasedExtractor
+from app.recommendation.recommender import FakeRecommender, Recommender, get_recommender
 from app.settings import BACKEND_DIR, get_settings
 from app.tracing.models import StepKind, TraceRun
 
@@ -81,6 +82,7 @@ class StubExtractor:
 
 ExtractorSetter = Callable[[InquiryExtractor], None]
 PlannerSetter = Callable[[Planner], None]
+RecommenderSetter = Callable[[Recommender], None]
 
 
 @pytest.fixture(scope="session")
@@ -191,6 +193,22 @@ def use_planner() -> Iterator[PlannerSetter]:
     use(RuleBasedPlanner())
     yield use
     app.dependency_overrides.pop(get_planner, None)
+
+
+@pytest.fixture(autouse=True)
+def use_recommender() -> Iterator[RecommenderSetter]:
+    """Override `get_recommender`: the rule-based recommender until the test sets another one.
+
+    Autouse, so every API test recommends with the rule-based recommender whatever
+    `LLM_PROVIDER` says.
+    """
+
+    def use(recommender: Recommender) -> None:
+        app.dependency_overrides[get_recommender] = lambda: recommender
+
+    use(FakeRecommender())
+    yield use
+    app.dependency_overrides.pop(get_recommender, None)
 
 
 def _client_with(engine: Engine) -> Iterator[TestClient]:
