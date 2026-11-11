@@ -43,10 +43,10 @@ class Settings(BaseSettings):
     # Safari rejects Secure cookies on http://localhost.
     cookie_secure: bool = True
 
-    # Inquiry analysis and orchestration planning: `fake` is the rule-based parser and
-    # planner (no key, no network); `groq` and `openrouter` call an OpenAI-compatible
-    # endpoint with LLM_API_KEY. LLM_MODEL unset or empty: the provider's default model
-    # (see app.llm.client.DEFAULT_MODELS).
+    # Inquiry analysis, orchestration planning and recommendation: `fake` is the rule-based
+    # parser, planner and recommender (no key, no network); `groq` and `openrouter` call an
+    # OpenAI-compatible endpoint with LLM_API_KEY. LLM_MODEL unset or empty: the provider's
+    # default model (see app.llm.client.DEFAULT_MODELS).
     llm_provider: LlmProvider = "fake"
     llm_api_key: SecretStr | None = None
     llm_model: str | None = None

@@ -11,6 +11,7 @@ from typing import Annotated, Literal, Protocol
 
 from fastapi import Depends
 
+from app.llm.client import BASE_URLS, DEFAULT_MODELS
 from app.recommendation.schema import (
     MAX_JUSTIFICATION_LENGTH,
     ConfidenceBand,
@@ -140,11 +141,21 @@ class UnconfiguredRecommender:
 def get_recommender(settings: Annotated[Settings, Depends(get_settings)]) -> Recommender:
     """Recommender selected by settings (like `get_planner`); a FastAPI dependency
     overridable in tests."""
+    # Imported here: the LLM recommender imports the types defined above.
+    from app.recommendation.llm_recommender import OpenAICompatibleRecommender
+
     provider = settings.llm_provider
     if provider == "fake":
         return FakeRecommender()
-    # The LLM recommender comes in a later phase; until then an LLM provider is unconfigured.
-    return UnconfiguredRecommender(provider)
+    if settings.llm_api_key is None:
+        return UnconfiguredRecommender(provider)
+    return OpenAICompatibleRecommender(
+        name=provider,
+        base_url=BASE_URLS[provider],
+        api_key=settings.llm_api_key.get_secret_value(),
+        model=settings.llm_model or DEFAULT_MODELS[provider],
+        timeout_seconds=settings.llm_timeout_seconds,
+    )
 
 
 class ChoiceRejected(Exception):

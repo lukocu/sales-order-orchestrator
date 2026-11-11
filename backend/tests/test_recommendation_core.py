@@ -585,8 +585,10 @@ def test_get_recommender_fake_is_rule_based() -> None:
 
 
 @pytest.mark.parametrize("provider", ["groq", "openrouter"])
-def test_get_recommender_llm_is_not_configured_yet(provider: str) -> None:
-    recommender = get_recommender(Settings.model_validate({"llm_provider": provider}))
+def test_get_recommender_without_key_is_not_configured(provider: str) -> None:
+    recommender = get_recommender(
+        Settings.model_validate({"llm_provider": provider, "llm_api_key": ""})
+    )
 
     assert isinstance(recommender, UnconfiguredRecommender)
     assert (recommender.name, recommender.step_kind) == (provider, "llm")

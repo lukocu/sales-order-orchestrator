@@ -643,23 +643,23 @@ Migracja 0009 dodaje kolumny `unit_cost` z backfillem i dopiero potem NOT NULL. 
 
 #### Automated
 
-- [x] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 3.2 Testy rekomendacji i regresji orchestracji przechodzą
+- [x] 3.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — d64947a
+- [x] 3.2 Testy rekomendacji i regresji orchestracji przechodzą — d64947a
 
 #### Manual
 
-- [x] 3.3 Lokalny cykl przez curl w trybie fake daje wybory i pasma z tabeli
+- [x] 3.3 Lokalny cykl przez curl w trybie fake daje wybory i pasma z tabeli — d64947a
 
 ### Phase 4: Rekomender LLM
 
 #### Automated
 
-- [ ] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 4.2 Testy rekomendera LLM przechodzą
+- [x] 4.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
+- [x] 4.2 Testy rekomendera LLM przechodzą
 
 #### Manual
 
-- [ ] 4.3 Lokalnie z Groq krok choose ma tokeny i koszt, a wybory przechodzą walidację
+- [x] 4.3 Lokalnie z Groq krok choose ma tokeny i koszt, a wybory przechodzą walidację
 
 ### Phase 5: Frontend i wdrożenie
 
