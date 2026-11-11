@@ -1,7 +1,8 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -44,6 +45,7 @@ class SupplierOffer(SQLModel, table=True):
     __table_args__ = (
         CheckConstraint("quantity > 0", name="ck_supplier_offers_quantity"),
         CheckConstraint("lead_time_days >= 0", name="ck_supplier_offers_lead_time_days"),
+        CheckConstraint("unit_cost > 0", name="ck_supplier_offers_unit_cost"),
     )
 
     id: int | None = Field(default=None, primary_key=True)
@@ -52,6 +54,7 @@ class SupplierOffer(SQLModel, table=True):
     quantity: int
     # Counted from the inquiry's reference_date, so a result does not depend on the run day.
     lead_time_days: int
+    unit_cost: Decimal = Field(sa_type=Numeric(12, 2))  # PLN net, purchase price per unit
 
 
 class CustomerOrder(SQLModel, table=True):

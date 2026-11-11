@@ -207,6 +207,7 @@ def test_supplier_offer_checks(
         supplier_name="Test",
         quantity=quantity,
         lead_time_days=lead_time_days,
+        unit_cost=Decimal("50.00"),
     )
 
     _assert_rejected(migrated_engine, row, constraint)

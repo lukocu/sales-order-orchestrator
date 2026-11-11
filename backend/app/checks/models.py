@@ -44,6 +44,7 @@ class Product(SQLModel, table=True):
         UniqueConstraint("code", name="uq_products_code"),
         CheckConstraint("list_price > 0", name="ck_products_list_price"),
         CheckConstraint("stock_quantity >= 0", name="ck_products_stock_quantity"),
+        CheckConstraint("unit_cost > 0", name="ck_products_unit_cost"),
     )
 
     id: int | None = Field(default=None, primary_key=True)
@@ -51,6 +52,7 @@ class Product(SQLModel, table=True):
     name: str = Field(max_length=200)
     list_price: Decimal = Field(sa_type=Numeric(12, 2))  # PLN net
     stock_quantity: int
+    unit_cost: Decimal = Field(sa_type=Numeric(12, 2))  # PLN net, cost of own stock
 
 
 class InquiryChecks(SQLModel, table=True):
