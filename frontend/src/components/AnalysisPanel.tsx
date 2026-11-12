@@ -1,7 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   analyzeInquiry,
+  decideDraft,
+  DRAFT_CHANGED,
+  editDraft,
   fetchAnalysis,
+  regenerateDraft,
   rerunChecks,
   rerunOrchestration,
   rerunPolicy,
@@ -12,10 +16,12 @@ import {
   type Outcome,
   type ParsedFields,
   type PriceKind,
+  type ReplyDraftEdit,
 } from '../api/analysis'
 import { ApiError, UnauthorizedError } from '../api/client'
 import ChecksSection from './ChecksSection'
 import { formatDate } from './format'
+import { DecisionHistory } from './ReplyDraftSection'
 import RunMetrics from './RunMetrics'
 
 type Props = {
@@ -73,8 +79,17 @@ const SUBSTITUTE_LABEL: Record<Substitute, string> = {
 const RELOADED_NOTICE =
   'Analysis changed by a re-analysis — reloaded, your unsaved edits were discarded.'
 
+const DRAFT_RELOADED_NOTICE =
+  'The draft changed since it was opened — reloaded, your decision was not saved.'
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong'
+}
+
+// The draft was written since it was read (another decision, a regenerated draft or a new
+// recommendation); every other 409 of a decision is shown at its form.
+function draftChanged(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 409 && error.message === DRAFT_CHANGED
 }
 
 // As the inbox lists it: the outcome only while the result matches the current analysis.
@@ -210,7 +225,15 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [reviewed, setReviewed] = useState<FieldName[]>([])
   const [busy, setBusy] = useState<
-    'analyzing' | 'saving' | 'checking' | 'orchestrating' | 'recommending' | 'evaluating' | null
+    | 'analyzing'
+    | 'saving'
+    | 'checking'
+    | 'orchestrating'
+    | 'recommending'
+    | 'evaluating'
+    | 'drafting'
+    | 'deciding'
+    | null
   >(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -305,6 +328,44 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
     } finally {
       setBusy(null)
     }
+  }
+
+  // Errors are left to ReplyDraftSection, which shows them next to its button.
+  async function regenerateReplyDraft() {
+    setBusy('drafting')
+    try {
+      showChecked(await regenerateDraft(inquiryId))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // A draft written meanwhile reloads the analysis, like a replaced analysis on save; other
+  // errors are left to ReplyDraftSection, which shows them at its form.
+  async function decideOnReplyDraft(send: () => Promise<Analysis>) {
+    setBusy('deciding')
+    setNotice(null)
+    try {
+      showChecked(await send())
+    } catch (error) {
+      if (!draftChanged(error)) throw error
+      setNotice(DRAFT_RELOADED_NOTICE)
+      reload()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  function editReplyDraft(updatedAt: string, edit: ReplyDraftEdit) {
+    return decideOnReplyDraft(() => editDraft(inquiryId, updatedAt, edit))
+  }
+
+  function decideReplyDraft(
+    updatedAt: string,
+    action: 'approve' | 'reject',
+    reason: string | null,
+  ) {
+    return decideOnReplyDraft(() => decideDraft(inquiryId, updatedAt, action, reason))
   }
 
   async function runAnalysis() {
@@ -513,12 +574,22 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
           orchestrating={busy === 'orchestrating'}
           recommending={busy === 'recommending'}
           evaluating={busy === 'evaluating'}
+          drafting={busy === 'drafting'}
+          deciding={busy === 'deciding'}
           onRerun={rerun}
           onRerunOrchestration={rerunOrchestrator}
           onRerunRecommendation={rerunRecommender}
           onRerunPolicy={reevaluatePolicy}
+          onRegenerateDraft={regenerateReplyDraft}
+          onEditDraft={editReplyDraft}
+          onDecideDraft={decideReplyDraft}
           onUnauthorized={onUnauthorized}
         />
+
+        {/* Outside the exception: decisions stay visible after a correction removes it. */}
+        {(analysis.decisions ?? []).length > 0 && (
+          <DecisionHistory inquiryId={inquiryId} decisions={analysis.decisions ?? []} />
+        )}
       </>
     )
   }

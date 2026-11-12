@@ -8,6 +8,7 @@ import {
   type DiscountCheck,
   type NeedsInputReason,
   type PriceCheck,
+  type ReplyDraftEdit,
   type StockCheck,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
@@ -15,13 +16,14 @@ import { formatDate, formatPercent, formatPln, totalCost, totalDuration } from '
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
 import RecommendationSection from './RecommendationSection'
+import ReplyDraftSection from './ReplyDraftSection'
 import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
   analysis: Analysis
   // True while the panel analyzes, saves or re-runs the checks, the orchestrator, the
-  // recommendation or the policy.
+  // recommendation or the policy, regenerates the draft or saves a decision on it.
   disabled: boolean
   // True while the panel re-runs the checks.
   running: boolean
@@ -31,6 +33,10 @@ type Props = {
   recommending: boolean
   // True while the panel re-runs the policy.
   evaluating: boolean
+  // True while the panel regenerates the reply draft.
+  drafting: boolean
+  // True while the panel saves an edit of the reply draft or a decision on it.
+  deciding: boolean
   // Re-runs the checks and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
   // Re-runs the orchestrator and shows the result; rejects when the re-run failed.
@@ -39,6 +45,16 @@ type Props = {
   onRerunRecommendation: () => Promise<void>
   // Re-runs the policy and shows the result; rejects when the re-run failed.
   onRerunPolicy: () => Promise<void>
+  // Regenerates the reply draft and shows the result; rejects when it failed.
+  onRegenerateDraft: () => Promise<void>
+  // Saves an edit of the reply draft read at `updatedAt`; rejects when it failed.
+  onEditDraft: (updatedAt: string, edit: ReplyDraftEdit) => Promise<void>
+  // Approves or rejects the reply draft read at `updatedAt`; rejects when it failed.
+  onDecideDraft: (
+    updatedAt: string,
+    action: 'approve' | 'reject',
+    reason: string | null,
+  ) => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -279,10 +295,15 @@ function ChecksSection({
   orchestrating,
   recommending,
   evaluating,
+  drafting,
+  deciding,
   onRerun,
   onRerunOrchestration,
   onRerunRecommendation,
   onRerunPolicy,
+  onRegenerateDraft,
+  onEditDraft,
+  onDecideDraft,
   onUnauthorized,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
@@ -360,6 +381,20 @@ function ChecksSection({
               disabled={disabled}
               running={evaluating}
               onRerun={onRerunPolicy}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+          {checks.outcome === 'exception' && (
+            <ReplyDraftSection
+              inquiryId={inquiryId}
+              draft={analysis.draft ?? null}
+              recommendation={analysis.recommendation ?? null}
+              disabled={disabled}
+              drafting={drafting}
+              deciding={deciding}
+              onRegenerate={onRegenerateDraft}
+              onEdit={onEditDraft}
+              onDecide={onDecideDraft}
               onUnauthorized={onUnauthorized}
             />
           )}

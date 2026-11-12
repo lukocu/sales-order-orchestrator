@@ -768,3 +768,92 @@ button:disabled {
   font-weight: 600;
   color: var(--muted);
 }
+
+/* Reply draft */
+
+.draft__status {
+  font-weight: 600;
+}
+
+.draft__fallback {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--warn);
+  font-size: 0.875rem;
+}
+
+.draft__email {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.draft__subject {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.draft__body {
+  margin: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.draft__why {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.draft__form {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.draft__form > label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.draft__form select,
+.draft__form textarea,
+.draft__lines input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+}
+
+.draft__lines input {
+  min-width: 5rem;
+}
+
+.draft__list-price {
+  display: block;
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.draft__earlier {
+  margin-left: 0.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}

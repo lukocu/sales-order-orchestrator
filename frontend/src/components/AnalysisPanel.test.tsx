@@ -2,6 +2,9 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields, RunSummary } from '../api/analysis'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
+import { ACME_POLICY } from '../test/policyFixtures'
+import { ACME_RECOMMENDATION } from '../test/recommendationFixtures'
+import { ACME_APPROVED, ACME_DRAFT, ACME_REJECTED_EARLIER } from '../test/replyDraftFixtures'
 import AnalysisPanel from './AnalysisPanel'
 
 type Handler = () => Response | Promise<Response>
@@ -10,6 +13,7 @@ type Routes = Record<string, Handler | Handler[]>
 const PATH = '/api/inquiries/7/analysis'
 const CHECKS_PATH = '/api/inquiries/7/checks'
 const ORCHESTRATION_PATH = '/api/inquiries/7/orchestration'
+const DECISION_PATH = '/api/inquiries/7/draft/decision'
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -553,6 +557,120 @@ describe('AnalysisPanel', () => {
 
     expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  // ACME with its exception carried through to a reply draft.
+  const DRAFTED: Partial<Analysis> = {
+    checks: EXCEPTION,
+    orchestration: ACME_ORCHESTRATION,
+    recommendation: ACME_RECOMMENDATION,
+    policy: ACME_POLICY,
+    draft: ACME_DRAFT,
+    decisions: [],
+  }
+
+  it('approves the reply draft with every button disabled meanwhile', async () => {
+    let answer: (response: Response) => void = () => {}
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)),
+      [`POST ${DECISION_PATH}`]: () => new Promise<Response>((resolve) => (answer = resolve)),
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+
+    expect(await screen.findByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeDisabled()
+    answer(
+      json(
+        200,
+        analysis({
+          ...DRAFTED,
+          draft: { ...ACME_DRAFT, status: 'ready_to_send' },
+          decisions: [ACME_APPROVED],
+        }),
+      ),
+    )
+
+    // The draft's status and its decision in the history.
+    expect(await screen.findAllByText('Ready to send (sending is simulated)')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled()
+    expect(screen.getByRole('region', { name: 'Decision history' })).toHaveTextContent(
+      'Anna Kowalska',
+    )
+  })
+
+  it('reloads the analysis when the draft changed since it was opened (409)', async () => {
+    const fetchMock = stubApi({
+      [`GET ${PATH}`]: [
+        () => json(200, analysis(DRAFTED)),
+        () =>
+          json(
+            200,
+            analysis({
+              ...DRAFTED,
+              draft: { ...ACME_DRAFT, status: 'rejected' },
+              decisions: [{ ...ACME_REJECTED_EARLIER, current: true }],
+            }),
+          ),
+      ],
+      [`POST ${DECISION_PATH}`]: () => json(409, { detail: 'Draft changed, reload' }),
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'The draft changed since it was opened — reloaded, your decision was not saved.',
+    )
+    expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.filter(([path]) => path === PATH)).toHaveLength(2)
+  })
+
+  it('keeps the decision history visible after a correction removes the exception', async () => {
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis({ ...DRAFTED, decisions: [ACME_APPROVED] })),
+      [`PUT ${PATH}`]: () =>
+        json(
+          200,
+          analysis({
+            fields: { ...FIELDS, quantity: 20 },
+            corrected_fields: ['quantity'],
+            corrected_at: '2026-11-10T09:30:00Z',
+            checks: STANDARD,
+            orchestration: null,
+            recommendation: null,
+            policy: null,
+            draft: null,
+            decisions: [{ ...ACME_APPROVED, current: false }],
+          }),
+        ),
+    })
+
+    renderPanel()
+    expect(await screen.findByRole('region', { name: 'Reply draft' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '20' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
+
+    expect(
+      await screen.findByText('Standard inquiry — completed without agents'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Reply draft' })).not.toBeInTheDocument()
+    const history = screen.getByRole('region', { name: 'Decision history' })
+    expect(history).toHaveTextContent('Approved')
+    expect(history).toHaveTextContent('earlier version')
+  })
+
+  it('shows no decision history without decisions', async () => {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)) })
+
+    renderPanel()
+
+    expect(await screen.findByRole('region', { name: 'Reply draft' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Decision history' })).not.toBeInTheDocument()
   })
 
   it('calls onUnauthorized when the API answers 401', async () => {

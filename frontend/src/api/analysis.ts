@@ -5,9 +5,11 @@ import { requestJson } from './client'
 // ChecksView / CheckResults in backend/app/checks/{service,schema}.py and OrchestrationView /
 // OrchestrationResult in backend/app/orchestration/{service,schema}.py and RecommendationView /
 // RecommendationResult in backend/app/recommendation/{service,schema}.py and PolicyView /
-// PolicyResult in backend/app/policy/{service,schema}.py.
+// PolicyResult in backend/app/policy/{service,schema}.py and DraftView / DecisionView /
+// DraftOffer in backend/app/draft/{service,schema}.py (prefixed ReplyDraft here: the analysis
+// form already has its own Draft).
 // Decimal values (price_value, cost_usd, amounts and percents of the checks, the
-// recommendation and the policy) arrive as JSON strings.
+// recommendation, the policy and the reply draft) arrive as JSON strings.
 
 export type FieldName =
   | 'customer'
@@ -365,6 +367,102 @@ export type PolicyView = {
   run: RunSummary | null // null when the run could not be traced
 }
 
+// The policy verdict without its stage metadata, as the reply draft carries it.
+export type PolicyResult = {
+  option_id: string
+  rules: RuleResult[]
+  outcome: PolicyOutcome
+  thresholds_are_examples: boolean
+}
+
+export type ReplyDraftStatus = 'draft' | 'ready_to_send' | 'awaiting_supervisor' | 'rejected'
+
+export type ReplyDraftAction = 'edit' | 'approve' | 'reject'
+
+export type ReplyDraftTextSource = 'model' | 'fallback'
+
+// One line of the offer: an option line with the list price of its product.
+export type ReplyDraftOfferLine = {
+  product_code: string
+  product_name: string
+  source: LineSource
+  supplier: string | null // only for supplier lines
+  quantity: number
+  available_on: string // ISO date
+  list_price: string // catalogue price of the line's product
+  unit_price: string // PLN net, offered to the customer
+  unit_cost: string
+  value: string
+  cost: string
+}
+
+// The chosen option as recommended, or its edit.
+export type ReplyDraftOffer = {
+  option_id: string
+  kind: OptionKind
+  lines: ReplyDraftOfferLine[]
+  covered_quantity: number
+  requested_quantity: number
+  fulfilled_on: string // ISO date
+  meets_deadline: boolean | null // null when the inquiry has no deadline
+  value: string
+  cost: string
+  margin_percent: string
+  edited: boolean
+}
+
+// "Why this recommendation?": the justification and the Polish labels of the cited signals.
+export type ReplyDraftWhy = {
+  justification: string
+  signals: string[]
+}
+
+export type ReplyDraftView = {
+  status: ReplyDraftStatus
+  offer: ReplyDraftOffer
+  subject: string
+  body: string // the e-mail in Polish, rendered by the backend from the offer
+  text_source: ReplyDraftTextSource // fallback: the model's paragraphs were unavailable
+  why: ReplyDraftWhy | null // null when the stored recommendation has no chosen option
+  // The verdict in force: the edit's own for an edited offer, the policy stage's otherwise.
+  policy: PolicyResult | null
+  // built from another recommendation, the recommendation is not current, or (offer as
+  // recommended) the policy stage's verdict is missing or stale
+  stale: boolean
+  drafted_at: string
+  updated_at: string // sent back unchanged with an edit or a decision
+  run: RunSummary | null // null when the run could not be traced
+}
+
+// What a decision was about: the offer and the verdict in force at that time.
+export type ReplyDraftSnapshot = {
+  offer: ReplyDraftOffer
+  policy_outcome: PolicyOutcome | null
+  failing_rules: RuleCode[]
+}
+
+export type ReplyDraftDecision = {
+  action: ReplyDraftAction
+  status_after: ReplyDraftStatus
+  reason: string | null
+  decided_by_name: string | null
+  decided_at: string
+  snapshot: ReplyDraftSnapshot
+  current: boolean // made on a draft of the current recommendation
+}
+
+export type ReplyDraftLineEdit = {
+  product_code: string
+  quantity: number
+  unit_price: string // decimal, at most two places
+}
+
+export type ReplyDraftEdit = {
+  option_id: string
+  lines: ReplyDraftLineEdit[] // exactly the option's lines, in its order
+  reason: string
+}
+
 export type Analysis = {
   inquiry_id: number
   extractor: Extractor
@@ -384,6 +482,10 @@ export type Analysis = {
   recommendation?: RecommendationView | null
   // null without a policy verdict; has its own run. Optional: older payloads lack it.
   policy?: PolicyView | null
+  // null without a reply draft; has its own run. Optional: older payloads lack it.
+  draft?: ReplyDraftView | null
+  // every decision on the inquiry's drafts, oldest first. Optional: older payloads lack it.
+  decisions?: ReplyDraftDecision[]
 }
 
 export const FIELD_NAMES: readonly FieldName[] = [
@@ -463,6 +565,20 @@ const RULE_VERDICTS: readonly RuleVerdict[] = ['pass', 'fail', 'not_evaluated']
 const POLICY_OUTCOMES: readonly PolicyOutcome[] = ['no_approval_needed', 'requires_supervisor']
 
 const RULE_UNITS: readonly RuleUnit[] = ['percent', 'PLN']
+
+const REPLY_DRAFT_STATUSES: readonly ReplyDraftStatus[] = [
+  'draft',
+  'ready_to_send',
+  'awaiting_supervisor',
+  'rejected',
+]
+
+const REPLY_DRAFT_ACTIONS: readonly ReplyDraftAction[] = ['edit', 'approve', 'reject']
+
+const TEXT_SOURCES: readonly ReplyDraftTextSource[] = ['model', 'fallback']
+
+// The 409 detail of an edit or a decision made on a draft that was written meanwhile.
+export const DRAFT_CHANGED = 'Draft changed, reload'
 
 type Json = Record<string, unknown>
 
@@ -861,6 +977,97 @@ export function isPolicyView(value: unknown): value is PolicyView {
   )
 }
 
+function isPolicyResult(value: unknown): value is PolicyResult {
+  if (!isObject(value)) return false
+  return (
+    typeof value.option_id === 'string' &&
+    Array.isArray(value.rules) &&
+    value.rules.every(isRuleResult) &&
+    isOneOf(value.outcome, POLICY_OUTCOMES) &&
+    typeof value.thresholds_are_examples === 'boolean'
+  )
+}
+
+function isReplyDraftOfferLine(value: unknown): value is ReplyDraftOfferLine {
+  if (!isObject(value)) return false
+  return (
+    typeof value.product_code === 'string' &&
+    typeof value.product_name === 'string' &&
+    isOneOf(value.source, LINE_SOURCES) &&
+    isStringOrNull(value.supplier) &&
+    typeof value.quantity === 'number' &&
+    typeof value.available_on === 'string' &&
+    typeof value.list_price === 'string' &&
+    typeof value.unit_price === 'string' &&
+    typeof value.unit_cost === 'string' &&
+    typeof value.value === 'string' &&
+    typeof value.cost === 'string'
+  )
+}
+
+function isReplyDraftOffer(value: unknown): value is ReplyDraftOffer {
+  if (!isObject(value)) return false
+  return (
+    typeof value.option_id === 'string' &&
+    isOneOf(value.kind, OPTION_KINDS) &&
+    Array.isArray(value.lines) &&
+    value.lines.every(isReplyDraftOfferLine) &&
+    typeof value.covered_quantity === 'number' &&
+    typeof value.requested_quantity === 'number' &&
+    typeof value.fulfilled_on === 'string' &&
+    (typeof value.meets_deadline === 'boolean' || value.meets_deadline === null) &&
+    typeof value.value === 'string' &&
+    typeof value.cost === 'string' &&
+    typeof value.margin_percent === 'string' &&
+    typeof value.edited === 'boolean'
+  )
+}
+
+function isReplyDraftWhy(value: unknown): value is ReplyDraftWhy {
+  if (!isObject(value)) return false
+  return typeof value.justification === 'string' && isStringList(value.signals)
+}
+
+export function isReplyDraftView(value: unknown): value is ReplyDraftView {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.status, REPLY_DRAFT_STATUSES) &&
+    isReplyDraftOffer(value.offer) &&
+    typeof value.subject === 'string' &&
+    typeof value.body === 'string' &&
+    isOneOf(value.text_source, TEXT_SOURCES) &&
+    (value.why === null || isReplyDraftWhy(value.why)) &&
+    (value.policy === null || isPolicyResult(value.policy)) &&
+    typeof value.stale === 'boolean' &&
+    typeof value.drafted_at === 'string' &&
+    typeof value.updated_at === 'string' &&
+    (value.run === null || isRunSummary(value.run))
+  )
+}
+
+function isReplyDraftSnapshot(value: unknown): value is ReplyDraftSnapshot {
+  if (!isObject(value)) return false
+  return (
+    isReplyDraftOffer(value.offer) &&
+    (value.policy_outcome === null || isOneOf(value.policy_outcome, POLICY_OUTCOMES)) &&
+    Array.isArray(value.failing_rules) &&
+    value.failing_rules.every((code) => isOneOf(code, RULE_CODES))
+  )
+}
+
+export function isReplyDraftDecision(value: unknown): value is ReplyDraftDecision {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.action, REPLY_DRAFT_ACTIONS) &&
+    isOneOf(value.status_after, REPLY_DRAFT_STATUSES) &&
+    isStringOrNull(value.reason) &&
+    isStringOrNull(value.decided_by_name) &&
+    typeof value.decided_at === 'string' &&
+    isReplyDraftSnapshot(value.snapshot) &&
+    typeof value.current === 'boolean'
+  )
+}
+
 function isAnalysis(value: unknown): value is Analysis {
   if (!isObject(value)) return false
   return (
@@ -882,7 +1089,10 @@ function isAnalysis(value: unknown): value is Analysis {
     (value.recommendation === undefined ||
       value.recommendation === null ||
       isRecommendationView(value.recommendation)) &&
-    (value.policy === undefined || value.policy === null || isPolicyView(value.policy))
+    (value.policy === undefined || value.policy === null || isPolicyView(value.policy)) &&
+    (value.draft === undefined || value.draft === null || isReplyDraftView(value.draft)) &&
+    (value.decisions === undefined ||
+      (Array.isArray(value.decisions) && value.decisions.every(isReplyDraftDecision)))
   )
 }
 
@@ -946,4 +1156,48 @@ export function rerunRecommendation(inquiryId: number): Promise<Analysis> {
 // current completed recommendation with a chosen option ApiError 409 "Nothing to evaluate".
 export function rerunPolicy(inquiryId: number): Promise<Analysis> {
   return requestJson(`/api/inquiries/${inquiryId}/policy`, isAnalysis, { method: 'POST' })
+}
+
+function draftPath(inquiryId: number): string {
+  return `/api/inquiries/${inquiryId}/draft`
+}
+
+// POST: draft the current recommendation again (the offer as recommended, status draft), when
+// there is no draft or it is rejected or stale. Answers with the whole analysis; without a
+// current recommendation with a chosen option ApiError 409 "Nothing to draft", for an approved
+// draft of the current recommendation ApiError 409 "Draft already decided".
+export function regenerateDraft(inquiryId: number): Promise<Analysis> {
+  return requestJson(draftPath(inquiryId), isAnalysis, { method: 'POST' })
+}
+
+// PUT: edit the draft's offer (another option, quantities and unit prices of its lines) and
+// evaluate its policy. `updatedAt` is the updated_at of the draft the edit was made on, sent
+// back unchanged; a draft written meanwhile is ApiError 409 DRAFT_CHANGED. A missing reason or
+// an invalid edit is ApiError 422.
+export function editDraft(
+  inquiryId: number,
+  updatedAt: string,
+  edit: ReplyDraftEdit,
+): Promise<Analysis> {
+  return requestJson(draftPath(inquiryId), isAnalysis, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updated_at: updatedAt, ...edit }),
+  })
+}
+
+// POST: approve (optional comment) or reject (reason required) the draft. `updatedAt` as for
+// editDraft; a draft written meanwhile is ApiError 409 DRAFT_CHANGED, approving without a
+// verdict in force ApiError 409 "Policy verdict missing", rejecting without a reason 422.
+export function decideDraft(
+  inquiryId: number,
+  updatedAt: string,
+  action: 'approve' | 'reject',
+  reason: string | null,
+): Promise<Analysis> {
+  return requestJson(`${draftPath(inquiryId)}/decision`, isAnalysis, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updated_at: updatedAt, action, reason }),
+  })
 }

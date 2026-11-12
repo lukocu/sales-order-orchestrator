@@ -7,14 +7,29 @@ import {
 import { ACME_POLICY, CREDIT_NOT_EVALUATED, DELTA_POLICY } from '../test/policyFixtures'
 import { ACME_RECOMMENDATION, DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
 import {
+  ACME_APPROVED,
+  ACME_DRAFT,
+  ACME_EDITED,
+  ACME_EDITED_DRAFT,
+  ACME_REJECTED_EARLIER,
+  DELTA_DRAFT,
+} from '../test/replyDraftFixtures'
+import {
+  decideDraft,
+  DRAFT_CHANGED,
+  editDraft,
   isOrchestrationView,
   isPolicyView,
   isRecommendationView,
+  isReplyDraftDecision,
+  isReplyDraftView,
+  regenerateDraft,
   rerunOrchestration,
   rerunPolicy,
   rerunRecommendation,
   type Analysis,
 } from './analysis'
+import { ApiError } from './client'
 
 // JSON round trip, as the view arrives from the API.
 function wire(value: unknown): unknown {
@@ -313,5 +328,162 @@ describe('rerunPolicy', () => {
     })
 
     await expect(rerunPolicy(7)).rejects.toThrow('Invalid response body')
+  })
+})
+
+describe('isReplyDraftView', () => {
+  it.each([
+    ['ACME', ACME_DRAFT],
+    ['ACME edited', ACME_EDITED_DRAFT],
+    ['Delta', DELTA_DRAFT],
+  ])('accepts the %s view', (_, view) => {
+    expect(isReplyDraftView(wire(view))).toBe(true)
+  })
+
+  it('accepts a draft without a verdict, a why or a run', () => {
+    const view = { ...ACME_DRAFT, policy: null, why: null, run: null, text_source: 'fallback' }
+    expect(isReplyDraftView(wire(view))).toBe(true)
+  })
+
+  const line = ACME_DRAFT.offer.lines[0]
+  it.each([
+    ['an unknown status', { ...ACME_DRAFT, status: 'sent' }],
+    ['an unknown text source', { ...ACME_DRAFT, text_source: 'llm' }],
+    ['a missing stale flag', { ...ACME_DRAFT, stale: undefined }],
+    ['a missing token', { ...ACME_DRAFT, updated_at: undefined }],
+    [
+      'a missing edited flag',
+      { ...ACME_DRAFT, offer: { ...ACME_DRAFT.offer, edited: undefined } },
+    ],
+    [
+      'a numeric unit price',
+      { ...ACME_DRAFT, offer: { ...ACME_DRAFT.offer, lines: [{ ...line, unit_price: 114 }] } },
+    ],
+    [
+      'a line without a list price',
+      {
+        ...ACME_DRAFT,
+        offer: { ...ACME_DRAFT.offer, lines: [{ ...line, list_price: undefined }] },
+      },
+    ],
+    [
+      'an unknown verdict outcome',
+      { ...ACME_DRAFT, policy: { ...ACME_DRAFT.policy, outcome: 'ok' } },
+    ],
+    ['signals that are not labels', { ...ACME_DRAFT, why: { justification: 'x', signals: [1] } }],
+  ])('rejects %s', (_, view) => {
+    expect(isReplyDraftView(wire(view))).toBe(false)
+  })
+})
+
+describe('isReplyDraftDecision', () => {
+  it.each([
+    ['an approval', ACME_APPROVED],
+    ['an edit', ACME_EDITED],
+    ['an earlier rejection', ACME_REJECTED_EARLIER],
+  ])('accepts %s', (_, decision) => {
+    expect(isReplyDraftDecision(wire(decision))).toBe(true)
+  })
+
+  it('accepts a decision without a verdict and an unknown user', () => {
+    const decision = {
+      ...ACME_APPROVED,
+      decided_by_name: null,
+      snapshot: { ...ACME_APPROVED.snapshot, policy_outcome: null },
+    }
+    expect(isReplyDraftDecision(wire(decision))).toBe(true)
+  })
+
+  it.each([
+    ['an unknown action', { ...ACME_APPROVED, action: 'send' }],
+    ['an unknown status after', { ...ACME_APPROVED, status_after: 'sent' }],
+    ['a missing current flag', { ...ACME_APPROVED, current: undefined }],
+    [
+      'an unknown failing rule',
+      { ...ACME_APPROVED, snapshot: { ...ACME_APPROVED.snapshot, failing_rules: ['stock'] } },
+    ],
+  ])('rejects %s', (_, decision) => {
+    expect(isReplyDraftDecision(wire(decision))).toBe(false)
+  })
+})
+
+describe('reply draft helpers', () => {
+  const analysis = {
+    ...ANALYSIS,
+    recommendation: ACME_RECOMMENDATION,
+    policy: ACME_POLICY,
+    draft: ACME_DRAFT,
+    decisions: [ACME_REJECTED_EARLIER],
+  }
+
+  it('regenerates the draft with a POST and returns the analysis', async () => {
+    const fetchMock = stubFetch(analysis)
+
+    await expect(regenerateDraft(7)).resolves.toEqual(analysis)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/inquiries/7/draft',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('puts an edit with the token of the draft it was made on', async () => {
+    const fetchMock = stubFetch(analysis)
+    const edit = {
+      option_id: 'stock',
+      lines: [{ product_code: 'ABC-100', quantity: 50, unit_price: '100.00' }],
+      reason: 'Negocjacje',
+    }
+
+    await expect(editDraft(7, ACME_DRAFT.updated_at, edit)).resolves.toEqual(analysis)
+    const [path, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(path).toBe('/api/inquiries/7/draft')
+    expect(init.method).toBe('PUT')
+    expect(JSON.parse(String(init.body))).toEqual({ updated_at: ACME_DRAFT.updated_at, ...edit })
+  })
+
+  it('posts a decision with its reason', async () => {
+    const fetchMock = stubFetch(analysis)
+
+    await expect(decideDraft(7, ACME_DRAFT.updated_at, 'reject', 'Za drogo')).resolves.toEqual(
+      analysis,
+    )
+    const [path, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(path).toBe('/api/inquiries/7/draft/decision')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(String(init.body))).toEqual({
+      updated_at: ACME_DRAFT.updated_at,
+      action: 'reject',
+      reason: 'Za drogo',
+    })
+  })
+
+  it('accepts an older analysis without the draft and decisions fields', async () => {
+    const older = { ...ANALYSIS, recommendation: ACME_RECOMMENDATION, policy: ACME_POLICY }
+    stubFetch(older)
+
+    await expect(regenerateDraft(7)).resolves.toEqual(older)
+  })
+
+  it('rejects an analysis whose decisions are not a list', async () => {
+    stubFetch({ ...analysis, decisions: ACME_APPROVED })
+
+    await expect(regenerateDraft(7)).rejects.toThrow('Invalid response body')
+  })
+
+  it('rejects a changed draft as a 409 with the reload detail', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ detail: DRAFT_CHANGED }), {
+            status: 409,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      ),
+    )
+
+    const failure = decideDraft(7, ACME_DRAFT.updated_at, 'approve', null)
+    await expect(failure).rejects.toBeInstanceOf(ApiError)
+    await expect(failure).rejects.toMatchObject({ status: 409, message: 'Draft changed, reload' })
   })
 })

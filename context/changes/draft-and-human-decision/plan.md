@@ -468,25 +468,25 @@ przez `POST .../draft`.
 
 #### Automated
 
-- [x] 3.1 Wszystkie bramki backendu przechodzą
-- [x] 3.2 Testy decyzji i API przechodzą
+- [x] 3.1 Wszystkie bramki backendu przechodzą — e8db230
+- [x] 3.2 Testy decyzji i API przechodzą — e8db230
 
 #### Manual
 
-- [x] 3.3 Lokalnie (fake) Approve ACME/Delta, edycja ceny z dużym rabatem, Reject bez powodu i historia decyzji działają
+- [x] 3.3 Lokalnie (fake) Approve ACME/Delta, edycja ceny z dużym rabatem, Reject bez powodu i historia decyzji działają — e8db230
 
 ### Phase 4: Frontend sekcji Draft i wdrożenie
 
 #### Automated
 
-- [ ] 4.1 Lint przechodzi
-- [ ] 4.2 Typy przechodzą
-- [ ] 4.3 Testy przechodzą
-- [ ] 4.4 Build przechodzi
-- [ ] 4.5 Bramki backendu przechodzą
-- [ ] 4.6 Obraz się buduje
+- [x] 4.1 Lint przechodzi
+- [x] 4.2 Typy przechodzą
+- [x] 4.3 Testy przechodzą
+- [x] 4.4 Build przechodzi
+- [x] 4.5 Bramki backendu przechodzą
+- [x] 4.6 Obraz się buduje
 
 #### Manual
 
-- [ ] 4.7 Lokalnie w trybie fake sekcja Draft pokazuje statusy, edycję, Reject z powodem i historię
+- [x] 4.7 Lokalnie w trybie fake sekcja Draft pokazuje statusy, edycję, Reject z powodem i historię
 - [ ] 4.8 Na Render health pokazuje 0012_drafts_decisions, a szkic ACME przechodzi Approve
