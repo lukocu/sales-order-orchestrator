@@ -342,13 +342,13 @@ Migracja 0011 tylko dodaje tabele i seed progów; downgrade je usuwa. Istniejąc
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [x] 1.2 Testy modeli i rdzenia polityki przechodzą: `docker compose run --rm backend uv run pytest tests/test_policy_models.py tests/test_policy_core.py`
-- [x] 1.3 Modele zgadzają się z migracją: `docker compose run --rm backend uv run alembic check`
+- [x] 1.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 809163b
+- [x] 1.2 Testy modeli i rdzenia polityki przechodzą: `docker compose run --rm backend uv run pytest tests/test_policy_models.py tests/test_policy_core.py` — 809163b
+- [x] 1.3 Modele zgadzają się z migracją: `docker compose run --rm backend uv run alembic check` — 809163b
 
 #### Manual
 
-- [x] 1.4 Downgrade do `0010_supplier_offer_unique` i ponowny upgrade do head przechodzą lokalnie
+- [x] 1.4 Downgrade do `0010_supplier_offer_unique` i ponowny upgrade do head przechodzą lokalnie — 809163b
 
 ### Phase 2: Serwis, pipeline i API
 

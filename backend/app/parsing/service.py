@@ -4,8 +4,9 @@ No database connection is held while the extractor runs: the inquiry is read in 
 session, the extraction runs inside a tracing run, and the result is written in another
 short session. After every stored analysis or correction the checks run in their own run
 (`app.checks.service`), after a stored check result the orchestration runs in another
-(`app.orchestration.service`), and after it the recommendation in a third
-(`app.recommendation.service`); their failure never undoes the stored analysis.
+(`app.orchestration.service`), after it the recommendation in a third
+(`app.recommendation.service`) and after that the policy in a fourth (`app.policy.service`);
+their failure never undoes the stored analysis.
 """
 
 import logging
@@ -33,6 +34,12 @@ from app.parsing.analyze import build_parsed
 from app.parsing.extractor import ExtractionError, ExtractionResult, InquiryExtractor
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import FieldName, ParsedFields
+from app.policy.service import (
+    PolicyView,
+    get_policy_view,
+    policy_after_recommendation,
+    run_policy,
+)
 from app.recommendation.recommender import Recommender
 from app.recommendation.service import (
     RecommendationView,
@@ -93,6 +100,8 @@ class AnalysisView(BaseModel):
     orchestration: OrchestrationView | None
     # None until an orchestration could be recommended from, and again once it is gone
     recommendation: RecommendationView | None
+    # None until a recommendation with a chosen option was evaluated, and again once it is gone
+    policy: PolicyView | None
 
 
 def reference_date_of(received_at: datetime) -> date:
@@ -258,7 +267,9 @@ def reorchestrate_inquiry(
 
 
 def rerecommend_inquiry(engine: Engine, inquiry_id: int, recommender: Recommender) -> AnalysisView:
-    """Run only the recommendation again in a new run for the current orchestration.
+    """Run only the recommendation again in a new run for the current orchestration, then
+    the policy (also when the recommendation raised, so an outdated verdict is dropped; a
+    policy failure is only logged).
 
     Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToRecommend`
     without a current exception with a `completed` or `partial` orchestration, and unexpected
@@ -269,7 +280,25 @@ def rerecommend_inquiry(engine: Engine, inquiry_id: int, recommender: Recommende
             if session.get(Inquiry, inquiry_id) is None:
                 raise InquiryNotFound
             raise AnalysisNotFound
-    run_recommendation(engine, inquiry_id, recommender)
+    try:
+        run_recommendation(engine, inquiry_id, recommender)
+    finally:
+        policy_after_recommendation(engine, inquiry_id)
+    return _current_view(engine, inquiry_id)
+
+
+def reevaluate_policy_inquiry(engine: Engine, inquiry_id: int) -> AnalysisView:
+    """Evaluate only the policy again in a new run for the current recommendation.
+
+    Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToEvaluate`
+    without a current recommendation with a chosen option, and unexpected policy errors.
+    """
+    with Session(engine) as session:
+        if _find(session, inquiry_id) is None:
+            if session.get(Inquiry, inquiry_id) is None:
+                raise InquiryNotFound
+            raise AnalysisNotFound
+    run_policy(engine, inquiry_id)
     return _current_view(engine, inquiry_id)
 
 
@@ -315,6 +344,10 @@ def _user_name(session: Session, user_id: int | None) -> str | None:
 def _view(session: Session, analysis: InquiryAnalysis) -> AnalysisView:
     fields = ParsedFields.model_validate(analysis.fields)
     fields_from_model = ParsedFields.model_validate(analysis.fields_from_model)
+    recommendation = get_recommendation_view(session, analysis)
+    policy = get_policy_view(session, analysis)
+    if policy is not None and recommendation is not None and recommendation.stale:
+        policy.stale = True  # evaluated from a recommendation of data that changed since
     return AnalysisView(
         inquiry_id=analysis.inquiry_id,
         extractor=analysis.extractor,
@@ -330,5 +363,6 @@ def _view(session: Session, analysis: InquiryAnalysis) -> AnalysisView:
         run=None if analysis.run_id is None else get_run_summary(session, analysis.run_id),
         checks=get_checks_view(session, analysis),
         orchestration=get_orchestration_view(session, analysis),
-        recommendation=get_recommendation_view(session, analysis),
+        recommendation=recommendation,
+        policy=policy,
     )

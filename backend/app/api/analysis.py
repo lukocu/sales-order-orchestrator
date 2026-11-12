@@ -28,10 +28,12 @@ from app.parsing.service import (
     analyze_inquiry,
     get_analysis,
     recheck_inquiry,
+    reevaluate_policy_inquiry,
     reorchestrate_inquiry,
     rerecommend_inquiry,
     save_corrections,
 )
+from app.policy.service import NothingToEvaluate
 from app.recommendation.recommender import Recommender, get_recommender
 from app.recommendation.service import NothingToRecommend
 
@@ -43,6 +45,7 @@ PATH = "/inquiries/{inquiry_id}/analysis"
 CHECKS_PATH = "/inquiries/{inquiry_id}/checks"
 ORCHESTRATION_PATH = "/inquiries/{inquiry_id}/orchestration"
 RECOMMENDATION_PATH = "/inquiries/{inquiry_id}/recommendation"
+POLICY_PATH = "/inquiries/{inquiry_id}/policy"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -95,6 +98,18 @@ def _recommendation_failed(inquiry_id: int, error: Exception) -> HTTPException:
     )
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Recommendation failed"
+    )
+
+
+def _policy_failed(inquiry_id: int, error: Exception) -> HTTPException:
+    # Class and inquiry id only: the message could quote inquiry content.
+    logger.error(
+        "Analysis API: policy evaluation failed for inquiry %s: %s",
+        inquiry_id,
+        type(error).__name__,
+    )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Policy evaluation failed"
     )
 
 
@@ -270,3 +285,27 @@ def rerecommend(
         raise database_unavailable() from None
     except Exception as error:  # its run and failed step are recorded
         raise _recommendation_failed(inquiry_id, error) from None
+
+
+@router.post(POLICY_PATH, response_model=AnalysisView)
+def reevaluate_policy(
+    inquiry_id: InquiryId, engine: Annotated[Engine, Depends(get_engine)]
+) -> AnalysisView:
+    """Evaluate only the policy again (after a stale verdict or a changed threshold)."""
+    try:
+        return reevaluate_policy_inquiry(engine, inquiry_id)
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except NothingToEvaluate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Nothing to evaluate"
+        ) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+    except Exception as error:  # its run and failed step are recorded
+        raise _policy_failed(inquiry_id, error) from None

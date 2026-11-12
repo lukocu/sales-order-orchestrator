@@ -390,6 +390,80 @@ new variables:
   an `llm` step with tokens and cost. Without `LLM_API_KEY` the recommendation ends `failed`
   with `recommender_failed: not_configured`.
 
+## Policy
+
+After every recommendation with a chosen option, the policy (`app.policy`) checks that option
+against four deterministic rules, in its own run with one `deterministic` step `rules` (no
+model, no tokens, no cost):
+
+| Rule          | Actual value                                                                 | Pass when                    |
+| ------------- | ---------------------------------------------------------------------------- | ---------------------------- |
+| `margin`      | the option's `margin_percent`                                                | ≥ `margin_min_percent`       |
+| `discount`    | the discount the customer asks for (see below)                               | ≤ `discount_max_percent`     |
+| `order_value` | the option's `value` (PLN net)                                               | ≤ `order_value_max`          |
+| `credit`      | the customer's balance + the option's `value`                                | ≤ the customer's credit limit, and the customer is not blocked |
+
+The discount rule evaluates the customer's request, because option prices always use the
+standard discount: a requested percentage as is; a target price as
+`(list_price − target_price) / list_price × 100`, rounded half up to 0.01 (a target at or
+above the list price gives a discount ≤ 0, so it passes); no request or "best price" the
+customer's standard discount. Credit is computed from the **selected option's value**, not
+from the full requested quantity the checks use, so the checks can show `over_limit` (Delta)
+while the policy passes; the rule's reason names that basis. A value exactly at its threshold
+passes.
+
+Each rule ends `pass`, `fail` or `not_evaluated` with its actual value, threshold and a short
+English reason. `not_evaluated` means a missing threshold or missing data: a skipped discount
+or credit check, no standard discount, a target price without a list price, no credit limit or
+balance. A blocked customer fails the credit rule. The overall outcome is **no approval
+needed** only when all four rules pass; any `fail` or `not_evaluated` means **requires
+supervisor**.
+
+The thresholds live in the `policy_rules` table, seeded by migration `0011_policy_verdicts`
+with **example values** (`is_example = true`, shown as *Example thresholds*): margin at least
+20.00%, discount at most 15.00%, order value at most 30 000.00 PLN. Credit uses the customer's
+limit, not a threshold. There is no UI or API to edit them; change one with SQL and re-run the
+policy (a changed threshold does not mark a verdict stale, the verdict keeps the thresholds it
+used):
+
+```sql
+UPDATE policy_rules SET threshold = 18.00, is_example = false WHERE code = 'margin_min_percent';
+```
+
+Expected verdicts with the seed data and the rule-based recommender:
+
+| Inquiry         | Outcome             | Rules that do not pass                     |
+| --------------- | ------------------- | ------------------------------------------ |
+| ACME            | no approval needed  | —                                          |
+| Technika Omega  | no approval needed  | —                                          |
+| Hurtownia Delta | requires supervisor | discount (25% > 15%), margin, order value  |
+| Biuro Max       | none (no recommendation) | —                                     |
+
+The verdict is stored in `inquiry_policy_verdicts` (one per inquiry) and returned as `policy`
+in the analysis. It is pinned to the recommendation by its `recommended_at`: a verdict computed
+while the recommendation was replaced, turned `failed` or removed is dropped. On read `policy`
+is `stale` when the stored recommendation has another `recommended_at` or the recommendation
+itself is stale. No recommendation, a `failed` one or one computed from another check result
+means no verdict: the stored one is removed (deleting the recommendation cascades to it).
+
+The policy runs after every recommendation attempt (after Analyze, a correction, **Re-run
+orchestrator** or **Re-run recommendation**). To evaluate it again for the current
+recommendation:
+
+```sh
+curl -b cookies.txt -X POST http://localhost:8000/api/inquiries/1/policy
+```
+
+It answers with the whole analysis (`policy` holds the rules, the outcome,
+`thresholds_are_examples`, `evaluated_at`, `stale` and the run; amounts and percents are JSON
+strings). Without an analysis it answers `404 No analysis yet`, without a current
+recommendation with a chosen option `409 Nothing to evaluate`, and on an unexpected error
+`500 Policy evaluation failed`.
+
+The policy does not enforce roles, queue the inquiry for a supervisor or record an approval
+(S-08), does not evaluate an edited draft of the answer (S-07) and never changes the
+recommender's choice or prices an option with the requested discount.
+
 ## Step tracing
 
 Every processing run is recorded as a run with its steps (`app.tracing`). A step stores its

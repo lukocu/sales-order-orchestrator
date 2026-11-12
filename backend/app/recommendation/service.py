@@ -36,6 +36,7 @@ from app.orchestration.schema import (
 )
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
+from app.policy.service import policy_after_recommendation
 from app.recommendation.models import InquiryRecommendation, RecommendationStatus
 from app.recommendation.options import (
     PricedProduct,
@@ -130,7 +131,9 @@ def recommend_after_orchestration(
     Runs inside the analysis, correction and orchestration requests, so the recommender gets
     a single attempt: a transient error ends in `failed` and "Re-run recommendation" retries
     it. Never raises: unexpected errors are logged (class and inquiry id only) and leave the
-    stored recommendation as it was.
+    stored recommendation as it was. Then the policy follows the recommendation: it is
+    evaluated again, or its verdict is dropped when there is no current recommendation with
+    a chosen option.
     """
     try:
         run_recommendation(engine, inquiry_id, recommender, attempts=1)
@@ -138,6 +141,7 @@ def recommend_after_orchestration(
         pass  # run_recommendation already dropped a recommendation of old data
     except Exception as error:
         logger.warning("Recommendation failed for inquiry %s: %s", inquiry_id, type(error).__name__)
+    policy_after_recommendation(engine, inquiry_id)
 
 
 def get_recommendation_view(
