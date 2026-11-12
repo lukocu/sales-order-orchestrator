@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-11
+updated: 2026-11-12
 prd_version: 1
 main_goal: quality
 top_blocker: decisions
@@ -48,7 +48,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-03 | deterministic-checks-and-exception | handlowiec widzi sprawdzenia bez agentów i wykryty wyjątek albo zakończenie standardowe | S-02, seeded mock company data (customers, products, stock, prices, discounts, credit status) | FR-003, FR-004, US-01 | done |
 | S-04 | orchestrator-plan-and-delegation   | handlowiec widzi plan orchestratora i wyniki delegowanych sprawdzeń                   | S-03, seeded substitute catalog and customer order history | FR-005, FR-006, FR-014, US-01, NFR | done |
 | S-05 | recommendation-with-confidence     | handlowiec widzi rekomendację z uzasadnieniem i pewnością                              | S-04          | FR-007, US-01                    | done |
-| S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | in-progress |
+| S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | done        |
 | S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | proposed |
 | S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | proposed |
 | S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | blocked |
@@ -179,7 +179,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Deterministyczny i konfigurowalny, żeby progi nie udawały prawdziwych (Sokrates przy FR-008); odblokowuje trzy dalsze wycinki.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-07: Szkic odpowiedzi i decyzja handlowca
 
@@ -275,3 +275,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-03: handlowiec widzi wynik sprawdzenia klienta, stanu, ceny standardowej, rabatu i statusu kredytowego; zapytanie standardowe kończy się z widoczną informacją, że agenci nie byli użyci, a brak pełnej ilości jest oznaczony jako wyjątek.** — Archived 2026-11-10 → `context/archive/2026-11-10-deterministic-checks-and-exception/`. Lesson: —.
 - **S-04: handlowiec widzi plan orchestratora zależny od typu wyjątku i danych zapytania, wymagane kompetencje dopasowane deterministycznie do agentów oraz wyniki sprawdzeń (zgodność zamiennika, dostępność, historia klienta), z których niezależne biegną równolegle.** — Archived 2026-11-11 → `context/archive/2026-11-11-orchestrator-plan-and-delegation/`. Lesson: —.
 - **S-05: handlowiec widzi jedną rekomendowaną opcję realizacji (częściowa dostawa, zamiennik, inne źródło) z uzasadnieniem odwołującym się do danych firmowych i pewnością wyliczoną z jawnych sygnałów.** — Archived 2026-11-11 → `context/archive/2026-11-11-recommendation-with-confidence/`. Lesson: —.
+- **S-06: handlowiec widzi werdykt każdej reguły (marża, rabat, wartość zamówienia, kredyt) dla rekomendacji oraz wynik łączny: bez akceptacji albo wymaga przełożonego; reguły i progi są konfiguracją oznaczoną jako przykładowa.** — Archived 2026-11-12 → `context/archive/2026-11-11-policy-verdict/`. Lesson: —.

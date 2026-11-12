@@ -1,10 +1,10 @@
 ---
 change_id: policy-verdict
 title: Policy verdict
-status: impl_reviewed
+status: archived
 created: 2026-11-11
 updated: 2026-11-12
-archived_at: null
+archived_at: 2026-11-12T16:18:53Z
 ---
 
 ## Notes
