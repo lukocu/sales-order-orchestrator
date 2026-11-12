@@ -14,6 +14,7 @@ from app.inquiries.models import Inquiry
 from app.orchestration.planning import PlannerFailed
 from app.policy import service as policy_service
 from app.policy.models import InquiryPolicyVerdict, PolicyRule
+from app.policy.rules import evaluate
 from app.policy.service import NothingToEvaluate, policy_after_recommendation
 from app.recommendation.models import InquiryRecommendation
 from tests.conftest import ExtractorSetter, InquiryFactory, PlannerSetter, RecommenderSetter
@@ -307,6 +308,63 @@ def test_outdated_recommendation_makes_the_verdict_stale_and_rerun_409(
     assert response.status_code == 409
     assert response.json() == {"detail": "Nothing to evaluate"}
     assert _stored(migrated_engine, acme) is None  # the verdict of old data is dropped
+
+
+def test_recommendation_of_a_replaced_orchestration_is_not_evaluated(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+) -> None:
+    _analyze(auth_client, acme)
+    with Session(migrated_engine) as session:
+        # Orchestrated again, but the recommendation run after it never stored a result.
+        session.execute(
+            update(InquiryRecommendation)
+            .where(col(InquiryRecommendation.inquiry_id) == acme.id)
+            .values(orchestrated_at=datetime(2020, 1, 1, tzinfo=UTC))
+        )
+        session.commit()
+
+    body = auth_client.get(_analysis_path(acme.id)).json()
+    assert body["recommendation"]["stale"] is True
+    assert body["policy"]["stale"] is True
+
+    response = auth_client.post(_path(acme.id))
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Nothing to evaluate"}
+    assert _stored(migrated_engine, acme) is None  # the verdict of old data is dropped
+
+
+def test_result_of_a_replaced_recommendation_is_dropped(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert acme.id is not None
+    stored = _analyze(auth_client, acme)["policy"]
+
+    def recommended_again(*args: Any) -> Any:
+        # The recommendation is stored again while the rules run.
+        with Session(migrated_engine) as session:
+            session.execute(
+                update(InquiryRecommendation)
+                .where(col(InquiryRecommendation.inquiry_id) == acme.id)
+                .values(recommended_at=datetime.now(UTC))
+            )
+            session.commit()
+        return evaluate(*args)
+
+    monkeypatch.setattr(policy_service, "evaluate", recommended_again)
+
+    policy_service.run_policy(migrated_engine, acme.id)
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.run_id == stored["run"]["id"]  # the result for the old recommendation is dropped
 
 
 def test_outdated_call_does_not_delete_a_current_verdict(

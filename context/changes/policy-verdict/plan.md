@@ -326,6 +326,13 @@ Migracja 0011 tylko dodaje tabele i seed progów; downgrade je usuwa. Istniejąc
 
 <!-- Uzupełniane podczas implementacji: odstępstwa od planu z uzasadnieniem. -->
 
+- **`_drop_outdated` zachowuje werdykt bieżącej rekomendacji** (`backend/app/policy/service.py`): usuwa werdykt tylko wtedy, gdy rekomendacja zniknęła, nie jest `completed`, ma inny `recommended_at` albo nie jest przypięta do bieżących danych. Starsze wywołanie nie skasuje wyniku nowszego runu (wzorzec `_drop_outdated` rekomendacji). Test: `test_outdated_call_does_not_delete_a_current_verdict`.
+- **Flaga przykładowych progów = `any(is_example)`** (`_thresholds`): plan nie mówił, jak łączyć flagi wierszy; jeden przykładowy próg czyni cały werdykt przykładowym (bezpieczniej dla UI). Brak wierszy → `false`.
+- **Cennik ≤ 0 → `discount` `not_evaluated`** (`backend/app/policy/rules.py`): ochrona przed dzieleniem przez zero przy przeliczaniu ceny docelowej na rabat; tabela reguł tego nie wymieniała.
+- **„Re-run policy” także przy braku werdyktu** (`frontend/src/components/PolicySection.tsx`): placeholder „Policy not evaluated yet” z przyciskiem, gdy rekomendacja ma wybór, a werdyktu jeszcze nie ma (np. rekomendacje sprzed migracji 0011). Opisane w README, pokryte testem.
+- **Mapowanie `ValidationError`/`SQLAlchemyError` w `POST /policy`** (`backend/app/api/analysis.py`): jak sąsiednie endpointy re-run (zapisana analiza niezgodna ze schematem → 500, baza niedostępna → 503).
+- **Pełny pin aktualności rekomendacji (z impl-review F1)**: polityka uznaje rekomendację za aktualną tym samym warunkiem co widok rekomendacji (wersja analizy, `checks_checked_at`, `orchestrated_at`) — wspólny `app/recommendation/pin.py` (`pinned_to`, `is_current`), używany w `_read_inputs`, `_drop_outdated` i pod blokadą w `_store`. Plan wymieniał tylko `checks_checked_at`; przy nieaktualnej orkiestracji `POST /policy` zwracał 200 ze `stale` zamiast 409.
+
 ## References
 
 - Research: `context/changes/policy-verdict/research.md`

@@ -44,6 +44,7 @@ from app.recommendation.options import (
     build_options,
     recommendation_facts,
 )
+from app.recommendation.pin import is_current, pinned_to
 from app.recommendation.recommender import (
     ChoiceRejected,
     Recommender,
@@ -170,13 +171,6 @@ def get_recommendation_view(
             type(error).__name__,
         )
         return None
-    version = analysis_version(analysis)
-    checks = current_checks(session, analysis.inquiry_id, version)
-    orchestrated_at = session.exec(
-        select(InquiryOrchestration.orchestrated_at).where(
-            col(InquiryOrchestration.inquiry_id) == analysis.inquiry_id
-        )
-    ).first()
     return RecommendationView(
         recommender=result.recommender,
         options=result.options,
@@ -185,24 +179,8 @@ def get_recommendation_view(
         error=result.error,
         status=row.status,
         recommended_at=row.recommended_at,
-        stale=not _pinned_to(
-            row, version, None if checks is None else checks.checked_at, orchestrated_at
-        ),
+        stale=not is_current(session, row, analysis),
         run=None if row.run_id is None else get_run_summary(session, row.run_id),
-    )
-
-
-def _pinned_to(
-    row: InquiryRecommendation,
-    version: datetime,
-    checks_checked_at: datetime | None,
-    orchestrated_at: datetime | None,
-) -> bool:
-    """True when the row was computed from exactly these current values."""
-    return (
-        row.analysis_version == version
-        and row.checks_checked_at == checks_checked_at
-        and row.orchestrated_at == orchestrated_at
     )
 
 
@@ -464,7 +442,7 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
         outdated = (
             orchestration is None
             or orchestration.status == "failed"
-            or not _pinned_to(
+            or not pinned_to(
                 row,
                 version,
                 None if checks is None else checks.checked_at,

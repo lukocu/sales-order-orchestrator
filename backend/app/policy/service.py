@@ -30,6 +30,7 @@ from app.policy.models import InquiryPolicyVerdict, PolicyRule
 from app.policy.rules import PolicyInputs, PolicyThresholds, evaluate
 from app.policy.schema import PolicyResult, ThresholdCode
 from app.recommendation.models import InquiryRecommendation
+from app.recommendation.pin import is_current
 from app.recommendation.schema import RecommendationResult
 from app.tracing import run
 from app.tracing.summary import RunSummary, get_run_summary
@@ -41,7 +42,8 @@ SUBJECT_TYPE = "inquiry"
 
 class NothingToEvaluate(Exception):
     """No current recommendation with a chosen option: none stored, not `completed`, no
-    choice or chosen option, or not computed from the current check result."""
+    choice or chosen option, or not computed from the current analysis version, check result
+    and orchestration."""
 
 
 class PolicyView(PolicyResult):
@@ -168,10 +170,11 @@ def _read_inputs(session: Session, inquiry_id: int) -> _Inputs:
     option = next((o for o in result.options if o.id == option_id), None)
     if option is None:
         raise NothingToEvaluate
-    # Pinned only to the analysis version; the recommendation must also be computed from
-    # this very check result.
+    # The same pin as the recommendation view: analysis version, check result, orchestration.
+    if not is_current(session, recommendation, analysis):
+        raise NothingToEvaluate
     checks = current_checks(session, inquiry_id, analysis_version(analysis))
-    if checks is None or checks.checked_at != recommendation.checks_checked_at:
+    if checks is None:
         raise NothingToEvaluate
     results = CheckResults.model_validate(checks.results)
     return _Inputs(
@@ -228,7 +231,8 @@ def _store(
         set_={name: statement.excluded[name] for name in values if name != "inquiry_id"},
     )
     with Session(engine) as session:
-        if lock_analysis(session, inquiry_id) is None:
+        analysis = lock_analysis(session, inquiry_id)
+        if analysis is None:
             return  # the inquiry was deleted meanwhile
         recommendation = session.exec(
             select(InquiryRecommendation).where(col(InquiryRecommendation.inquiry_id) == inquiry_id)
@@ -240,6 +244,8 @@ def _store(
             or recommendation.recommended_at != inputs.recommended_at
         ):
             return  # recommended again, failed or deleted meanwhile: that run decides
+        if not is_current(session, recommendation, analysis):
+            return  # re-checked or orchestrated again meanwhile: that chain decides
         session.exec(statement)
         session.commit()
 
@@ -248,7 +254,8 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
     """Delete the stored verdict when it no longer belongs to a current recommendation.
 
     That is when the stored recommendation is gone, not `completed`, recommended again
-    (another `recommended_at`) or not computed from the current check result. A verdict of
+    (another `recommended_at`) or not computed from the current analysis version, check
+    result and orchestration. A verdict of
     the current recommendation is kept, so an older call never deletes the result of a
     newer run.
     """
@@ -264,13 +271,11 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
         recommendation = session.exec(
             select(InquiryRecommendation).where(col(InquiryRecommendation.inquiry_id) == inquiry_id)
         ).first()
-        checks = current_checks(session, inquiry_id, analysis_version(analysis))
         outdated = (
             recommendation is None
             or recommendation.status != "completed"
             or recommendation.recommended_at != verdict.recommended_at
-            or checks is None
-            or checks.checked_at != recommendation.checks_checked_at
+            or not is_current(session, recommendation, analysis)
         )
         if outdated:
             session.exec(
