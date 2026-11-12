@@ -28,6 +28,8 @@ from sqlmodel import Session, col, select
 from app.checks.models import Product
 from app.checks.schema import CheckResults
 from app.checks.service import CHECK_INPUTS, analysis_version, current_checks, lock_analysis
+from app.draft.drafter import Drafter
+from app.draft.service import draft_after_policy
 from app.orchestration.models import InquiryOrchestration, SupplierOffer
 from app.orchestration.schema import (
     OrchestrationResult,
@@ -125,7 +127,7 @@ def run_recommendation(
 
 
 def recommend_after_orchestration(
-    engine: Engine, inquiry_id: int, recommender: Recommender
+    engine: Engine, inquiry_id: int, recommender: Recommender, drafter: Drafter
 ) -> None:
     """After an orchestration attempt: recommend, else drop a recommendation of old data.
 
@@ -134,7 +136,7 @@ def recommend_after_orchestration(
     it. Never raises: unexpected errors are logged (class and inquiry id only) and leave the
     stored recommendation as it was. Then the policy follows the recommendation: it is
     evaluated again, or its verdict is dropped when there is no current recommendation with
-    a chosen option.
+    a chosen option; and the draft follows the policy (`draft_after_policy`).
     """
     try:
         run_recommendation(engine, inquiry_id, recommender, attempts=1)
@@ -143,6 +145,7 @@ def recommend_after_orchestration(
     except Exception as error:
         logger.warning("Recommendation failed for inquiry %s: %s", inquiry_id, type(error).__name__)
     policy_after_recommendation(engine, inquiry_id)
+    draft_after_policy(engine, inquiry_id, drafter)
 
 
 def get_recommendation_view(

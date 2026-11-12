@@ -7,6 +7,7 @@ from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.auth.models import User
+from app.draft.drafter import FakeDrafter
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import RuleBasedPlanner
 from app.parsing.fake import RuleBasedExtractor
@@ -66,6 +67,7 @@ def _analyze(engine: Engine, inquiry: Inquiry, user: User) -> None:
         AuthUser.from_user(user),
         RuleBasedPlanner(),
         FakeRecommender(),
+        FakeDrafter(),
     )
 
 

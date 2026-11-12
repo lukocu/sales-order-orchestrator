@@ -10,6 +10,8 @@ from app.api.errors import database_unavailable
 from app.auth.deps import AuthUser, get_current_user
 from app.checks.service import NoAnalysis
 from app.db import get_engine
+from app.draft.drafter import Drafter, get_drafter
+from app.draft.service import DraftDecided, NothingToDraft
 from app.orchestration.planning import Planner, get_planner
 from app.orchestration.service import NothingToOrchestrate
 from app.parsing.extractor import (
@@ -28,6 +30,7 @@ from app.parsing.service import (
     analyze_inquiry,
     get_analysis,
     recheck_inquiry,
+    redraft_inquiry,
     reevaluate_policy_inquiry,
     reorchestrate_inquiry,
     rerecommend_inquiry,
@@ -46,6 +49,7 @@ CHECKS_PATH = "/inquiries/{inquiry_id}/checks"
 ORCHESTRATION_PATH = "/inquiries/{inquiry_id}/orchestration"
 RECOMMENDATION_PATH = "/inquiries/{inquiry_id}/recommendation"
 POLICY_PATH = "/inquiries/{inquiry_id}/policy"
+DRAFT_PATH = "/inquiries/{inquiry_id}/draft"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -113,6 +117,16 @@ def _policy_failed(inquiry_id: int, error: Exception) -> HTTPException:
     )
 
 
+def _draft_failed(inquiry_id: int, error: Exception) -> HTTPException:
+    # Class and inquiry id only: the message could quote inquiry content.
+    logger.error(
+        "Analysis API: drafting failed for inquiry %s: %s", inquiry_id, type(error).__name__
+    )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Drafting failed"
+    )
+
+
 def _extraction_error(error: ExtractionError) -> HTTPException:
     if isinstance(error, ExtractionNotConfigured):
         return HTTPException(
@@ -151,11 +165,12 @@ def analyze(
     extractor: Annotated[InquiryExtractor, Depends(get_extractor)],
     planner: Annotated[Planner, Depends(get_planner)],
     recommender: Annotated[Recommender, Depends(get_recommender)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> AnalysisView:
     """Analyze the inquiry, replacing its analysis and corrections; on failure nothing changes."""
     try:
-        return analyze_inquiry(engine, extractor, inquiry_id, user, planner, recommender)
+        return analyze_inquiry(engine, extractor, inquiry_id, user, planner, recommender, drafter)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except ExtractionError as error:
@@ -181,6 +196,7 @@ def correct(
     engine: Annotated[Engine, Depends(get_engine)],
     planner: Annotated[Planner, Depends(get_planner)],
     recommender: Annotated[Recommender, Depends(get_recommender)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
     user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> AnalysisView:
     """Save the user's field values; 409 when the analysis was replaced in the meantime."""
@@ -194,6 +210,7 @@ def correct(
             user,
             planner,
             recommender,
+            drafter,
         )
     except AnalysisNotFound:
         raise _no_analysis() from None
@@ -216,10 +233,11 @@ def recheck(
     engine: Annotated[Engine, Depends(get_engine)],
     planner: Annotated[Planner, Depends(get_planner)],
     recommender: Annotated[Recommender, Depends(get_recommender)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
 ) -> AnalysisView:
     """Run the checks again for the current analysis (after a stale or failed result)."""
     try:
-        return recheck_inquiry(engine, inquiry_id, planner, recommender)
+        return recheck_inquiry(engine, inquiry_id, planner, recommender, drafter)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except NoAnalysis:
@@ -239,11 +257,12 @@ def reorchestrate(
     engine: Annotated[Engine, Depends(get_engine)],
     planner: Annotated[Planner, Depends(get_planner)],
     recommender: Annotated[Recommender, Depends(get_recommender)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
 ) -> AnalysisView:
     """Run the orchestration again (after a stale, failed or partial result), then the
     recommendation."""
     try:
-        return reorchestrate_inquiry(engine, inquiry_id, planner, recommender)
+        return reorchestrate_inquiry(engine, inquiry_id, planner, recommender, drafter)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -266,10 +285,11 @@ def rerecommend(
     inquiry_id: InquiryId,
     engine: Annotated[Engine, Depends(get_engine)],
     recommender: Annotated[Recommender, Depends(get_recommender)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
 ) -> AnalysisView:
     """Run only the recommendation again (after a stale or failed result)."""
     try:
-        return rerecommend_inquiry(engine, inquiry_id, recommender)
+        return rerecommend_inquiry(engine, inquiry_id, recommender, drafter)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -289,11 +309,13 @@ def rerecommend(
 
 @router.post(POLICY_PATH, response_model=AnalysisView)
 def reevaluate_policy(
-    inquiry_id: InquiryId, engine: Annotated[Engine, Depends(get_engine)]
+    inquiry_id: InquiryId,
+    engine: Annotated[Engine, Depends(get_engine)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
 ) -> AnalysisView:
     """Evaluate only the policy again (after a stale verdict or a changed threshold)."""
     try:
-        return reevaluate_policy_inquiry(engine, inquiry_id)
+        return reevaluate_policy_inquiry(engine, inquiry_id, drafter)
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -309,3 +331,33 @@ def reevaluate_policy(
         raise database_unavailable() from None
     except Exception as error:  # its run and failed step are recorded
         raise _policy_failed(inquiry_id, error) from None
+
+
+@router.post(DRAFT_PATH, response_model=AnalysisView)
+def regenerate(
+    inquiry_id: InquiryId,
+    engine: Annotated[Engine, Depends(get_engine)],
+    drafter: Annotated[Drafter, Depends(get_drafter)],
+) -> AnalysisView:
+    """Draft the current recommendation again: the offer as recommended, status `draft`."""
+    try:
+        return redraft_inquiry(engine, inquiry_id, drafter)
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except NothingToDraft:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Nothing to draft"
+        ) from None
+    except DraftDecided:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Draft already decided"
+        ) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+    except Exception as error:  # its run and failed step are recorded
+        raise _draft_failed(inquiry_id, error) from None

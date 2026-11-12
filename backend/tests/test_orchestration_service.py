@@ -8,6 +8,7 @@ from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, col, select
 
 from app.checks.models import InquiryChecks
+from app.draft.drafter import FakeDrafter
 from app.inquiries.models import Inquiry
 from app.orchestration.agents import AgentInput
 from app.orchestration.models import InquiryOrchestration
@@ -567,7 +568,7 @@ def test_orchestration_after_checks_does_not_retry_the_planner(
     _analyze(auth_client, acme)
     planner = StubPlanner(errors=[_transient()])
 
-    orchestrate_after_checks(migrated_engine, acme.id, planner, FakeRecommender())
+    orchestrate_after_checks(migrated_engine, acme.id, planner, FakeRecommender(), FakeDrafter())
 
     view = _orchestration(auth_client, acme)
     assert view is not None

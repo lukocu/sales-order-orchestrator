@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, update
 from sqlmodel import Session, col, select
 
+from app.draft.drafter import FakeDrafter
 from app.inquiries.models import Inquiry
 from app.orchestration.models import InquiryOrchestration
 from app.orchestration.planning import PlannerFailed
@@ -254,7 +255,7 @@ def test_outdated_call_does_not_delete_a_current_recommendation(
 
     monkeypatch.setattr(recommendation_service, "_read_inputs", nothing)
 
-    recommend_after_orchestration(migrated_engine, acme.id, FakeRecommender())
+    recommend_after_orchestration(migrated_engine, acme.id, FakeRecommender(), FakeDrafter())
 
     row = _stored(migrated_engine, acme)
     assert row is not None

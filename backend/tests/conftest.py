@@ -13,6 +13,7 @@ from sqlmodel import Session, col, select
 from app.auth.models import Role, User
 from app.auth.passwords import hash_password
 from app.db import build_engine, get_engine
+from app.draft.drafter import Drafter, FakeDrafter, get_drafter
 from app.inquiries.models import Inquiry
 from app.main import app
 from app.orchestration.planning import Planner, RuleBasedPlanner, get_planner
@@ -83,6 +84,7 @@ class StubExtractor:
 ExtractorSetter = Callable[[InquiryExtractor], None]
 PlannerSetter = Callable[[Planner], None]
 RecommenderSetter = Callable[[Recommender], None]
+DrafterSetter = Callable[[Drafter], None]
 
 
 @pytest.fixture(scope="session")
@@ -209,6 +211,21 @@ def use_recommender() -> Iterator[RecommenderSetter]:
     use(FakeRecommender())
     yield use
     app.dependency_overrides.pop(get_recommender, None)
+
+
+@pytest.fixture(autouse=True)
+def use_drafter() -> Iterator[DrafterSetter]:
+    """Override `get_drafter`: the template drafter until the test sets another one.
+
+    Autouse, so every API test drafts with the template drafter whatever `LLM_PROVIDER` says.
+    """
+
+    def use(drafter: Drafter) -> None:
+        app.dependency_overrides[get_drafter] = lambda: drafter
+
+    use(FakeDrafter())
+    yield use
+    app.dependency_overrides.pop(get_drafter, None)
 
 
 def _client_with(engine: Engine) -> Iterator[TestClient]:

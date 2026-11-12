@@ -28,6 +28,7 @@ from sqlmodel import Session, col, select
 from app.checks.models import InquiryChecks, Product
 from app.checks.schema import CheckResults
 from app.checks.service import analysis_version, current_checks, lock_analysis
+from app.draft.drafter import Drafter
 from app.orchestration.agents import AgentInput
 from app.orchestration.executor import PlanItem, execute
 from app.orchestration.models import InquiryOrchestration
@@ -120,7 +121,11 @@ def run_orchestration(
 
 
 def orchestrate_after_checks(
-    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+    engine: Engine,
+    inquiry_id: int,
+    planner: Planner,
+    recommender: Recommender,
+    drafter: Drafter,
 ) -> None:
     """After a stored check result: orchestrate an exception, else drop the old orchestration.
 
@@ -137,7 +142,7 @@ def orchestrate_after_checks(
         pass  # the analysis or its checks changed meanwhile; that newer run decides
     except Exception as error:
         logger.warning("Orchestration failed for inquiry %s: %s", inquiry_id, type(error).__name__)
-    recommend_after_orchestration(engine, inquiry_id, recommender)
+    recommend_after_orchestration(engine, inquiry_id, recommender, drafter)
 
 
 def get_orchestration_view(session: Session, analysis: InquiryAnalysis) -> OrchestrationView | None:

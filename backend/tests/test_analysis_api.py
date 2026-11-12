@@ -170,6 +170,9 @@ def test_rule_based_analysis_of_acme(
         ("parse", "deterministic", "not_applicable"),
         ("resolve-deadline", "deterministic", "not_applicable"),
     ]
+    # The chain runs to the reply draft; no decision has been made yet.
+    assert body["draft"]["status"] == "draft"
+    assert body["decisions"] == []
     assert auth_client.get(_path(acme.id)).json() == body
 
 

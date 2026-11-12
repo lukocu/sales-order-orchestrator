@@ -445,24 +445,24 @@ przez `POST .../draft`.
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Testy modeli, rdzenia oferty i polityki przechodzą
-- [x] 1.3 Modele zgadzają się z migracją
+- [x] 1.1 Wszystkie bramki backendu przechodzą — 460cc21
+- [x] 1.2 Testy modeli, rdzenia oferty i polityki przechodzą — 460cc21
+- [x] 1.3 Modele zgadzają się z migracją — 460cc21
 
 #### Manual
 
-- [x] 1.4 Downgrade do 0011_policy_verdicts i ponowny upgrade do head przechodzą lokalnie
+- [x] 1.4 Downgrade do 0011_policy_verdicts i ponowny upgrade do head przechodzą lokalnie — 460cc21
 
 ### Phase 2: Drafter LLM i etap szkicu
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
-- [ ] 2.2 Testy draftera, serwisu szkicu i regresji łańcucha przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.2 Testy draftera, serwisu szkicu i regresji łańcucha przechodzą
 
 #### Manual
 
-- [ ] 2.3 Lokalnie (fake) ACME, Omega i Delta mają szkic, Biuro Max nie, POST policy nie resetuje szkicu
+- [x] 2.3 Lokalnie (fake) ACME, Omega i Delta mają szkic, Biuro Max nie, POST policy nie resetuje szkicu
 
 ### Phase 3: Decyzje handlowca — Edit, Approve, Reject
 

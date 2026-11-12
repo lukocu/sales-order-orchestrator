@@ -5,8 +5,9 @@ session, the extraction runs inside a tracing run, and the result is written in 
 short session. After every stored analysis or correction the checks run in their own run
 (`app.checks.service`), after a stored check result the orchestration runs in another
 (`app.orchestration.service`), after it the recommendation in a third
-(`app.recommendation.service`) and after that the policy in a fourth (`app.policy.service`);
-their failure never undoes the stored analysis.
+(`app.recommendation.service`), after that the policy in a fourth (`app.policy.service`)
+and the reply draft in a fifth (`app.draft.service`); their failure never undoes the stored
+analysis.
 """
 
 import logging
@@ -22,6 +23,15 @@ from sqlmodel import Session, col, select
 from app.auth.deps import AuthUser
 from app.auth.models import User
 from app.checks.service import ChecksView, NoAnalysis, get_checks_view, run_checks
+from app.draft.drafter import Drafter
+from app.draft.service import (
+    DecisionView,
+    DraftView,
+    draft_after_policy,
+    get_decision_views,
+    get_draft_view,
+    regenerate_draft,
+)
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import Planner
 from app.orchestration.service import (
@@ -102,6 +112,10 @@ class AnalysisView(BaseModel):
     recommendation: RecommendationView | None
     # None until a recommendation with a chosen option was evaluated, and again once it is gone
     policy: PolicyView | None
+    # None until a recommendation with a chosen option was drafted, and again once it is gone
+    draft: DraftView | None
+    # every decision on the inquiry's drafts, oldest first, also of earlier recommendations
+    decisions: list[DecisionView]
 
 
 def reference_date_of(received_at: datetime) -> date:
@@ -124,6 +138,7 @@ def analyze_inquiry(
     user: AuthUser,
     planner: Planner,
     recommender: Recommender,
+    drafter: Drafter,
 ) -> AnalysisView:
     """Analyze the inquiry and replace its current analysis (corrections are dropped).
 
@@ -174,7 +189,7 @@ def analyze_inquiry(
     with Session(engine) as session:
         session.exec(statement)
         session.commit()
-    _run_checks_after_save(engine, inquiry_id, planner, recommender)
+    _run_checks_after_save(engine, inquiry_id, planner, recommender, drafter)
     return _current_view(engine, inquiry_id)
 
 
@@ -198,6 +213,7 @@ def save_corrections(
     user: AuthUser,
     planner: Planner,
     recommender: Recommender,
+    drafter: Drafter,
 ) -> AnalysisView:
     """Store the user's values for the analysis read at `analyzed_at`.
 
@@ -223,12 +239,16 @@ def save_corrections(
         session.add(analysis)
         session.commit()
     # Outside the lock: the checks lock the analysis again only to store their result.
-    _run_checks_after_save(engine, inquiry_id, planner, recommender)
+    _run_checks_after_save(engine, inquiry_id, planner, recommender, drafter)
     return _current_view(engine, inquiry_id)
 
 
 def recheck_inquiry(
-    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+    engine: Engine,
+    inquiry_id: int,
+    planner: Planner,
+    recommender: Recommender,
+    drafter: Drafter,
 ) -> AnalysisView:
     """Run the checks again in a new run for the current analysis, then the orchestration
     and the recommendation.
@@ -243,12 +263,16 @@ def recheck_inquiry(
             if session.get(Inquiry, inquiry_id) is None:
                 raise InquiryNotFound from None
         raise
-    orchestrate_after_checks(engine, inquiry_id, planner, recommender)
+    orchestrate_after_checks(engine, inquiry_id, planner, recommender, drafter)
     return _current_view(engine, inquiry_id)
 
 
 def reorchestrate_inquiry(
-    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+    engine: Engine,
+    inquiry_id: int,
+    planner: Planner,
+    recommender: Recommender,
+    drafter: Drafter,
 ) -> AnalysisView:
     """Run the orchestration again in a new run for the current analysis, then the
     recommendation (a single recommender attempt; its failure is only logged).
@@ -262,14 +286,16 @@ def reorchestrate_inquiry(
                 raise InquiryNotFound
             raise AnalysisNotFound
     run_orchestration(engine, inquiry_id, planner)
-    recommend_after_orchestration(engine, inquiry_id, recommender)
+    recommend_after_orchestration(engine, inquiry_id, recommender, drafter)
     return _current_view(engine, inquiry_id)
 
 
-def rerecommend_inquiry(engine: Engine, inquiry_id: int, recommender: Recommender) -> AnalysisView:
+def rerecommend_inquiry(
+    engine: Engine, inquiry_id: int, recommender: Recommender, drafter: Drafter
+) -> AnalysisView:
     """Run only the recommendation again in a new run for the current orchestration, then
-    the policy (also when the recommendation raised, so an outdated verdict is dropped; a
-    policy failure is only logged).
+    the policy and the draft (also when the recommendation raised, so an outdated verdict and
+    draft are dropped; their failure is only logged).
 
     Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToRecommend`
     without a current exception with a `completed` or `partial` orchestration, and unexpected
@@ -284,11 +310,14 @@ def rerecommend_inquiry(engine: Engine, inquiry_id: int, recommender: Recommende
         run_recommendation(engine, inquiry_id, recommender)
     finally:
         policy_after_recommendation(engine, inquiry_id)
+        draft_after_policy(engine, inquiry_id, drafter)
     return _current_view(engine, inquiry_id)
 
 
-def reevaluate_policy_inquiry(engine: Engine, inquiry_id: int) -> AnalysisView:
-    """Evaluate only the policy again in a new run for the current recommendation.
+def reevaluate_policy_inquiry(engine: Engine, inquiry_id: int, drafter: Drafter) -> AnalysisView:
+    """Evaluate only the policy again in a new run for the current recommendation, then
+    follow with the draft: an existing draft of the current recommendation is kept, a
+    missing one is drafted, a draft of old data is dropped (only logged on failure).
 
     Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToEvaluate`
     without a current recommendation with a chosen option, and unexpected policy errors.
@@ -298,12 +327,35 @@ def reevaluate_policy_inquiry(engine: Engine, inquiry_id: int) -> AnalysisView:
             if session.get(Inquiry, inquiry_id) is None:
                 raise InquiryNotFound
             raise AnalysisNotFound
-    run_policy(engine, inquiry_id)
+    try:
+        run_policy(engine, inquiry_id)
+    finally:
+        draft_after_policy(engine, inquiry_id, drafter)
+    return _current_view(engine, inquiry_id)
+
+
+def redraft_inquiry(engine: Engine, inquiry_id: int, drafter: Drafter) -> AnalysisView:
+    """Draft the current recommendation again ("Regenerate draft"), resetting the offer.
+
+    Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis, `NothingToDraft`
+    without a current recommendation with a chosen option, `DraftDecided` for an approved
+    draft of the current recommendation, and unexpected drafting errors.
+    """
+    with Session(engine) as session:
+        if _find(session, inquiry_id) is None:
+            if session.get(Inquiry, inquiry_id) is None:
+                raise InquiryNotFound
+            raise AnalysisNotFound
+    regenerate_draft(engine, inquiry_id, drafter)
     return _current_view(engine, inquiry_id)
 
 
 def _run_checks_after_save(
-    engine: Engine, inquiry_id: int, planner: Planner, recommender: Recommender
+    engine: Engine,
+    inquiry_id: int,
+    planner: Planner,
+    recommender: Recommender,
+    drafter: Drafter,
 ) -> None:
     """Checks, then the orchestration and the recommendation, after a saved analysis or
     correction.
@@ -316,7 +368,7 @@ def _run_checks_after_save(
         # Class and inquiry id only: the message could quote inquiry content.
         logger.warning("Checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)
         return
-    orchestrate_after_checks(engine, inquiry_id, planner, recommender)
+    orchestrate_after_checks(engine, inquiry_id, planner, recommender, drafter)
 
 
 def _current_view(engine: Engine, inquiry_id: int) -> AnalysisView:
@@ -365,4 +417,6 @@ def _view(session: Session, analysis: InquiryAnalysis) -> AnalysisView:
         orchestration=get_orchestration_view(session, analysis),
         recommendation=recommendation,
         policy=policy,
+        draft=get_draft_view(session, analysis),
+        decisions=get_decision_views(session, analysis),
     )
