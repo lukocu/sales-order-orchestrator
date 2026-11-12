@@ -75,9 +75,11 @@ def run_policy(engine: Engine, inquiry_id: int) -> None:
         _drop_outdated(engine, inquiry_id)
         raise
 
-    with run(engine, subject_type=SUBJECT_TYPE, subject_id=str(inquiry_id)) as traced:
-        with traced.step("rules", kind="deterministic"):
-            result = evaluate(inputs.inputs, inputs.thresholds)
+    with (
+        run(engine, subject_type=SUBJECT_TYPE, subject_id=str(inquiry_id)) as traced,
+        traced.step("rules", kind="deterministic"),
+    ):
+        result = evaluate(inputs.inputs, inputs.thresholds)
     _store(engine, inquiry_id, inputs, traced.id, result)
 
 
