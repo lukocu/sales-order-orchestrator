@@ -12,7 +12,7 @@ analysis.
 
 import logging
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -24,10 +24,13 @@ from app.auth.deps import AuthUser
 from app.auth.models import User
 from app.checks.service import ChecksView, NoAnalysis, get_checks_view, run_checks
 from app.draft.drafter import Drafter
+from app.draft.offer import LineEdit
 from app.draft.service import (
     DecisionView,
     DraftView,
+    decide,
     draft_after_policy,
+    edit_draft,
     get_decision_views,
     get_draft_view,
     regenerate_draft,
@@ -348,6 +351,61 @@ def redraft_inquiry(engine: Engine, inquiry_id: int, drafter: Drafter) -> Analys
             raise AnalysisNotFound
     regenerate_draft(engine, inquiry_id, drafter)
     return _current_view(engine, inquiry_id)
+
+
+def edit_draft_inquiry(
+    engine: Engine,
+    inquiry_id: int,
+    user: AuthUser,
+    *,
+    updated_at: datetime,
+    option_id: str,
+    lines: list[LineEdit],
+    reason: str | None,
+) -> AnalysisView:
+    """Edit the draft's offer (see `app.draft.service.edit_draft`).
+
+    Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis and whatever
+    `edit_draft` raises.
+    """
+    _require_analysis(engine, inquiry_id)
+    edit_draft(
+        engine,
+        inquiry_id,
+        user,
+        updated_at=updated_at,
+        option_id=option_id,
+        lines=lines,
+        reason=reason,
+    )
+    return _current_view(engine, inquiry_id)
+
+
+def decide_draft_inquiry(
+    engine: Engine,
+    inquiry_id: int,
+    user: AuthUser,
+    *,
+    updated_at: datetime,
+    action: Literal["approve", "reject"],
+    reason: str | None,
+) -> AnalysisView:
+    """Approve or reject the draft (see `app.draft.service.decide`).
+
+    Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis and whatever `decide`
+    raises.
+    """
+    _require_analysis(engine, inquiry_id)
+    decide(engine, inquiry_id, user, updated_at=updated_at, action=action, reason=reason)
+    return _current_view(engine, inquiry_id)
+
+
+def _require_analysis(engine: Engine, inquiry_id: int) -> None:
+    with Session(engine) as session:
+        if _find(session, inquiry_id) is None:
+            if session.get(Inquiry, inquiry_id) is None:
+                raise InquiryNotFound
+            raise AnalysisNotFound
 
 
 def _run_checks_after_save(

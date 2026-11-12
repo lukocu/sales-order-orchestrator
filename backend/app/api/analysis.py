@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import AwareDatetime, BaseModel, ConfigDict, ValidationError
@@ -11,7 +11,16 @@ from app.auth.deps import AuthUser, get_current_user
 from app.checks.service import NoAnalysis
 from app.db import get_engine
 from app.draft.drafter import Drafter, get_drafter
-from app.draft.service import DraftDecided, NothingToDraft
+from app.draft.offer import InvalidEdit, LineEdit
+from app.draft.service import (
+    DraftChanged,
+    DraftDecided,
+    DraftNotEditable,
+    DraftStale,
+    NothingToDraft,
+    PolicyMissing,
+    ReasonRequired,
+)
 from app.orchestration.planning import Planner, get_planner
 from app.orchestration.service import NothingToOrchestrate
 from app.parsing.extractor import (
@@ -28,6 +37,8 @@ from app.parsing.service import (
     AnalysisView,
     InquiryNotFound,
     analyze_inquiry,
+    decide_draft_inquiry,
+    edit_draft_inquiry,
     get_analysis,
     recheck_inquiry,
     redraft_inquiry,
@@ -50,6 +61,7 @@ ORCHESTRATION_PATH = "/inquiries/{inquiry_id}/orchestration"
 RECOMMENDATION_PATH = "/inquiries/{inquiry_id}/recommendation"
 POLICY_PATH = "/inquiries/{inquiry_id}/policy"
 DRAFT_PATH = "/inquiries/{inquiry_id}/draft"
+DECISION_PATH = "/inquiries/{inquiry_id}/draft/decision"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -361,3 +373,111 @@ def regenerate(
         raise database_unavailable() from None
     except Exception as error:  # its run and failed step are recorded
         raise _draft_failed(inquiry_id, error) from None
+
+
+class DraftEditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    updated_at: AwareDatetime  # of the draft the edit was made on
+    option_id: str
+    lines: list[LineEdit]
+    reason: str | None = None  # required; a missing or blank one is a 422 "Reason is required"
+
+
+class DraftDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    updated_at: AwareDatetime  # of the draft the decision was made on
+    action: Literal["approve", "reject"]
+    reason: str | None = None  # required to reject, optional to approve
+
+
+def _decision_error(error: Exception) -> HTTPException:
+    """The 409/422 of an edit or a decision; `error` is one of the draft service's."""
+    if isinstance(error, ReasonRequired):
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Reason is required"
+        )
+    if isinstance(error, InvalidEdit):
+        # Fixed English sentences of `app.draft.offer` and the service, no inquiry data.
+        return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error))
+    details: dict[type[Exception], str] = {
+        DraftChanged: "Draft changed, reload",
+        DraftNotEditable: "Draft cannot be changed",
+        DraftStale: "Draft is stale",
+        PolicyMissing: "Policy verdict missing",
+        NothingToDraft: "Nothing to draft",
+    }
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=details[type(error)])
+
+
+_DECISION_ERRORS = (
+    ReasonRequired,
+    InvalidEdit,
+    DraftChanged,
+    DraftNotEditable,
+    DraftStale,
+    PolicyMissing,
+    NothingToDraft,
+)
+
+
+@router.put(DRAFT_PATH, response_model=AnalysisView)
+def edit(
+    inquiry_id: InquiryId,
+    request: DraftEditRequest,
+    engine: Annotated[Engine, Depends(get_engine)],
+    user: Annotated[AuthUser, Depends(get_current_user)],
+) -> AnalysisView:
+    """Edit the draft's offer and evaluate its policy; 409 when the draft changed meanwhile."""
+    try:
+        return edit_draft_inquiry(
+            engine,
+            inquiry_id,
+            user,
+            updated_at=request.updated_at,
+            option_id=request.option_id,
+            lines=request.lines,
+            reason=request.reason,
+        )
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except _DECISION_ERRORS as error:
+        raise _decision_error(error) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+
+
+@router.post(DECISION_PATH, response_model=AnalysisView)
+def decide_draft(
+    inquiry_id: InquiryId,
+    request: DraftDecisionRequest,
+    engine: Annotated[Engine, Depends(get_engine)],
+    user: Annotated[AuthUser, Depends(get_current_user)],
+) -> AnalysisView:
+    """Approve or reject the draft; 409 when the draft changed meanwhile."""
+    try:
+        return decide_draft_inquiry(
+            engine,
+            inquiry_id,
+            user,
+            updated_at=request.updated_at,
+            action=request.action,
+            reason=request.reason,
+        )
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except _DECISION_ERRORS as error:
+        raise _decision_error(error) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None

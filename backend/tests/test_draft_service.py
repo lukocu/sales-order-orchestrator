@@ -11,7 +11,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, delete, update
 from sqlmodel import Session, col, select
 
+from app.auth.deps import AuthUser
 from app.auth.models import User
+from app.checks.rules import CENT
 from app.draft import service as draft_service
 from app.draft.drafter import (
     FALLBACK_CLOSING,
@@ -24,12 +26,19 @@ from app.draft.drafter import (
     UnconfiguredDrafter,
 )
 from app.draft.models import InquiryDraft, InquiryDraftDecision
-from app.draft.offer import format_amount
+from app.draft.offer import InvalidEdit, LineEdit, format_amount
 from app.draft.schema import DecisionSnapshot, DraftOffer, DraftStatus
 from app.draft.service import (
+    DraftChanged,
     DraftDecided,
+    DraftNotEditable,
+    DraftStale,
     NothingToDraft,
+    PolicyMissing,
+    ReasonRequired,
+    decide,
     draft_after_policy,
+    edit_draft,
     generate_draft,
     regenerate_draft,
 )
@@ -122,7 +131,7 @@ def _add_decision(
     *,
     status_after: DraftStatus = "ready_to_send",
 ) -> None:
-    """A decision row as phase 3 will write it (no decision endpoint exists yet)."""
+    """A decision row as `decide` writes it, without its checks."""
     assert inquiry.id is not None
     snapshot = DecisionSnapshot(
         offer=DraftOffer.model_validate(draft["offer"]),
@@ -840,3 +849,555 @@ def test_without_session_is_401(client: TestClient) -> None:
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Not authenticated"}
+
+
+# --- Decisions --------------------------------------------------------------------------
+
+
+def _auth(user: User) -> AuthUser:
+    return AuthUser.from_user(user)
+
+
+def _token(draft: dict[str, Any]) -> datetime:
+    return datetime.fromisoformat(draft["updated_at"])
+
+
+def _edits(draft: dict[str, Any], *, discount: Decimal | None = None) -> list[LineEdit]:
+    """The draft's lines as edits; with `discount` (percent) every unit price is cut to that
+    much below its list price."""
+    return [
+        LineEdit(
+            product_code=line["product_code"],
+            quantity=line["quantity"],
+            unit_price=(
+                Decimal(line["unit_price"])
+                if discount is None
+                else (Decimal(line["list_price"]) * (100 - discount) / 100).quantize(CENT)
+            ),
+        )
+        for line in draft["offer"]["lines"]
+    ]
+
+
+def _decisions(engine: Engine, inquiry: Inquiry) -> list[InquiryDraftDecision]:
+    with Session(engine) as session:
+        return list(
+            session.exec(
+                select(InquiryDraftDecision)
+                .where(col(InquiryDraftDecision.inquiry_id) == inquiry.id)
+                .order_by(col(InquiryDraftDecision.id))
+            ).all()
+        )
+
+
+def test_approve_without_approval_needed_is_ready_to_send(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    assert draft["policy"]["outcome"] == "no_approval_needed"
+
+    decide(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        action="approve",
+        reason="  ",
+    )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.status == "ready_to_send"
+    assert row.updated_at != _token(draft)
+    (decision,) = _decisions(migrated_engine, acme)
+    assert (decision.action, decision.status_after, decision.reason) == (
+        "approve",
+        "ready_to_send",
+        None,  # a blank comment is no comment
+    )
+    assert decision.decided_by == test_user.id
+    assert decision.decided_at == row.updated_at
+    assert decision.recommended_at == row.recommended_at
+    snapshot = DecisionSnapshot.model_validate(decision.snapshot)
+    assert snapshot.offer == DraftOffer.model_validate(draft["offer"])
+    assert (snapshot.policy_outcome, snapshot.failing_rules) == ("no_approval_needed", [])
+
+
+def test_approve_with_supervisor_verdict_awaits_the_supervisor(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    delta = _inquiry(make_inquiry, DELTA)
+    assert delta.id is not None
+    draft = _analyze(auth_client, delta)["draft"]
+
+    decide(
+        migrated_engine,
+        delta.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        action="approve",
+        reason="Klient strategiczny",
+    )
+
+    row = _stored(migrated_engine, delta)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+    (decision,) = _decisions(migrated_engine, delta)
+    assert (decision.status_after, decision.reason) == (
+        "awaiting_supervisor",
+        "Klient strategiczny",
+    )
+    snapshot = DecisionSnapshot.model_validate(decision.snapshot)
+    assert snapshot.policy_outcome == "requires_supervisor"
+    assert "discount" in snapshot.failing_rules
+
+
+def test_edit_without_changes_keeps_the_stage_outcome(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    body = _analyze(auth_client, acme)
+    draft = body["draft"]
+
+    edit_draft(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        option_id=draft["offer"]["option_id"],
+        lines=_edits(draft),
+        reason="Bez zmian",
+    )
+
+    edited = _read(auth_client, acme)["draft"]
+    assert edited["offer"]["edited"] is True
+    assert edited["offer"]["value"] == draft["offer"]["value"]
+    assert edited["policy"]["outcome"] == body["policy"]["outcome"]
+    assert [r["verdict"] for r in edited["policy"]["rules"]] == [
+        r["verdict"] for r in body["policy"]["rules"]
+    ]
+
+
+def test_edit_recomputes_the_offer_and_its_policy(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    edits = _edits(draft, discount=Decimal("20"))
+    edits[0] = edits[0].model_copy(update={"quantity": edits[0].quantity + 5})
+
+    edit_draft(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        option_id=draft["offer"]["option_id"],
+        lines=edits,
+        reason=" Rabat negocjowany ",
+    )
+
+    view = _read(auth_client, acme)
+    edited = view["draft"]
+    assert (edited["status"], edited["stale"]) == ("draft", False)
+    offer = edited["offer"]
+    assert offer["edited"] is True
+    expected_value = sum((e.unit_price * e.quantity for e in edits), Decimal("0"))
+    assert Decimal(offer["value"]) == expected_value
+    assert offer["covered_quantity"] == sum(e.quantity for e in edits)
+    assert Decimal(offer["margin_percent"]) < Decimal(draft["offer"]["margin_percent"])
+    assert f"Razem: {format_amount(expected_value)} PLN netto." in edited["body"]
+    # The edit's own verdict: the offered discount fails the discount rule.
+    assert edited["policy"]["outcome"] == "requires_supervisor"
+    discount = next(r for r in edited["policy"]["rules"] if r["code"] == "discount")
+    assert discount["verdict"] == "fail"
+    assert Decimal(discount["actual"]) >= Decimal("19.99")
+    # The policy stage's verdict of the offer as recommended is untouched.
+    assert view["policy"]["outcome"] == "no_approval_needed"
+    (decision,) = view["decisions"]
+    assert (decision["action"], decision["status_after"], decision["reason"]) == (
+        "edit",
+        "draft",
+        "Rabat negocjowany",
+    )
+    assert decision["decided_by_name"] == "Test User"
+    assert decision["snapshot"]["offer"] == offer
+    assert "discount" in decision["snapshot"]["failing_rules"]
+
+    # Approving the edited offer follows its own verdict.
+    decide(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(edited),
+        action="approve",
+        reason=None,
+    )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+    assert [d.action for d in _decisions(migrated_engine, acme)] == ["edit", "approve"]
+
+
+def test_reject_needs_a_reason_and_rejects(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    user = _auth(test_user)
+
+    for reason in (None, "", "   "):
+        with pytest.raises(ReasonRequired):
+            decide(
+                migrated_engine,
+                acme.id,
+                user,
+                updated_at=_token(draft),
+                action="reject",
+                reason=reason,
+            )
+    assert _decisions(migrated_engine, acme) == []
+
+    decide(
+        migrated_engine,
+        acme.id,
+        user,
+        updated_at=_token(draft),
+        action="reject",
+        reason="Klient wycofał zapytanie",
+    )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.status == "rejected"
+    (decision,) = _decisions(migrated_engine, acme)
+    assert (decision.action, decision.status_after, decision.reason) == (
+        "reject",
+        "rejected",
+        "Klient wycofał zapytanie",
+    )
+
+
+def test_edit_needs_a_reason(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+
+    with pytest.raises(ReasonRequired):
+        edit_draft(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            option_id=draft["offer"]["option_id"],
+            lines=_edits(draft),
+            reason=" ",
+        )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.result["offer"]["edited"] is False
+
+
+def test_invalid_edits_change_nothing(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    option_id = draft["offer"]["option_id"]
+    edits = _edits(draft)
+    invalid: list[tuple[str, list[LineEdit]]] = [
+        ("no-such-option", edits),
+        (option_id, [*edits, edits[0]]),
+        (option_id, [edits[0].model_copy(update={"quantity": 0}), *edits[1:]]),
+        (option_id, [edits[0].model_copy(update={"unit_price": Decimal("0")}), *edits[1:]]),
+    ]
+
+    for edited_option, lines in invalid:
+        with pytest.raises(InvalidEdit):
+            edit_draft(
+                migrated_engine,
+                acme.id,
+                _auth(test_user),
+                updated_at=_token(draft),
+                option_id=edited_option,
+                lines=lines,
+                reason="Zmiana",
+            )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert (row.updated_at, row.result["offer"]["edited"]) == (_token(draft), False)
+    assert _decisions(migrated_engine, acme) == []
+
+
+def test_edit_can_switch_to_another_option(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    body = _analyze(auth_client, acme)
+    draft = body["draft"]
+    others = [
+        o for o in body["recommendation"]["options"] if o["id"] != draft["offer"]["option_id"]
+    ]
+    assert others, "the ACME recommendation has more than one option"
+    other = others[0]
+    lines = [
+        LineEdit(
+            product_code=line["product_code"],
+            quantity=line["quantity"],
+            unit_price=Decimal(line["unit_price"]),
+        )
+        for line in other["lines"]
+    ]
+
+    edit_draft(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        option_id=other["id"],
+        lines=lines,
+        reason="Inna opcja",
+    )
+
+    offer = _read(auth_client, acme)["draft"]["offer"]
+    assert (offer["option_id"], offer["kind"], offer["edited"]) == (
+        other["id"],
+        other["kind"],
+        True,
+    )
+    assert offer["value"] == other["value"]
+
+
+def test_changed_draft_is_refused(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    _set_draft(migrated_engine, acme, updated_at=datetime.now(UTC))
+
+    with pytest.raises(DraftChanged):
+        decide(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            action="approve",
+            reason=None,
+        )
+    with pytest.raises(DraftChanged):
+        edit_draft(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            option_id=draft["offer"]["option_id"],
+            lines=_edits(draft),
+            reason="Zmiana",
+        )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.status == "draft"
+    assert _decisions(migrated_engine, acme) == []
+
+
+@pytest.mark.parametrize("status", ["ready_to_send", "awaiting_supervisor", "rejected"])
+def test_decided_draft_cannot_be_changed(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+    status: DraftStatus,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    _set_draft(migrated_engine, acme, status=status)
+
+    with pytest.raises(DraftNotEditable):
+        decide(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            action="reject",
+            reason="Za późno",
+        )
+    with pytest.raises(DraftNotEditable):
+        edit_draft(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            option_id=draft["offer"]["option_id"],
+            lines=_edits(draft),
+            reason="Zmiana",
+        )
+    assert _decisions(migrated_engine, acme) == []
+
+
+def test_decision_after_a_decision_is_refused(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    decide(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        action="approve",
+        reason=None,
+    )
+    approved = _read(auth_client, acme)["draft"]
+
+    with pytest.raises(DraftNotEditable):
+        decide(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(approved),
+            action="reject",
+            reason="Pomyłka",
+        )
+    assert len(_decisions(migrated_engine, acme)) == 1
+
+
+def test_stale_draft_is_refused(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    _set_draft(migrated_engine, acme, recommended_at=datetime(2020, 1, 1, tzinfo=UTC))
+
+    with pytest.raises(DraftStale):
+        decide(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            action="approve",
+            reason=None,
+        )
+    with pytest.raises(DraftStale):
+        edit_draft(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            option_id=draft["offer"]["option_id"],
+            lines=_edits(draft),
+            reason="Zmiana",
+        )
+    assert _decisions(migrated_engine, acme) == []
+
+
+@pytest.mark.parametrize("verdict", ["missing", "stale"])
+def test_approve_without_a_current_verdict_is_refused(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+    verdict: str,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    with Session(migrated_engine) as session:
+        where = col(InquiryPolicyVerdict.inquiry_id) == acme.id
+        if verdict == "missing":
+            session.execute(delete(InquiryPolicyVerdict).where(where))
+        else:
+            session.execute(
+                update(InquiryPolicyVerdict)
+                .where(where)
+                .values(recommended_at=datetime(2020, 1, 1, tzinfo=UTC))
+            )
+        session.commit()
+
+    with pytest.raises(PolicyMissing):
+        decide(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            action="approve",
+            reason=None,
+        )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.status == "draft"
+    assert _decisions(migrated_engine, acme) == []
+
+
+def test_decision_without_a_draft_is_nothing_to_draft(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    with Session(migrated_engine) as session:
+        session.execute(delete(InquiryDraft).where(col(InquiryDraft.inquiry_id) == acme.id))
+        session.commit()
+
+    with pytest.raises(NothingToDraft):
+        decide(
+            migrated_engine,
+            acme.id,
+            _auth(test_user),
+            updated_at=_token(draft),
+            action="approve",
+            reason=None,
+        )

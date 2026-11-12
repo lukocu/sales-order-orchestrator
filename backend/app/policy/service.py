@@ -188,11 +188,11 @@ def _read_inputs(session: Session, inquiry_id: int) -> _Inputs:
             list_price=results.price.list_price,
             credit=results.credit,
         ),
-        thresholds=_thresholds(session),
+        thresholds=load_thresholds(session),
     )
 
 
-def _thresholds(session: Session) -> PolicyThresholds:
+def load_thresholds(session: Session) -> PolicyThresholds:
     """The configured thresholds; a missing row leaves its rule not evaluated."""
     rules = {rule.code: rule for rule in session.exec(select(PolicyRule)).all()}
 

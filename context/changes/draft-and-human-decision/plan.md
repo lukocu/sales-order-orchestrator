@@ -457,23 +457,23 @@ przez `POST .../draft`.
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą
-- [x] 2.2 Testy draftera, serwisu szkicu i regresji łańcucha przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą — 02ecd4d
+- [x] 2.2 Testy draftera, serwisu szkicu i regresji łańcucha przechodzą — 02ecd4d
 
 #### Manual
 
-- [x] 2.3 Lokalnie (fake) ACME, Omega i Delta mają szkic, Biuro Max nie, POST policy nie resetuje szkicu
+- [x] 2.3 Lokalnie (fake) ACME, Omega i Delta mają szkic, Biuro Max nie, POST policy nie resetuje szkicu — 02ecd4d
 
 ### Phase 3: Decyzje handlowca — Edit, Approve, Reject
 
 #### Automated
 
-- [ ] 3.1 Wszystkie bramki backendu przechodzą
-- [ ] 3.2 Testy decyzji i API przechodzą
+- [x] 3.1 Wszystkie bramki backendu przechodzą
+- [x] 3.2 Testy decyzji i API przechodzą
 
 #### Manual
 
-- [ ] 3.3 Lokalnie (fake) Approve ACME/Delta, edycja ceny z dużym rabatem, Reject bez powodu i historia decyzji działają
+- [x] 3.3 Lokalnie (fake) Approve ACME/Delta, edycja ceny z dużym rabatem, Reject bez powodu i historia decyzji działają
 
 ### Phase 4: Frontend sekcji Draft i wdrożenie
 

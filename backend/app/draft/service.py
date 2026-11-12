@@ -19,16 +19,18 @@ inquiry id only, never inquiry content.
 
 import logging
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import Engine, delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, col, select
 
+from app.auth.deps import AuthUser
 from app.auth.models import User
 from app.checks.models import Product
 from app.checks.schema import CheckResults
@@ -46,7 +48,15 @@ from app.draft.drafter import (
     validate_text,
 )
 from app.draft.models import InquiryDraft, InquiryDraftDecision
-from app.draft.offer import offer_from_option, render_body, render_subject
+from app.draft.offer import (
+    InvalidEdit,
+    LineEdit,
+    apply_edit,
+    offer_from_option,
+    offer_policy_inputs,
+    render_body,
+    render_subject,
+)
 from app.draft.schema import (
     DecisionAction,
     DecisionSnapshot,
@@ -59,8 +69,10 @@ from app.draft.schema import (
 from app.inquiries.models import Inquiry
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
+from app.policy.models import InquiryPolicyVerdict
+from app.policy.rules import evaluate
 from app.policy.schema import PolicyResult
-from app.policy.service import get_policy_view
+from app.policy.service import get_policy_view, load_thresholds
 from app.recommendation.models import InquiryRecommendation
 from app.recommendation.pin import is_current
 from app.recommendation.schema import RecommendationOption, RecommendationResult
@@ -85,6 +97,28 @@ class NothingToDraft(Exception):
 
 class DraftDecided(Exception):
     """The draft of the current recommendation was approved; it cannot be regenerated."""
+
+
+class DraftChanged(Exception):
+    """The draft was written since the salesperson read it (another `updated_at`)."""
+
+
+class DraftNotEditable(Exception):
+    """The draft is no longer in status `draft`: it was approved or rejected."""
+
+
+class DraftStale(Exception):
+    """The draft no longer belongs to the current recommendation (recommended again, or the
+    recommendation is not computed from the current data)."""
+
+
+class PolicyMissing(Exception):
+    """Approve without a verdict in force: the policy stage's verdict of the offer as
+    recommended is missing or stale, or an edited offer carries no verdict."""
+
+
+class ReasonRequired(ValueError):
+    """An edit or a rejection without a reason (missing or blank)."""
 
 
 class DraftWhy(BaseModel):
@@ -210,6 +244,86 @@ def regenerate_draft(
         retry_delay_s,
         replacing=None if stored is None else stored.updated_at,
     )
+
+
+# --- Decisions --------------------------------------------------------------------------
+
+
+def edit_draft(
+    engine: Engine,
+    inquiry_id: int,
+    user: AuthUser,
+    *,
+    updated_at: datetime,
+    option_id: str,
+    lines: Sequence[LineEdit],
+    reason: str | None,
+) -> None:
+    """Replace the draft's offer by an option of the current recommendation with new
+    quantities and unit prices of its lines, and evaluate the policy for that offer.
+
+    The edited offer carries its own verdict (the discount rule also judges the offered
+    prices). The status stays `draft` and an `edit` decision is appended. Raises
+    `ReasonRequired`, `NothingToDraft` without a draft, `DraftChanged`, `DraftNotEditable`,
+    `DraftStale` and `InvalidEdit` (unknown option or lines not matching it); nothing is
+    written then.
+    """
+    reason = _required(reason)
+    with Session(engine) as session:
+        analysis, row, result, recommendation = _locked_draft(session, inquiry_id, updated_at)
+        option = next((o for o in recommendation.options if o.id == option_id), None)
+        if option is None:
+            raise InvalidEdit("Option is not one of the recommendation's options")
+        list_prices = _list_prices(session, {line.product_code for line in option.lines})
+        if list_prices is None:
+            logger.error("Draft of inquiry %s: a product of the edited option is gone", inquiry_id)
+            raise NothingToDraft
+        offer = apply_edit(option, lines, list_prices)
+        checks = current_checks(session, inquiry_id, analysis_version(analysis))
+        if checks is None:
+            raise DraftStale
+        policy = evaluate(
+            offer_policy_inputs(offer, CheckResults.model_validate(checks.results)),
+            load_thresholds(session),
+        )
+        row.result = result.model_copy(update={"offer": offer, "policy": policy}).model_dump(
+            mode="json"
+        )
+        _decide(session, row, user, "edit", "draft", reason, offer, policy)
+
+
+def decide(
+    engine: Engine,
+    inquiry_id: int,
+    user: AuthUser,
+    *,
+    updated_at: datetime,
+    action: Literal["approve", "reject"],
+    reason: str | None,
+) -> None:
+    """Approve or reject the draft and append the decision with what it was about.
+
+    Approve sets `ready_to_send` when the verdict in force needs no approval and
+    `awaiting_supervisor` otherwise; the verdict in force is the edit's own for an edited
+    offer and the policy stage's current verdict for the offer as recommended. Reject sets
+    `rejected` and needs a reason. Raises `ReasonRequired`, `NothingToDraft` without a draft,
+    `DraftChanged`, `DraftNotEditable`, `DraftStale` and `PolicyMissing` (approve without a
+    verdict in force); nothing is written then.
+    """
+    reason = _required(reason) if action == "reject" else _optional(reason)
+    with Session(engine) as session:
+        _, row, result, _ = _locked_draft(session, inquiry_id, updated_at)
+        policy = _policy_in_force(session, row, result)
+        status_after: DraftStatus
+        if action == "reject":
+            status_after = "rejected"
+        elif policy is None:
+            raise PolicyMissing
+        elif policy.outcome == "no_approval_needed":
+            status_after = "ready_to_send"
+        else:
+            status_after = "awaiting_supervisor"
+        _decide(session, row, user, action, status_after, reason, result.offer, policy)
 
 
 def get_draft_view(session: Session, analysis: InquiryAnalysis) -> DraftView | None:
@@ -597,6 +711,126 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
         if outdated:
             session.exec(delete(InquiryDraft).where(col(InquiryDraft.inquiry_id) == inquiry_id))
             session.commit()
+
+
+def _required(reason: str | None) -> str:
+    if reason is None or not reason.strip():
+        raise ReasonRequired
+    return reason.strip()
+
+
+def _optional(reason: str | None) -> str | None:
+    return None if reason is None or not reason.strip() else reason.strip()
+
+
+def _list_prices(session: Session, codes: set[str]) -> dict[str, Decimal] | None:
+    """List prices of the products; None when one of them is gone from the catalogue."""
+    prices: dict[str, Decimal] = {
+        product.code: product.list_price
+        for product in session.exec(select(Product).where(col(Product.code).in_(codes))).all()
+    }
+    return prices if codes <= prices.keys() else None
+
+
+def _locked_draft(
+    session: Session, inquiry_id: int, updated_at: datetime
+) -> tuple[InquiryAnalysis, InquiryDraft, DraftResult, RecommendationResult]:
+    """The draft read at `updated_at`, in status `draft` and of the current recommendation,
+    with the analysis locked until the session commits."""
+    analysis = lock_analysis(session, inquiry_id)
+    if analysis is None:
+        raise NothingToDraft
+    row = session.exec(
+        select(InquiryDraft).where(col(InquiryDraft.inquiry_id) == inquiry_id)
+    ).first()
+    if row is None:
+        raise NothingToDraft
+    if row.updated_at != updated_at:
+        raise DraftChanged
+    if row.status != "draft":
+        raise DraftNotEditable
+    recommendation = _recommendation(session, inquiry_id)
+    if (
+        recommendation is None
+        or recommendation.status != "completed"
+        or recommendation.recommended_at != row.recommended_at
+        or not is_current(session, recommendation, analysis)
+    ):
+        raise DraftStale
+    try:
+        result = DraftResult.model_validate(row.result)
+        recommended = RecommendationResult.model_validate(recommendation.result)
+    except ValidationError as error:
+        # Hidden in the view as well; class and inquiry id only.
+        logger.error(
+            "Stored draft or recommendation of inquiry %s does not match the schema: %s",
+            inquiry_id,
+            type(error).__name__,
+        )
+        raise DraftStale from None
+    return analysis, row, result, recommended
+
+
+def _policy_in_force(
+    session: Session, row: InquiryDraft, result: DraftResult
+) -> PolicyResult | None:
+    """The edit's own verdict for an edited offer; else the policy stage's verdict of the
+    draft's recommendation (None when missing, of another recommendation or not readable).
+
+    The caller already checked that the draft's recommendation is the current one.
+    """
+    if result.offer.edited:
+        return result.policy
+    verdict = session.exec(
+        select(InquiryPolicyVerdict).where(col(InquiryPolicyVerdict.inquiry_id) == row.inquiry_id)
+    ).first()
+    if verdict is None or verdict.recommended_at != row.recommended_at:
+        return None
+    try:
+        return PolicyResult.model_validate(verdict.result)
+    except ValidationError as error:
+        logger.error(
+            "Stored policy verdict of inquiry %s does not match the schema: %s",
+            row.inquiry_id,
+            type(error).__name__,
+        )
+        return None
+
+
+def _decide(
+    session: Session,
+    row: InquiryDraft,
+    user: AuthUser,
+    action: DecisionAction,
+    status_after: DraftStatus,
+    reason: str | None,
+    offer: DraftOffer,
+    policy: PolicyResult | None,
+) -> None:
+    """Set the draft's new status and token and append the decision, in one commit."""
+    now = datetime.now(UTC)
+    rules = [] if policy is None else policy.rules
+    snapshot = DecisionSnapshot(
+        offer=offer,
+        policy_outcome=None if policy is None else policy.outcome,
+        failing_rules=[rule.code for rule in rules if rule.verdict == "fail"],
+    )
+    row.status = status_after
+    row.updated_at = now
+    session.add(row)
+    session.add(
+        InquiryDraftDecision(
+            inquiry_id=row.inquiry_id,
+            recommended_at=row.recommended_at,
+            action=action,
+            status_after=status_after,
+            reason=reason,
+            decided_by=user.id,
+            decided_at=now,
+            snapshot=snapshot.model_dump(mode="json"),
+        )
+    )
+    session.commit()
 
 
 def _user_name(session: Session, user_id: int | None) -> str | None:
