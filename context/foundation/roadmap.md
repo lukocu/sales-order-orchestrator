@@ -49,7 +49,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-04 | orchestrator-plan-and-delegation   | handlowiec widzi plan orchestratora i wyniki delegowanych sprawdzeń                   | S-03, seeded substitute catalog and customer order history | FR-005, FR-006, FR-014, US-01, NFR | done |
 | S-05 | recommendation-with-confidence     | handlowiec widzi rekomendację z uzasadnieniem i pewnością                              | S-04          | FR-007, US-01                    | done |
 | S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | done        |
-| S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | in-progress |
+| S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | done |
 | S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | proposed |
 | S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | blocked |
 | S-10 | workflow-vs-orchestrator-eval      | autor porównuje stały workflow i orchestrator na zestawie testowym                    | S-06, F-02, labelled test inquiry set | FR-012 | proposed |
@@ -191,7 +191,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Zamyka US-01 i guardrail „nic do klienta bez człowieka”; edycja nie może obejść polityki.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-08: Akceptacja przełożonego
 
@@ -276,3 +276,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-04: handlowiec widzi plan orchestratora zależny od typu wyjątku i danych zapytania, wymagane kompetencje dopasowane deterministycznie do agentów oraz wyniki sprawdzeń (zgodność zamiennika, dostępność, historia klienta), z których niezależne biegną równolegle.** — Archived 2026-11-11 → `context/archive/2026-11-11-orchestrator-plan-and-delegation/`. Lesson: —.
 - **S-05: handlowiec widzi jedną rekomendowaną opcję realizacji (częściowa dostawa, zamiennik, inne źródło) z uzasadnieniem odwołującym się do danych firmowych i pewnością wyliczoną z jawnych sygnałów.** — Archived 2026-11-11 → `context/archive/2026-11-11-recommendation-with-confidence/`. Lesson: —.
 - **S-06: handlowiec widzi werdykt każdej reguły (marża, rabat, wartość zamówienia, kredyt) dla rekomendacji oraz wynik łączny: bez akceptacji albo wymaga przełożonego; reguły i progi są konfiguracją oznaczoną jako przykładowa.** — Archived 2026-11-12 → `context/archive/2026-11-11-policy-verdict/`. Lesson: —.
+- **S-07: handlowiec widzi szkic odpowiedzi z liczbami z wyliczonych danych i sekcją „Why this recommendation?”, zatwierdza go (status READY TO SEND, wysyłka symulowana), edytuje (zmiana ceny, ilości lub produktu ponownie uruchamia politykę) lub odrzuca; decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-12 → `context/archive/2026-11-12-draft-and-human-decision/`. Lesson: —.
