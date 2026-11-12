@@ -365,14 +365,14 @@ Migracja 0011 tylko dodaje tabele i seed progów; downgrade je usuwa. Istniejąc
 
 #### Automated
 
-- [ ] 3.1 Lint przechodzi: `cd frontend && npm run lint`
-- [ ] 3.2 Typy przechodzą: `cd frontend && npm run typecheck`
-- [ ] 3.3 Testy przechodzą: `cd frontend && npm test`
-- [ ] 3.4 Build przechodzi: `cd frontend && npm run build`
-- [ ] 3.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 3.6 Obraz się buduje: `docker build -t sales-order-orchestrator .`
+- [x] 3.1 Lint przechodzi: `cd frontend && npm run lint` — 51dc758
+- [x] 3.2 Typy przechodzą: `cd frontend && npm run typecheck` — 51dc758
+- [x] 3.3 Testy przechodzą: `cd frontend && npm test` — 51dc758
+- [x] 3.4 Build przechodzi: `cd frontend && npm run build` — 51dc758
+- [x] 3.5 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 51dc758
+- [x] 3.6 Obraz się buduje: `docker build -t sales-order-orchestrator .` — 51dc758
 
 #### Manual
 
-- [ ] 3.7 Lokalnie w trybie fake sekcja Policy pokazuje ACME i Omega jako „No approval needed”, Deltę jako „Requires supervisor approval” z nieprzechodzącym rabatem, etykieta „Example thresholds” jest widoczna, a re-run działa
-- [ ] 3.8 Na Render health pokazuje migrację `0011_policy_verdicts`, a ACME, Omega i Delta (po re-run orkiestracji) mają werdykty zgodne z planem
+- [x] 3.7 Lokalnie w trybie fake sekcja Policy pokazuje ACME i Omega jako „No approval needed”, Deltę jako „Requires supervisor approval” z nieprzechodzącym rabatem, etykieta „Example thresholds” jest widoczna, a re-run działa — 51dc758
+- [x] 3.8 Na Render health pokazuje migrację `0011_policy_verdicts`, a ACME, Omega i Delta (po re-run orkiestracji) mają werdykty zgodne z planem
