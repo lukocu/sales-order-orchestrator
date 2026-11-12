@@ -139,6 +139,16 @@ def _draft_failed(inquiry_id: int, error: Exception) -> HTTPException:
     )
 
 
+def _decision_failed(inquiry_id: int, error: Exception) -> HTTPException:
+    # Class and inquiry id only: the message could quote inquiry content.
+    logger.error(
+        "Analysis API: draft decision failed for inquiry %s: %s", inquiry_id, type(error).__name__
+    )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Decision failed"
+    )
+
+
 def _extraction_error(error: ExtractionError) -> HTTPException:
     if isinstance(error, ExtractionNotConfigured):
         return HTTPException(
@@ -451,6 +461,8 @@ def edit(
     except SQLAlchemyError:
         logger.exception("Analysis API: database unavailable")
         raise database_unavailable() from None
+    except Exception as error:  # an edit's failed policy run is recorded
+        raise _decision_failed(inquiry_id, error) from None
 
 
 @router.post(DECISION_PATH, response_model=AnalysisView)
@@ -481,3 +493,5 @@ def decide_draft(
     except SQLAlchemyError:
         logger.exception("Analysis API: database unavailable")
         raise database_unavailable() from None
+    except Exception as error:
+        raise _decision_failed(inquiry_id, error) from None

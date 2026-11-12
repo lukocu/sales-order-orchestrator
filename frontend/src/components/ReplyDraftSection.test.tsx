@@ -214,6 +214,16 @@ describe('ReplyDraftSection', () => {
     expect(screen.getByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
   })
 
+  it.each(['ready_to_send', 'awaiting_supervisor'] as const)(
+    'offers no Regenerate for a stale %s draft',
+    (status) => {
+      renderSection({ ...ACME_DRAFT, status, stale: true })
+
+      expect(decisionButtons()).toEqual([])
+      expect(screen.queryByRole('button', { name: 'Regenerate draft' })).not.toBeInTheDocument()
+    },
+  )
+
   it('shows a placeholder with Regenerate when there is no draft yet', () => {
     renderSection(null)
 
@@ -475,5 +485,17 @@ describe('DecisionHistory', () => {
     expect(items[2]).toHaveTextContent('Approved')
     expect(items[2]).toHaveTextContent('Ready to send (sending is simulated)')
     expect(items[2]).toHaveTextContent('Reason—')
+  })
+
+  it('keeps a decision whose details are no longer readable', () => {
+    render(<DecisionHistory inquiryId={7} decisions={[{ ...ACME_APPROVED, snapshot: null }]} />)
+
+    const item = within(screen.getByRole('region', { name: 'Decision history' })).getByRole(
+      'listitem',
+    )
+    expect(item).toHaveTextContent('Approved')
+    expect(item).toHaveTextContent('Anna Kowalska')
+    expect(item).toHaveTextContent('OfferDetails unavailable')
+    expect(item).toHaveTextContent('PolicyDetails unavailable')
   })
 })

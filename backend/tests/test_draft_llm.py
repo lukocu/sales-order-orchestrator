@@ -219,6 +219,8 @@ def _output(intro: str = VALID["intro"], closing: str = VALID["closing"]) -> Dra
 def test_valid_text_passes() -> None:
     validate_text(_output())
     validate_text(_output(FALLBACK_INTRO, FALLBACK_CLOSING))
+    # Words that only start like a number word are not number words.
+    validate_text(_output(intro="Jednakże trzeba przyznać, że stosowny termin dwór zna."))
 
 
 @pytest.mark.parametrize(
@@ -229,8 +231,28 @@ def test_valid_text_passes() -> None:
         (_output(closing="Cena ٣ zł."), "text_has_digit"),  # any Unicode digit
         (_output(intro="a" * (MAX_PARAGRAPH_LENGTH + 1)), "text_too_long"),
         (_output(closing="   "), "text_empty"),
+        (_output(intro="Udzielimy rabatu dziesięć procent."), "text_has_number_word"),
+        (_output(intro="Dostawa w ciągu trzech dni."), "text_has_number_word"),
+        (_output(closing="Pięćset sztuk czeka."), "text_has_number_word"),
+        (_output(closing="Rabat wynosi kilka %."), "text_has_number_word"),
+        (_output(closing="Płatność: https://pay.example/x"), "text_has_link"),
+        (_output(closing="Szczegóły na www.example.pl"), "text_has_link"),
+        (_output(intro="Prosimy pisać na biuro@example.pl."), "text_has_link"),
     ],
-    ids=["intro-digit", "closing-date", "unicode-digit", "too-long", "empty"],
+    ids=[
+        "intro-digit",
+        "closing-date",
+        "unicode-digit",
+        "too-long",
+        "empty",
+        "percent-words",
+        "inflected-number",
+        "hundreds",
+        "percent-sign",
+        "url",
+        "www",
+        "email",
+    ],
 )
 def test_rejected_text(output: DrafterOutput, code: str) -> None:
     with pytest.raises(TextRejected) as raised:

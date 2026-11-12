@@ -2,10 +2,12 @@
 
 The code assembles every number of the reply (`app.draft.offer.render_body`); a drafter only
 writes the intro and the closing paragraph around them, from `DraftFacts`, which carry no
-numbers. `validate_text` rejects a paragraph with a digit or over the length limit, so no
-number in the e-mail can come from a model.
+numbers. `validate_text` rejects a paragraph with a digit, a number word, a percent sign, a
+link or an e-mail address, or over the length limit, so no number, term or address in the
+e-mail can come from a model (the facts carry customer text, so a prompt injection is assumed).
 """
 
+import re
 from dataclasses import dataclass
 from typing import Annotated, Literal, Protocol
 
@@ -20,7 +22,21 @@ from app.tracing.pricing import LlmUsage
 
 MAX_PARAGRAPH_LENGTH = 600
 
-RejectionCode = Literal["text_empty", "text_has_digit", "text_too_long"]
+RejectionCode = Literal[
+    "text_empty", "text_has_digit", "text_has_number_word", "text_has_link", "text_too_long"
+]
+
+# Numbers spelled out in Polish (inflected forms) and percent words. "jeden"/"jedna" are left
+# out: their stem also starts common words ("jednak", "jednocześnie").
+NUMBER_WORDS = re.compile(
+    r"\b("
+    r"zer[oa]|dw(a|ie|óch|oma|u)|trz(y|ech|ema|eci\w*)|czter\w*|pię[ćc]\w*|sze[śs][ćc]\w*"
+    r"|siedem|siedm\w*|osiem|ośm\w*|dziewię[ćc]\w*|dziesię[ćc]\w*|\w+naści\w*|\w+dzieści\w*"
+    r"|\w+set|sto|stu|tysi[ąę]c\w*|milion\w*|procent\w*|pół|połow\w*"
+    r")\b",
+    re.IGNORECASE,
+)
+LINK = re.compile(r"://|\bwww\.|@", re.IGNORECASE)
 
 # Used when the drafter fails or its text is rejected on every attempt.
 FALLBACK_INTRO = (
@@ -172,11 +188,16 @@ class TextRejected(Exception):
 
 
 def validate_text(output: DrafterOutput) -> None:
-    """`TextRejected` when a paragraph is empty, has a digit or is too long; intro first."""
+    """`TextRejected` when a paragraph is empty, has a digit, a number word or `%`, a link or
+    an e-mail address, or is too long; intro first."""
     for paragraph in (output.intro, output.closing):
         if not paragraph.strip():
             raise TextRejected("text_empty", "A paragraph is empty")
         if any(char.isdigit() for char in paragraph):
             raise TextRejected("text_has_digit", "A paragraph contains a digit")
+        if "%" in paragraph or NUMBER_WORDS.search(paragraph):
+            raise TextRejected("text_has_number_word", "A paragraph contains a number word")
+        if LINK.search(paragraph):
+            raise TextRejected("text_has_link", "A paragraph contains a link or an address")
         if len(paragraph) > MAX_PARAGRAPH_LENGTH:
             raise TextRejected("text_too_long", "A paragraph is too long")

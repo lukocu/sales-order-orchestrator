@@ -395,3 +395,29 @@ def test_without_session_is_401(client: TestClient, method: str) -> None:
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Not authenticated"}
+
+
+@pytest.mark.parametrize("endpoint", ["edit", "decision"])
+def test_unexpected_error_is_a_logged_500(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    monkeypatch: pytest.MonkeyPatch,
+    endpoint: str,
+) -> None:
+    draft = _analyze(auth_client, acme)["draft"]
+
+    def broken(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("boom")
+
+    target = "edit_draft_inquiry" if endpoint == "edit" else "decide_draft_inquiry"
+    monkeypatch.setattr(f"app.api.analysis.{target}", broken)
+    if endpoint == "edit":
+        response = auth_client.put(_draft_path(acme.id), json=_edit_body(draft))
+    else:
+        response = auth_client.post(
+            _decision_path(acme.id), json={"updated_at": draft["updated_at"], "action": "approve"}
+        )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Decision failed"}

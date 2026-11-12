@@ -447,7 +447,7 @@ export type ReplyDraftDecision = {
   reason: string | null
   decided_by_name: string | null
   decided_at: string
-  snapshot: ReplyDraftSnapshot
+  snapshot: ReplyDraftSnapshot | null // null when the stored snapshot is no longer readable
   current: boolean // made on a draft of the current recommendation
 }
 
@@ -1063,7 +1063,7 @@ export function isReplyDraftDecision(value: unknown): value is ReplyDraftDecisio
     isStringOrNull(value.reason) &&
     isStringOrNull(value.decided_by_name) &&
     typeof value.decided_at === 'string' &&
-    isReplyDraftSnapshot(value.snapshot) &&
+    (value.snapshot === null || isReplyDraftSnapshot(value.snapshot)) &&
     typeof value.current === 'boolean'
   )
 }

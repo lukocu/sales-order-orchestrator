@@ -151,7 +151,7 @@ class DecisionView(BaseModel):
     reason: str | None
     decided_by_name: str | None
     decided_at: datetime
-    snapshot: DecisionSnapshot
+    snapshot: DecisionSnapshot | None  # None when the stored snapshot is no longer readable
     current: bool  # made on a draft of the current recommendation
 
 
@@ -271,6 +271,8 @@ def edit_draft(
     reason = _required(reason)
     with Session(engine) as session:
         analysis, row, result, recommendation = _locked_draft(session, inquiry_id, updated_at)
+        if not result.offer.edited and _policy_in_force(session, analysis, row, result) is None:
+            raise DraftStale  # shown as stale: no current verdict for the offer as recommended
         option = next((o for o in recommendation.options if o.id == option_id), None)
         if option is None:
             raise InvalidEdit("Option is not one of the recommendation's options")
@@ -279,13 +281,14 @@ def edit_draft(
             logger.error("Draft of inquiry %s: a product of the edited option is gone", inquiry_id)
             raise NothingToDraft
         offer = apply_edit(option, lines, list_prices)
-        checks = current_checks(session, inquiry_id, analysis_version(analysis))
-        if checks is None:
+        # Traced like the policy stage's evaluation (`run_policy`).
+        with (
+            run(engine, subject_type=SUBJECT_TYPE, subject_id=str(inquiry_id)) as traced,
+            traced.step("rules", kind="deterministic"),
+        ):
+            policy = _edited_offer_policy(session, analysis, offer)
+        if policy is None:
             raise DraftStale
-        policy = evaluate(
-            offer_policy_inputs(offer, CheckResults.model_validate(checks.results)),
-            load_thresholds(session),
-        )
         row.result = result.model_copy(update={"offer": offer, "policy": policy}).model_dump(
             mode="json"
         )
@@ -312,13 +315,14 @@ def decide(
     """
     reason = _required(reason) if action == "reject" else _optional(reason)
     with Session(engine) as session:
-        _, row, result, _ = _locked_draft(session, inquiry_id, updated_at)
-        policy = _policy_in_force(session, row, result)
+        analysis, row, result, _ = _locked_draft(session, inquiry_id, updated_at)
+        policy = _policy_in_force(session, analysis, row, result)
         status_after: DraftStatus
+        if policy is None:
+            # The view shows such a draft as stale; only Approve names the missing verdict.
+            raise PolicyMissing if action == "approve" else DraftStale
         if action == "reject":
             status_after = "rejected"
-        elif policy is None:
-            raise PolicyMissing
         elif policy.outcome == "no_approval_needed":
             status_after = "ready_to_send"
         else:
@@ -358,8 +362,9 @@ def get_draft_view(session: Session, analysis: InquiryAnalysis) -> DraftView | N
 
     policy: PolicyResult | None
     if result.offer.edited:
-        policy = result.policy
-        policy_stale = False
+        # Re-evaluated with the current thresholds, as Approve does: never an old verdict.
+        policy = _edited_offer_policy(session, analysis, result.offer)
+        policy_stale = policy is None
     else:
         stage = get_policy_view(session, analysis)
         policy = (
@@ -391,7 +396,8 @@ def get_draft_view(session: Session, analysis: InquiryAnalysis) -> DraftView | N
 def get_decision_views(session: Session, analysis: InquiryAnalysis) -> list[DecisionView]:
     """Every decision on the inquiry's drafts, oldest first, also of earlier recommendations.
 
-    A decision whose snapshot no longer matches `DecisionSnapshot` is left out (logged).
+    A decision whose snapshot no longer matches `DecisionSnapshot` stays in the history (it is
+    the audit trail) with `snapshot=None` (logged).
     """
     inquiry_id = analysis.inquiry_id
     rows = session.exec(
@@ -409,6 +415,7 @@ def get_decision_views(session: Session, analysis: InquiryAnalysis) -> list[Deci
     )
     views: list[DecisionView] = []
     for row in rows:
+        snapshot: DecisionSnapshot | None
         try:
             snapshot = DecisionSnapshot.model_validate(row.snapshot)
         except ValidationError as error:
@@ -417,7 +424,7 @@ def get_decision_views(session: Session, analysis: InquiryAnalysis) -> list[Deci
                 inquiry_id,
                 type(error).__name__,
             )
-            continue
+            snapshot = None
         views.append(
             DecisionView(
                 action=row.action,
@@ -771,16 +778,31 @@ def _locked_draft(
     return analysis, row, result, recommended
 
 
-def _policy_in_force(
-    session: Session, row: InquiryDraft, result: DraftResult
+def _edited_offer_policy(
+    session: Session, analysis: InquiryAnalysis, offer: DraftOffer
 ) -> PolicyResult | None:
-    """The edit's own verdict for an edited offer; else the policy stage's verdict of the
-    draft's recommendation (None when missing, of another recommendation or not readable).
+    """The verdict for an edited offer under the current checks and the current thresholds
+    (None without current checks), so a threshold change after the edit is never missed.
+    """
+    checks = current_checks(session, analysis.inquiry_id, analysis_version(analysis))
+    if checks is None:
+        return None
+    return evaluate(
+        offer_policy_inputs(offer, CheckResults.model_validate(checks.results)),
+        load_thresholds(session),
+    )
+
+
+def _policy_in_force(
+    session: Session, analysis: InquiryAnalysis, row: InquiryDraft, result: DraftResult
+) -> PolicyResult | None:
+    """For an edited offer its verdict re-evaluated now; else the policy stage's verdict of
+    the draft's recommendation (None when missing, of another recommendation or not readable).
 
     The caller already checked that the draft's recommendation is the current one.
     """
     if result.offer.edited:
-        return result.policy
+        return _edited_offer_policy(session, analysis, result.offer)
     verdict = session.exec(
         select(InquiryPolicyVerdict).where(col(InquiryPolicyVerdict.inquiry_id) == row.inquiry_id)
     ).first()

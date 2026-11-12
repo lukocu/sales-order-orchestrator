@@ -140,8 +140,13 @@ function ReplyDraftSection({
 
   const blocked = blockedReason(recommendation)
   const outdated = draft === null || draft.stale
+  // A decided draft (ready to send / awaiting supervisor) is never regenerated: the backend
+  // refuses it even when stale; a new recommendation replaces it instead.
   const offerRegenerate =
-    blocked === null && (draft === null || draft.status === 'rejected' || draft.stale)
+    blocked === null &&
+    (draft === null ||
+      draft.status === 'rejected' ||
+      (draft.stale && draft.status === 'draft'))
   const canDecide = draft !== null && draft.status === 'draft' && !draft.stale
 
   return (
@@ -582,8 +587,9 @@ export function DecisionHistory({
       <ol className="checks__list">
         {decisions.map((decision, index) => {
           const [status, tone] = STATUS[decision.status_after]
-          const outcome = decision.snapshot.policy_outcome
-          const failing = decision.snapshot.failing_rules.map((code) => RULE[code])
+          const snapshot = decision.snapshot
+          const outcome = snapshot?.policy_outcome ?? null
+          const failing = snapshot?.failing_rules.map((code) => RULE[code]) ?? []
           return (
             <li key={`${decision.decided_at}-${index}`} className="check">
               <p className="check__head">
@@ -602,12 +608,17 @@ export function DecisionHistory({
                 <dd>{decision.reason ?? '—'}</dd>
                 <dt>Offer</dt>
                 <dd>
-                  {formatPln(decision.snapshot.offer.value)} · option{' '}
-                  {decision.snapshot.offer.option_id}
+                  {snapshot === null
+                    ? 'Details unavailable'
+                    : `${formatPln(snapshot.offer.value)} · option ${snapshot.offer.option_id}`}
                 </dd>
                 <dt>Policy</dt>
                 <dd>
-                  {outcome === null ? 'no verdict' : OUTCOME[outcome][0]}
+                  {snapshot === null
+                    ? 'Details unavailable'
+                    : outcome === null
+                      ? 'no verdict'
+                      : OUTCOME[outcome][0]}
                   {failing.length > 0 && ` (failing: ${failing.join(', ')})`}
                 </dd>
               </dl>

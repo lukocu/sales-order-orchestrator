@@ -1,7 +1,7 @@
 """Draft stage in the inquiry chain: draft after the policy, keep, replace, retry, fall back,
 store guard, regenerate and the decision history, in fake mode."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -43,9 +43,9 @@ from app.draft.service import (
     regenerate_draft,
 )
 from app.inquiries.models import Inquiry
-from app.policy.models import InquiryPolicyVerdict
+from app.policy.models import InquiryPolicyVerdict, PolicyRule
 from app.recommendation.models import InquiryRecommendation
-from app.tracing.models import StepKind
+from app.tracing.models import StepKind, TraceRun, TraceStep
 from app.tracing.pricing import LlmUsage
 from tests.conftest import DrafterSetter, ExtractorSetter, InquiryFactory
 from tests.test_parsing_extractors import ACME, BIURO_MAX, DELTA, OMEGA
@@ -1401,3 +1401,185 @@ def test_decision_without_a_draft_is_nothing_to_draft(
             action="approve",
             reason=None,
         )
+
+
+@pytest.fixture
+def restore_thresholds(migrated_engine: Engine) -> Iterator[None]:
+    """`policy_rules` is shared and never cleaned: put the thresholds back after the test."""
+    with Session(migrated_engine) as session:
+        saved = {rule.code: rule.threshold for rule in session.exec(select(PolicyRule)).all()}
+    yield
+    with Session(migrated_engine) as session:
+        for code, threshold in saved.items():
+            session.execute(
+                update(PolicyRule).where(col(PolicyRule.code) == code).values(threshold=threshold)
+            )
+        session.commit()
+
+
+def test_edited_offer_is_judged_by_the_current_thresholds(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+    restore_thresholds: None,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    edit_draft(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        option_id=draft["offer"]["option_id"],
+        lines=_edits(draft),
+        reason="Bez zmian cen",
+    )
+    edited = _read(auth_client, acme)["draft"]
+    assert edited["policy"]["outcome"] == "no_approval_needed"
+
+    # The discount maximum drops below the offered discount after the edit.
+    with Session(migrated_engine) as session:
+        session.execute(
+            update(PolicyRule)
+            .where(col(PolicyRule.code) == "discount_max_percent")
+            .values(threshold=Decimal("0"))
+        )
+        session.commit()
+
+    shown = _read(auth_client, acme)["draft"]
+    assert (shown["policy"]["outcome"], shown["stale"]) == ("requires_supervisor", False)
+    decide(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(edited),
+        action="approve",
+        reason=None,
+    )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+    snapshot = DecisionSnapshot.model_validate(_decisions(migrated_engine, acme)[-1].snapshot)
+    assert snapshot.policy_outcome == "requires_supervisor"
+    assert "discount" in snapshot.failing_rules
+
+
+@pytest.mark.parametrize("verdict", ["missing", "stale"])
+@pytest.mark.parametrize("action", ["edit", "reject"])
+def test_edit_or_reject_without_a_current_verdict_is_stale(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+    verdict: str,
+    action: str,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    with Session(migrated_engine) as session:
+        where = col(InquiryPolicyVerdict.inquiry_id) == acme.id
+        if verdict == "missing":
+            session.execute(delete(InquiryPolicyVerdict).where(where))
+        else:
+            session.execute(
+                update(InquiryPolicyVerdict)
+                .where(where)
+                .values(recommended_at=datetime(2020, 1, 1, tzinfo=UTC))
+            )
+        session.commit()
+    assert _read(auth_client, acme)["draft"]["stale"] is True
+
+    with pytest.raises(DraftStale):
+        if action == "edit":
+            edit_draft(
+                migrated_engine,
+                acme.id,
+                _auth(test_user),
+                updated_at=_token(draft),
+                option_id=draft["offer"]["option_id"],
+                lines=_edits(draft),
+                reason="Negocjacje",
+            )
+        else:
+            decide(
+                migrated_engine,
+                acme.id,
+                _auth(test_user),
+                updated_at=_token(draft),
+                action="reject",
+                reason="Za drogo",
+            )
+
+    row = _stored(migrated_engine, acme)
+    assert row is not None
+    assert (row.status, row.updated_at) == ("draft", _token(draft))
+    assert _decisions(migrated_engine, acme) == []
+
+
+def test_decision_with_an_unreadable_snapshot_stays_in_the_history(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    decide(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        action="reject",
+        reason="Za drogo",
+    )
+    with Session(migrated_engine) as session:
+        session.execute(
+            update(InquiryDraftDecision)
+            .where(col(InquiryDraftDecision.inquiry_id) == acme.id)
+            .values(snapshot={"offer": {}, "renamed_field": True})
+        )
+        session.commit()
+
+    (decision,) = _read(auth_client, acme)["decisions"]
+
+    assert (decision["action"], decision["reason"], decision["snapshot"]) == (
+        "reject",
+        "Za drogo",
+        None,
+    )
+
+
+def test_edit_traces_its_policy_evaluation(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    acme: Inquiry,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    assert acme.id is not None
+    draft = _analyze(auth_client, acme)["draft"]
+    with Session(migrated_engine) as session:
+        before = max(run.id or 0 for run in session.exec(select(TraceRun)).all())
+
+    edit_draft(
+        migrated_engine,
+        acme.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        option_id=draft["offer"]["option_id"],
+        lines=_edits(draft, discount=Decimal("20")),
+        reason="Negocjacje",
+    )
+
+    with Session(migrated_engine) as session:
+        (edit_run,) = session.exec(select(TraceRun).where(col(TraceRun.id) > before)).all()
+        steps = session.exec(select(TraceStep).where(col(TraceStep.run_id) == edit_run.id)).all()
+    assert (edit_run.subject_id, edit_run.status) == (str(acme.id), "completed")
+    assert [(step.name, step.kind, step.status) for step in steps] == [
+        ("rules", "deterministic", "ok")
+    ]
