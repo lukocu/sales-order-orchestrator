@@ -313,3 +313,110 @@ def test_result_round_trips_through_json() -> None:
     result = evaluate(inputs, SEED)
 
     assert type(result).model_validate(result.model_dump(mode="json")) == result
+
+
+# --- Offered discount (an edited draft, S-07) -------------------------------------------
+
+
+def test_without_an_offered_discount_the_rule_is_unchanged() -> None:
+    for discount in (
+        _discount(standard="10.00"),
+        _discount("discount_percent", "25"),
+        _discount("target_price", "100.00"),
+        _discount(status="skipped", standard=None),
+    ):
+        assert evaluate_discount(
+            discount, Decimal("120.00"), Decimal("15.00"), None
+        ) == evaluate_discount(discount, Decimal("120.00"), Decimal("15.00"))
+
+
+def test_offered_discount_equal_to_the_standard_keeps_the_stage_result() -> None:
+    discount = _discount(standard="5.00")
+
+    assert evaluate_discount(
+        discount, None, Decimal("15.00"), Decimal("5.00")
+    ) == evaluate_discount(discount, None, Decimal("15.00"))
+
+
+def test_offered_discount_above_the_maximum_fails() -> None:
+    rule = evaluate_discount(_discount(standard="5.00"), None, Decimal("15.00"), Decimal("16.67"))
+
+    assert (rule.verdict, rule.actual, rule.threshold) == (
+        "fail",
+        Decimal("16.67"),
+        Decimal("15.00"),
+    )
+    assert rule.reason == "Offered discount above the maximum"
+
+
+def test_larger_offered_discount_within_the_maximum_passes() -> None:
+    rule = evaluate_discount(_discount(standard="5.00"), None, Decimal("15.00"), Decimal("15.00"))
+
+    assert (rule.verdict, rule.actual) == ("pass", Decimal("15.00"))
+    assert rule.reason == "Offered discount within the maximum"
+
+
+def test_requested_discount_above_the_maximum_fails_even_with_a_small_offered_one() -> None:
+    rule = evaluate_discount(
+        _discount("discount_percent", "25", standard="10.00", status="above_standard"),
+        None,
+        Decimal("15.00"),
+        Decimal("10.00"),
+    )
+
+    assert (rule.verdict, rule.actual) == ("fail", Decimal("25"))
+    assert rule.reason == "Requested discount above the maximum"
+
+
+def test_target_price_above_the_maximum_fails_with_an_offered_discount() -> None:
+    rule = evaluate_discount(
+        _discount("target_price", "100.00"), Decimal("120.00"), Decimal("15.00"), Decimal("5.00")
+    )
+
+    assert (rule.verdict, rule.actual) == ("fail", Decimal("16.67"))
+    assert rule.reason == "Discount implied by the target price above the maximum"
+
+
+@pytest.mark.parametrize(
+    ("offered", "verdict"), [(Decimal("15.00"), "pass"), (Decimal("15.01"), "fail")]
+)
+def test_offered_discount_decides_when_the_requested_one_is_not_evaluated(
+    offered: Decimal, verdict: str
+) -> None:
+    for discount in (
+        _discount(status="skipped", standard=None),
+        _discount("target_price", "100.00"),  # no list price
+        _discount("discount_percent", None),
+    ):
+        rule = evaluate_discount(discount, None, Decimal("15.00"), offered)
+
+        assert (rule.verdict, rule.actual) == (verdict, offered)
+        assert rule.reason.startswith("Offered discount")
+
+
+def test_offered_discount_without_a_maximum_is_not_evaluated() -> None:
+    rule = evaluate_discount(_discount(standard="5.00"), None, None, Decimal("8.00"))
+
+    assert (rule.verdict, rule.actual, rule.threshold) == ("not_evaluated", Decimal("8.00"), None)
+
+
+def test_evaluate_passes_the_offered_discount_to_the_rule() -> None:
+    inputs = PolicyInputs(
+        option_id="stock+ABC-110",
+        value=Decimal("8562.50"),
+        margin_percent=Decimal("19.42"),
+        discount=_discount(standard="5.00"),
+        list_price=Decimal("120.00"),
+        credit=_credit("30000.00", "2000.00"),
+        offered_discount_percent=Decimal("16.67"),
+    )
+
+    result = evaluate(inputs, SEED)
+
+    assert _verdicts(result.rules) == {
+        "margin": "fail",
+        "discount": "fail",
+        "order_value": "pass",
+        "credit": "pass",
+    }
+    assert result.outcome == "requires_supervisor"

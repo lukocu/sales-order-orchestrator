@@ -26,7 +26,11 @@ class PolicyThresholds:
 
 @dataclass(frozen=True)
 class PolicyInputs:
-    """What the rules evaluate: one option and the discount and credit checks."""
+    """What the rules evaluate: one option and the discount and credit checks.
+
+    `offered_discount_percent` is the largest discount of an edited offer's prices off their
+    list prices; None for the option as recommended, whose discount rule is the S-06 one.
+    """
 
     option_id: str
     value: Decimal  # PLN net
@@ -34,6 +38,7 @@ class PolicyInputs:
     discount: DiscountCheck
     list_price: Decimal | None  # catalogue price of the requested product
     credit: CreditCheck
+    offered_discount_percent: Decimal | None = None
 
 
 def evaluate_margin(margin_percent: Decimal, minimum: Decimal | None) -> RuleResult:
@@ -63,9 +68,50 @@ def target_price_discount(target_price: Decimal, list_price: Decimal) -> Decimal
 
 
 def evaluate_discount(
+    discount: DiscountCheck,
+    list_price: Decimal | None,
+    maximum: Decimal | None,
+    offered: Decimal | None = None,
+) -> RuleResult:
+    """The discount the customer asks for; without a request, the standard discount.
+
+    With `offered` (the discount in an edited offer's prices) both are evaluated: the rule
+    fails when either is above the maximum and reports the larger one. An unchanged offer
+    thus keeps the stage's result, and a lower price can only make it worse.
+    """
+    requested = _evaluate_requested_discount(discount, list_price, maximum)
+    if offered is None:
+        return requested
+    if maximum is None:
+        candidates = [d for d in (requested.actual, offered) if d is not None]
+        return RuleResult(
+            code="discount",
+            verdict="not_evaluated",
+            actual=max(candidates),
+            threshold=None,
+            unit="percent",
+            reason="No maximum discount threshold",
+        )
+    decided = requested.verdict != "not_evaluated" and requested.actual is not None
+    if decided and requested.actual is not None and requested.actual >= offered:
+        return requested  # the requested (or standard) discount decides, with its own reason
+    passed = offered <= maximum
+    return RuleResult(
+        code="discount",
+        verdict="pass" if passed else "fail",
+        actual=offered,
+        threshold=maximum,
+        unit="percent",
+        reason="Offered discount within the maximum"
+        if passed
+        else "Offered discount above the maximum",
+    )
+
+
+def _evaluate_requested_discount(
     discount: DiscountCheck, list_price: Decimal | None, maximum: Decimal | None
 ) -> RuleResult:
-    """The discount the customer asks for; without a request, the standard discount."""
+    """The S-06 discount rule: the requested discount, else the standard one."""
 
     def not_evaluated(reason: str, actual: Decimal | None = None) -> RuleResult:
         return RuleResult(
@@ -190,7 +236,12 @@ def outcome(rules: list[RuleResult]) -> PolicyOutcome:
 def evaluate(inputs: PolicyInputs, thresholds: PolicyThresholds) -> PolicyResult:
     rules = [
         evaluate_margin(inputs.margin_percent, thresholds.margin_min_percent),
-        evaluate_discount(inputs.discount, inputs.list_price, thresholds.discount_max_percent),
+        evaluate_discount(
+            inputs.discount,
+            inputs.list_price,
+            thresholds.discount_max_percent,
+            inputs.offered_discount_percent,
+        ),
         evaluate_order_value(inputs.value, thresholds.order_value_max),
         evaluate_credit(inputs.credit, inputs.value),
     ]

@@ -6,6 +6,7 @@ from sqlmodel import SQLModel, create_engine
 
 import app.auth.models  # noqa: F401  (registers tables on SQLModel.metadata)
 import app.checks.models  # noqa: F401
+import app.draft.models  # noqa: F401
 import app.inquiries.models  # noqa: F401
 import app.orchestration.models  # noqa: F401
 import app.parsing.models  # noqa: F401
