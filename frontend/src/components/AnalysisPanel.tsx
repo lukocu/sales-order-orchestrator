@@ -4,6 +4,7 @@ import {
   fetchAnalysis,
   rerunChecks,
   rerunOrchestration,
+  rerunPolicy,
   rerunRecommendation,
   saveCorrections,
   type Analysis,
@@ -209,7 +210,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [reviewed, setReviewed] = useState<FieldName[]>([])
   const [busy, setBusy] = useState<
-    'analyzing' | 'saving' | 'checking' | 'orchestrating' | 'recommending' | null
+    'analyzing' | 'saving' | 'checking' | 'orchestrating' | 'recommending' | 'evaluating' | null
   >(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -291,6 +292,16 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
     setBusy('recommending')
     try {
       showChecked(await rerunRecommendation(inquiryId))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // Errors are left to PolicySection, which shows them next to its button.
+  async function reevaluatePolicy() {
+    setBusy('evaluating')
+    try {
+      showChecked(await rerunPolicy(inquiryId))
     } finally {
       setBusy(null)
     }
@@ -501,9 +512,11 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
           running={busy === 'checking'}
           orchestrating={busy === 'orchestrating'}
           recommending={busy === 'recommending'}
+          evaluating={busy === 'evaluating'}
           onRerun={rerun}
           onRerunOrchestration={rerunOrchestrator}
           onRerunRecommendation={rerunRecommender}
+          onRerunPolicy={reevaluatePolicy}
           onUnauthorized={onUnauthorized}
         />
       </>

@@ -354,12 +354,12 @@ Migracja 0011 tylko dodaje tabele i seed progów; downgrade je usuwa. Istniejąc
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`
-- [ ] 2.2 Testy polityki i regresji łańcucha przechodzą: `docker compose run --rm backend uv run pytest tests/test_policy_service.py tests/test_recommendation_service.py tests/test_orchestration_service.py tests/test_analysis_api.py`
+- [x] 2.1 Wszystkie bramki backendu przechodzą: `docker compose run --rm backend sh check.sh` — 8421982
+- [x] 2.2 Testy polityki i regresji łańcucha przechodzą: `docker compose run --rm backend uv run pytest tests/test_policy_service.py tests/test_recommendation_service.py tests/test_orchestration_service.py tests/test_analysis_api.py` — 8421982
 
 #### Manual
 
-- [ ] 2.3 Lokalnie (fake) `GET /api/inquiries/{id}/analysis` dla ACME, Omega i Delty zwraca `policy` z oczekiwanym wynikiem łącznym, a `POST .../policy` działa i zwraca 409 dla Biuro Max
+- [x] 2.3 Lokalnie (fake) `GET /api/inquiries/{id}/analysis` dla ACME, Omega i Delty zwraca `policy` z oczekiwanym wynikiem łącznym, a `POST .../policy` działa i zwraca 409 dla Biuro Max — 8421982
 
 ### Phase 3: Frontend i wdrożenie
 

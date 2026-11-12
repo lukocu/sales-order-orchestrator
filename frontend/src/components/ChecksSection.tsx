@@ -13,14 +13,15 @@ import {
 import { UnauthorizedError } from '../api/client'
 import { formatDate, formatPercent, formatPln, totalCost, totalDuration } from './format'
 import OrchestrationSection from './OrchestrationSection'
+import PolicySection from './PolicySection'
 import RecommendationSection from './RecommendationSection'
 import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
   analysis: Analysis
-  // True while the panel analyzes, saves or re-runs the checks, the orchestrator or the
-  // recommendation.
+  // True while the panel analyzes, saves or re-runs the checks, the orchestrator, the
+  // recommendation or the policy.
   disabled: boolean
   // True while the panel re-runs the checks.
   running: boolean
@@ -28,12 +29,16 @@ type Props = {
   orchestrating: boolean
   // True while the panel re-runs the recommendation.
   recommending: boolean
+  // True while the panel re-runs the policy.
+  evaluating: boolean
   // Re-runs the checks and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
   // Re-runs the orchestrator and shows the result; rejects when the re-run failed.
   onRerunOrchestration: () => Promise<void>
   // Re-runs the recommendation and shows the result; rejects when the re-run failed.
   onRerunRecommendation: () => Promise<void>
+  // Re-runs the policy and shows the result; rejects when the re-run failed.
+  onRerunPolicy: () => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -273,9 +278,11 @@ function ChecksSection({
   running,
   orchestrating,
   recommending,
+  evaluating,
   onRerun,
   onRerunOrchestration,
   onRerunRecommendation,
+  onRerunPolicy,
   onUnauthorized,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
@@ -342,6 +349,17 @@ function ChecksSection({
               disabled={disabled}
               running={recommending}
               onRerun={onRerunRecommendation}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+          {checks.outcome === 'exception' && (
+            <PolicySection
+              inquiryId={inquiryId}
+              policy={analysis.policy ?? null}
+              recommendation={analysis.recommendation ?? null}
+              disabled={disabled}
+              running={evaluating}
+              onRerun={onRerunPolicy}
               onUnauthorized={onUnauthorized}
             />
           )}

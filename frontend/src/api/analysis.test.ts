@@ -4,11 +4,14 @@ import {
   DELTA_ORCHESTRATION,
   OMEGA_ORCHESTRATION,
 } from '../test/orchestrationFixtures'
+import { ACME_POLICY, CREDIT_NOT_EVALUATED, DELTA_POLICY } from '../test/policyFixtures'
 import { ACME_RECOMMENDATION, DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
 import {
   isOrchestrationView,
+  isPolicyView,
   isRecommendationView,
   rerunOrchestration,
+  rerunPolicy,
   rerunRecommendation,
   type Analysis,
 } from './analysis'
@@ -240,5 +243,75 @@ describe('rerunRecommendation', () => {
     })
 
     await expect(rerunRecommendation(7)).rejects.toThrow('Invalid response body')
+  })
+})
+
+describe('isPolicyView', () => {
+  it.each([
+    ['ACME', ACME_POLICY],
+    ['Delta', DELTA_POLICY],
+  ])('accepts the %s view', (_, view) => {
+    expect(isPolicyView(wire(view))).toBe(true)
+  })
+
+  it('accepts a not evaluated rule without values and a view without a run', () => {
+    const view = {
+      ...DELTA_POLICY,
+      rules: [...DELTA_POLICY.rules.slice(0, 3), CREDIT_NOT_EVALUATED],
+      run: null,
+    }
+    expect(isPolicyView(wire(view))).toBe(true)
+  })
+
+  const rule = ACME_POLICY.rules[0]
+  it.each([
+    ['an unknown outcome', { ...ACME_POLICY, outcome: 'approved' }],
+    ['a missing stale flag', { ...ACME_POLICY, stale: undefined }],
+    ['a missing examples flag', { ...ACME_POLICY, thresholds_are_examples: undefined }],
+    ['rules that are not a list', { ...ACME_POLICY, rules: rule }],
+    ['an unknown rule code', { ...ACME_POLICY, rules: [{ ...rule, code: 'stock' }] }],
+    ['an unknown verdict', { ...ACME_POLICY, rules: [{ ...rule, verdict: 'warn' }] }],
+    ['an unknown unit', { ...ACME_POLICY, rules: [{ ...rule, unit: 'EUR' }] }],
+    ['a numeric actual value', { ...ACME_POLICY, rules: [{ ...rule, actual: 25.51 }] }],
+    ['a missing reason', { ...ACME_POLICY, rules: [{ ...rule, reason: undefined }] }],
+  ])('rejects %s', (_, view) => {
+    expect(isPolicyView(wire(view))).toBe(false)
+  })
+})
+
+describe('rerunPolicy', () => {
+  const analysis = { ...ANALYSIS, recommendation: ACME_RECOMMENDATION, policy: ACME_POLICY }
+
+  it('posts to the policy endpoint and returns the analysis', async () => {
+    const fetchMock = stubFetch(analysis)
+
+    await expect(rerunPolicy(7)).resolves.toEqual(analysis)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/inquiries/7/policy',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('accepts an older analysis without the policy field', async () => {
+    const older = { ...ANALYSIS, recommendation: ACME_RECOMMENDATION }
+    stubFetch(older)
+
+    await expect(rerunPolicy(7)).resolves.toEqual(older)
+  })
+
+  it('accepts an analysis without a verdict', async () => {
+    const none = { ...analysis, policy: null }
+    stubFetch(none)
+
+    await expect(rerunPolicy(7)).resolves.toEqual(none)
+  })
+
+  it('rejects an analysis whose policy has an unknown verdict', async () => {
+    stubFetch({
+      ...analysis,
+      policy: { ...ACME_POLICY, rules: [{ ...ACME_POLICY.rules[0], verdict: 'ok' }] },
+    })
+
+    await expect(rerunPolicy(7)).rejects.toThrow('Invalid response body')
   })
 })

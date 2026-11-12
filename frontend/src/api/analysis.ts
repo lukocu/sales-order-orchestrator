@@ -4,9 +4,10 @@ import { requestJson } from './client'
 // backend/app/parsing/schema.py, RunSummary in backend/app/tracing/summary.py and
 // ChecksView / CheckResults in backend/app/checks/{service,schema}.py and OrchestrationView /
 // OrchestrationResult in backend/app/orchestration/{service,schema}.py and RecommendationView /
-// RecommendationResult in backend/app/recommendation/{service,schema}.py.
-// Decimal values (price_value, cost_usd, amounts and percents of the checks and the
-// recommendation) arrive as JSON strings.
+// RecommendationResult in backend/app/recommendation/{service,schema}.py and PolicyView /
+// PolicyResult in backend/app/policy/{service,schema}.py.
+// Decimal values (price_value, cost_usd, amounts and percents of the checks, the
+// recommendation and the policy) arrive as JSON strings.
 
 export type FieldName =
   | 'customer'
@@ -336,6 +337,34 @@ export type RecommendationView = {
   run: RunSummary | null // null when the run could not be traced
 }
 
+export type RuleCode = 'margin' | 'discount' | 'order_value' | 'credit'
+
+export type RuleVerdict = 'pass' | 'fail' | 'not_evaluated'
+
+export type PolicyOutcome = 'no_approval_needed' | 'requires_supervisor'
+
+export type RuleUnit = 'percent' | 'PLN'
+
+// One rule: the actual value next to its threshold, the verdict and a short English reason.
+export type RuleResult = {
+  code: RuleCode
+  verdict: RuleVerdict
+  actual: string | null
+  threshold: string | null
+  unit: RuleUnit
+  reason: string
+}
+
+export type PolicyView = {
+  option_id: string // the recommended option the rules were evaluated on
+  rules: RuleResult[] // always margin, discount, order_value, credit
+  outcome: PolicyOutcome
+  thresholds_are_examples: boolean
+  evaluated_at: string
+  stale: boolean // computed from a recommendation that is no longer current
+  run: RunSummary | null // null when the run could not be traced
+}
+
 export type Analysis = {
   inquiry_id: number
   extractor: Extractor
@@ -353,6 +382,8 @@ export type Analysis = {
   orchestration: OrchestrationView | null // null until an exception was orchestrated; own run
   // null without a recommendation; has its own run. Optional: older payloads lack it.
   recommendation?: RecommendationView | null
+  // null without a policy verdict; has its own run. Optional: older payloads lack it.
+  policy?: PolicyView | null
 }
 
 export const FIELD_NAMES: readonly FieldName[] = [
@@ -424,6 +455,14 @@ const RECOMMENDATION_ERROR_KINDS: readonly RecommendationErrorKind[] = [
   'recommender_failed',
   'choice_rejected',
 ]
+
+const RULE_CODES: readonly RuleCode[] = ['margin', 'discount', 'order_value', 'credit']
+
+const RULE_VERDICTS: readonly RuleVerdict[] = ['pass', 'fail', 'not_evaluated']
+
+const POLICY_OUTCOMES: readonly PolicyOutcome[] = ['no_approval_needed', 'requires_supervisor']
+
+const RULE_UNITS: readonly RuleUnit[] = ['percent', 'PLN']
 
 type Json = Record<string, unknown>
 
@@ -796,6 +835,32 @@ export function isRecommendationView(value: unknown): value is RecommendationVie
   )
 }
 
+function isRuleResult(value: unknown): value is RuleResult {
+  if (!isObject(value)) return false
+  return (
+    isOneOf(value.code, RULE_CODES) &&
+    isOneOf(value.verdict, RULE_VERDICTS) &&
+    isStringOrNull(value.actual) &&
+    isStringOrNull(value.threshold) &&
+    isOneOf(value.unit, RULE_UNITS) &&
+    typeof value.reason === 'string'
+  )
+}
+
+export function isPolicyView(value: unknown): value is PolicyView {
+  if (!isObject(value)) return false
+  return (
+    typeof value.option_id === 'string' &&
+    Array.isArray(value.rules) &&
+    value.rules.every(isRuleResult) &&
+    isOneOf(value.outcome, POLICY_OUTCOMES) &&
+    typeof value.thresholds_are_examples === 'boolean' &&
+    typeof value.evaluated_at === 'string' &&
+    typeof value.stale === 'boolean' &&
+    (value.run === null || isRunSummary(value.run))
+  )
+}
+
 function isAnalysis(value: unknown): value is Analysis {
   if (!isObject(value)) return false
   return (
@@ -816,7 +881,8 @@ function isAnalysis(value: unknown): value is Analysis {
     (value.orchestration === null || isOrchestrationView(value.orchestration)) &&
     (value.recommendation === undefined ||
       value.recommendation === null ||
-      isRecommendationView(value.recommendation))
+      isRecommendationView(value.recommendation)) &&
+    (value.policy === undefined || value.policy === null || isPolicyView(value.policy))
   )
 }
 
@@ -873,4 +939,11 @@ export function rerunOrchestration(inquiryId: number): Promise<Analysis> {
 // ApiError 409 "Nothing to recommend".
 export function rerunRecommendation(inquiryId: number): Promise<Analysis> {
   return requestJson(`/api/inquiries/${inquiryId}/recommendation`, isAnalysis, { method: 'POST' })
+}
+
+// POST: evaluate the policy again for the current recommendation (after a stale result, or
+// none yet). Answers with the whole analysis; without an analysis ApiError 404, without a
+// current completed recommendation with a chosen option ApiError 409 "Nothing to evaluate".
+export function rerunPolicy(inquiryId: number): Promise<Analysis> {
+  return requestJson(`/api/inquiries/${inquiryId}/policy`, isAnalysis, { method: 'POST' })
 }

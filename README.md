@@ -460,6 +460,12 @@ strings). Without an analysis it answers `404 No analysis yet`, without a curren
 recommendation with a chosen option `409 Nothing to evaluate`, and on an unexpected error
 `500 Policy evaluation failed`.
 
+The **Policy** section under the recommendation shows the outcome (*No approval needed* or
+*Requires supervisor approval*), the *Example thresholds* label, a table of the four rules
+(actual value, threshold, *Pass* / *Fail* / *Not evaluated*, reason) and the metrics of the
+policy run. Without a current recommendation it says why; a stale verdict or none yet offers
+**Re-run policy**.
+
 The policy does not enforce roles, queue the inquiry for a supervisor or record an approval
 (S-08), does not evaluate an edited draft of the answer (S-07) and never changes the
 recommender's choice or prices an option with the requested discount.

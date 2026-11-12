@@ -728,3 +728,43 @@ button:disabled {
   font-weight: 400;
   color: var(--muted);
 }
+
+/* Policy */
+
+.policy__example {
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.policy__table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.policy__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.policy__table caption {
+  margin-bottom: 0.25rem;
+  text-align: left;
+}
+
+.policy__table th,
+.policy__table td {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.policy__table thead th {
+  font-weight: 600;
+  color: var(--muted);
+}
