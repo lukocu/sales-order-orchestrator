@@ -216,6 +216,28 @@ button:disabled {
   color: var(--warn);
 }
 
+/* Draft badge: filled, so it stays apart from the outcome badge of the same tone. */
+.badge--awaiting_supervisor {
+  border-color: var(--warn);
+  color: var(--card);
+  background: var(--warn);
+}
+
+.inquiry__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.inbox__filter {
+  margin-bottom: 0.75rem;
+}
+
+.inbox__filter[aria-pressed='true'] {
+  border-color: var(--text);
+  font-weight: 600;
+}
+
 .detail__subject {
   margin: 0;
   font-size: 1.125rem;

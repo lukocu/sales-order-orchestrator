@@ -15,14 +15,19 @@ import type {
   RuleResult,
   RuleVerdict,
 } from '../api/analysis'
+import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { formatDate, formatPercent, formatPln } from './format'
 import RunMetrics from './RunMetrics'
 
 type Decision = 'approve' | 'reject'
 
+type Mode = Decision | 'edit' | 'supervisor-approve' | 'supervisor-reject'
+
 type Props = {
   inquiryId: number
+  // The signed-in user: a supervisor decides on drafts awaiting the supervisor.
+  user: User
   // null while there is no draft for the current recommendation.
   draft: ReplyDraftView | null
   // The recommendation the draft is built from; tells why there is none and lists the options
@@ -40,6 +45,9 @@ type Props = {
   onEdit: (updatedAt: string, edit: ReplyDraftEdit) => Promise<void>
   // Approves or rejects the draft read at `updatedAt`; rejects when it failed.
   onDecide: (updatedAt: string, action: Decision, reason: string | null) => Promise<void>
+  // Approves or rejects, as the supervisor, the draft awaiting the supervisor read at
+  // `updatedAt`, with a required reason; rejects when it failed.
+  onSupervisorDecide: (updatedAt: string, action: Decision, reason: string) => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -58,6 +66,8 @@ const ACTION: Record<ReplyDraftAction, string> = {
   edit: 'Edited',
   approve: 'Approved',
   reject: 'Rejected',
+  supervisor_approve: 'Approved by supervisor',
+  supervisor_reject: 'Rejected by supervisor',
 }
 
 const OUTCOME: Record<PolicyOutcome, [string, Tone]> = {
@@ -111,8 +121,17 @@ function ruleAmount(rule: RuleResult, value: string | null): string {
 
 // The reply draft of the recommended option: the e-mail preview, why this option, the policy
 // verdict in force and the salesperson's decision.
+// What the supervisor may do with a draft: nothing unless it is current and awaiting the
+// supervisor; only reject a draft they passed to the supervisor themselves (four eyes).
+function supervisorActions(draft: ReplyDraftView | null, user: User): Decision[] {
+  if (draft === null || draft.status !== 'awaiting_supervisor' || draft.stale) return []
+  if (user.role !== 'supervisor') return []
+  return draft.submitted_by !== user.id ? ['approve', 'reject'] : ['reject']
+}
+
 function ReplyDraftSection({
   inquiryId,
+  user,
   draft,
   recommendation,
   disabled,
@@ -121,10 +140,11 @@ function ReplyDraftSection({
   onRegenerate,
   onEdit,
   onDecide,
+  onSupervisorDecide,
   onUnauthorized,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'approve' | 'reject' | 'edit' | null>(null)
+  const [mode, setMode] = useState<Mode | null>(null)
   const headingId = `draft-${inquiryId}-heading`
 
   async function regenerate() {
@@ -148,6 +168,10 @@ function ReplyDraftSection({
       draft.status === 'rejected' ||
       (draft.stale && draft.status === 'draft'))
   const canDecide = draft !== null && draft.status === 'draft' && !draft.stale
+  const awaiting = draft !== null && draft.status === 'awaiting_supervisor' && !draft.stale
+  const asSupervisor = supervisorActions(draft, user)
+  const supervisorMode =
+    mode === 'supervisor-approve' ? 'approve' : mode === 'supervisor-reject' ? 'reject' : null
 
   return (
     <section className="orchestration draft" aria-labelledby={headingId}>
@@ -215,6 +239,44 @@ function ReplyDraftSection({
           disabled={disabled}
           saving={deciding}
           onSubmit={(edit) => onEdit(draft.updated_at, edit)}
+          onDone={() => setMode(null)}
+          onUnauthorized={onUnauthorized}
+        />
+      )}
+
+      {awaiting && user.role !== 'supervisor' && (
+        <p className="checks__line">Waiting for a supervisor decision.</p>
+      )}
+      {awaiting && user.role === 'supervisor' && draft?.submitted_by === user.id && (
+        <p className="checks__line">
+          You submitted this draft; another supervisor must approve it. You can reject it to
+          start over.
+        </p>
+      )}
+      {draft !== null && asSupervisor.length > 0 && supervisorMode === null && (
+        <div className="analysis__actions" role="group" aria-label="Supervisor decision">
+          {asSupervisor.includes('approve') && (
+            <button
+              type="button"
+              onClick={() => setMode('supervisor-approve')}
+              disabled={disabled}
+            >
+              Approve
+            </button>
+          )}
+          <button type="button" onClick={() => setMode('supervisor-reject')} disabled={disabled}>
+            Reject
+          </button>
+        </div>
+      )}
+      {draft !== null && supervisorMode !== null && asSupervisor.includes(supervisorMode) && (
+        <DecisionForm
+          key={`supervisor-${supervisorMode}-${draft.updated_at}`}
+          action={supervisorMode}
+          supervisor
+          disabled={disabled}
+          saving={deciding}
+          onSubmit={(reason) => onSupervisorDecide(draft.updated_at, supervisorMode, reason ?? '')}
           onDone={() => setMode(null)}
           onUnauthorized={onUnauthorized}
         />
@@ -359,18 +421,23 @@ async function send<T>(
   }
 }
 
-// Approve with an optional comment, or reject with a required reason.
-function DecisionForm(props: FormProps<string | null> & { action: Decision }) {
-  const { action, disabled, saving, onDone } = props
+// Approve with an optional comment, or reject with a required reason; the supervisor needs a
+// reason for both.
+function DecisionForm(
+  props: FormProps<string | null> & { action: Decision; supervisor?: boolean },
+) {
+  const { action, supervisor = false, disabled, saving, onDone } = props
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const approve = action === 'approve'
-  const id = `draft-${action}-reason`
+  const required = supervisor || !approve
+  const id = supervisor ? `draft-supervisor-${action}-reason` : `draft-${action}-reason`
+  const name = approve ? 'Approve' : 'Reject'
 
   function submit() {
     const text = reason.trim()
-    if (!approve && text === '') {
-      setError('Enter a reason for the rejection.')
+    if (required && text === '') {
+      setError(approve ? 'Enter a reason for the approval.' : 'Enter a reason for the rejection.')
       return
     }
     void send(props, text === '' ? null : text, setError)
@@ -380,13 +447,13 @@ function DecisionForm(props: FormProps<string | null> & { action: Decision }) {
     <form
       className="draft__form"
       noValidate
-      aria-label={approve ? 'Approve draft' : 'Reject draft'}
+      aria-label={supervisor ? `${name} as supervisor` : `${name} draft`}
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <label htmlFor={id}>{approve ? 'Comment (optional)' : 'Reason (required)'}</label>
+      <label htmlFor={id}>{required ? 'Reason (required)' : 'Comment (optional)'}</label>
       <textarea
         id={id}
         rows={2}
@@ -590,6 +657,12 @@ export function DecisionHistory({
           const snapshot = decision.snapshot
           const outcome = snapshot?.policy_outcome ?? null
           const failing = snapshot?.failing_rules.map((code) => RULE[code]) ?? []
+          // Older snapshots lack the rules the verdict could not evaluate.
+          const notEvaluated = (snapshot?.not_evaluated_rules ?? []).map((code) => RULE[code])
+          const rules = [
+            ...(failing.length > 0 ? [`failing: ${failing.join(', ')}`] : []),
+            ...(notEvaluated.length > 0 ? [`not evaluated: ${notEvaluated.join(', ')}`] : []),
+          ]
           return (
             <li key={`${decision.decided_at}-${index}`} className="check">
               <p className="check__head">
@@ -619,7 +692,7 @@ export function DecisionHistory({
                     : outcome === null
                       ? 'no verdict'
                       : OUTCOME[outcome][0]}
-                  {failing.length > 0 && ` (failing: ${failing.join(', ')})`}
+                  {rules.length > 0 && ` (${rules.join('; ')})`}
                 </dd>
               </dl>
             </li>

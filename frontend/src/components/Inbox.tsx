@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Outcome } from '../api/analysis'
+import type { Outcome, ReplyDraftStatus } from '../api/analysis'
 import { logout, ROLE_LABEL, UnauthorizedError, type User } from '../api/auth'
 import {
   fetchInquiries,
@@ -43,6 +43,7 @@ function Inbox({ user, onSignedOut }: Props) {
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
+  const [awaitingOnly, setAwaitingOnly] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -88,6 +89,26 @@ function Inbox({ user, onSignedOut }: Props) {
     )
   }, [])
 
+  // The panel reports the draft status after loading the analysis and after every change of
+  // the draft (a decision, an edit, a regenerated or dropped draft); updated in place too.
+  const handleDraftStatus = useCallback(
+    (inquiryId: number, draftStatus: ReplyDraftStatus | null) => {
+      setList((current) =>
+        current.kind !== 'ok'
+          ? current
+          : {
+              ...current,
+              inquiries: current.inquiries.map((inquiry) =>
+                inquiry.id === inquiryId && inquiry.draft_status !== draftStatus
+                  ? { ...inquiry, draft_status: draftStatus }
+                  : inquiry,
+              ),
+            },
+      )
+    },
+    [],
+  )
+
   function retryList() {
     setList({ kind: 'loading' })
     setListAttempt((n) => n + 1)
@@ -111,6 +132,12 @@ function Inbox({ user, onSignedOut }: Props) {
 
   // The detail fetched for an earlier selection is stale until the new one arrives.
   const currentDetail = detail !== null && detail.id === selectedId ? detail : null
+
+  const awaiting =
+    list.kind === 'ok'
+      ? list.inquiries.filter((inquiry) => inquiry.draft_status === 'awaiting_supervisor')
+      : []
+  const shown = list.kind !== 'ok' ? [] : awaitingOnly ? awaiting : list.inquiries
 
   return (
     <section className="inbox">
@@ -141,12 +168,25 @@ function Inbox({ user, onSignedOut }: Props) {
               </button>
             </div>
           )}
+          {list.kind === 'ok' && list.inquiries.length > 0 && (
+            <button
+              type="button"
+              className="inbox__filter"
+              aria-pressed={awaitingOnly}
+              onClick={() => setAwaitingOnly((on) => !on)}
+            >
+              Awaiting supervisor only ({awaiting.length})
+            </button>
+          )}
           {list.kind === 'ok' && list.inquiries.length === 0 && (
             <p className="muted">No inquiries yet.</p>
           )}
-          {list.kind === 'ok' && list.inquiries.length > 0 && (
+          {list.kind === 'ok' && list.inquiries.length > 0 && shown.length === 0 && (
+            <p className="muted">No inquiries awaiting a supervisor.</p>
+          )}
+          {shown.length > 0 && (
             <ul className="inquiries">
-              {list.inquiries.map((inquiry) => (
+              {shown.map((inquiry) => (
                 <li key={inquiry.id}>
                   <button
                     type="button"
@@ -160,11 +200,18 @@ function Inbox({ user, onSignedOut }: Props) {
                       <time className="inquiry__date" dateTime={inquiry.received_at}>
                         {formatDate(inquiry.received_at)}
                       </time>
-                      {inquiry.outcome !== null && (
-                        <span className={`badge badge--${inquiry.outcome}`}>
-                          {OUTCOME_LABEL[inquiry.outcome]}
-                        </span>
-                      )}
+                      <span className="inquiry__badges">
+                        {inquiry.draft_status === 'awaiting_supervisor' && (
+                          <span className="badge badge--awaiting_supervisor">
+                            Awaiting supervisor
+                          </span>
+                        )}
+                        {inquiry.outcome !== null && (
+                          <span className={`badge badge--${inquiry.outcome}`}>
+                            {OUTCOME_LABEL[inquiry.outcome]}
+                          </span>
+                        )}
+                      </span>
                     </span>
                   </button>
                 </li>
@@ -200,8 +247,10 @@ function Inbox({ user, onSignedOut }: Props) {
             <AnalysisPanel
               key={currentDetail.inquiry.id}
               inquiryId={currentDetail.inquiry.id}
+              user={user}
               onUnauthorized={onSignedOut}
               onOutcome={handleOutcome}
+              onDraftStatus={handleDraftStatus}
             />
           )}
         </section>

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  decideAsSupervisor,
   decideDraft,
   editDraft,
   regenerateDraft,
@@ -12,6 +13,7 @@ import {
   type ReplyDraftStatus,
   type ReplyDraftView,
 } from '../api/analysis'
+import type { User } from '../api/auth'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import { ACME_POLICY } from '../test/policyFixtures'
 import { ACME_RECOMMENDATION } from '../test/recommendationFixtures'
@@ -21,12 +23,17 @@ import {
   ACME_EDITED,
   ACME_EDITED_DRAFT,
   ACME_REJECTED_EARLIER,
+  DELTA_AWAITING,
   DELTA_DRAFT,
+  DELTA_SUBMITTED,
+  DELTA_SUPERVISOR_REJECTED,
 } from '../test/replyDraftFixtures'
+import { OTHER_SUPERVISOR, SALES, SUPERVISOR } from '../test/userFixtures'
 import ReplyDraftSection, { DecisionHistory } from './ReplyDraftSection'
 
 const DRAFT_PATH = '/api/inquiries/7/draft'
 const DECISION_PATH = '/api/inquiries/7/draft/decision'
+const SUPERVISOR_DECISION_PATH = '/api/inquiries/7/draft/supervisor-decision'
 
 type Handler = () => Response
 
@@ -95,10 +102,12 @@ function analysis(draft: ReplyDraftView | null, decisions: ReplyDraftDecision[] 
 function Harness({
   initial,
   recommendation,
+  user,
   onUnauthorized,
 }: {
   initial: ReplyDraftView | null
   recommendation: RecommendationView | null
+  user: User
   onUnauthorized: () => void
 }) {
   const [current, setCurrent] = useState(initial)
@@ -116,6 +125,7 @@ function Harness({
   return (
     <ReplyDraftSection
       inquiryId={7}
+      user={user}
       draft={current}
       recommendation={recommendation}
       disabled={busy !== null}
@@ -126,6 +136,9 @@ function Harness({
       onDecide={(updatedAt, action, reason) =>
         run('deciding', () => decideDraft(7, updatedAt, action, reason))
       }
+      onSupervisorDecide={(updatedAt, action, reason) =>
+        run('deciding', () => decideAsSupervisor(7, updatedAt, action, reason))
+      }
       onUnauthorized={onUnauthorized}
     />
   )
@@ -135,15 +148,25 @@ function renderSection(
   initial: ReplyDraftView | null,
   recommendation: RecommendationView | null = ACME_RECOMMENDATION,
   onUnauthorized = vi.fn(),
+  user: User = SALES,
 ) {
   render(
-    <Harness initial={initial} recommendation={recommendation} onUnauthorized={onUnauthorized} />,
+    <Harness
+      initial={initial}
+      recommendation={recommendation}
+      user={user}
+      onUnauthorized={onUnauthorized}
+    />,
   )
   return onUnauthorized
 }
 
-function decisionButtons(): string[] {
-  const bar = screen.queryByRole('group', { name: 'Decision' })
+function renderAs(user: User, initial: ReplyDraftView | null) {
+  return renderSection(initial, ACME_RECOMMENDATION, vi.fn(), user)
+}
+
+function decisionButtons(name = 'Decision'): string[] {
+  const bar = screen.queryByRole('group', { name })
   if (bar === null) return []
   return within(bar)
     .getAllByRole('button')
@@ -463,6 +486,145 @@ describe('ReplyDraftSection', () => {
   })
 })
 
+describe("ReplyDraftSection: the supervisor's decision", () => {
+  const supervisorButtons = () => decisionButtons('Supervisor decision')
+
+  it("offers a supervisor Approve and Reject on another user's submission", () => {
+    renderAs(SUPERVISOR, DELTA_AWAITING)
+
+    expect(screen.getByText('Awaiting supervisor approval')).toBeInTheDocument()
+    expect(supervisorButtons()).toEqual(['Approve', 'Reject'])
+    expect(decisionButtons()).toEqual([])
+    expect(screen.queryByText(/You submitted this draft/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Waiting for a supervisor decision.')).not.toBeInTheDocument()
+    // The verdict in force stays in view for the decision.
+    expect(screen.getByRole('table', { name: /^Policy verdict in force:/ })).toHaveTextContent(
+      'Requires supervisor approval',
+    )
+  })
+
+  it('offers a supervisor only Reject on their own submission, with an explanation', () => {
+    renderAs(SUPERVISOR, { ...DELTA_AWAITING, submitted_by: SUPERVISOR.id })
+
+    expect(
+      screen.getByText(
+        'You submitted this draft; another supervisor must approve it. You can reject it to ' +
+          'start over.',
+      ),
+    ).toBeInTheDocument()
+    expect(supervisorButtons()).toEqual(['Reject'])
+  })
+
+  it("offers another supervisor both actions on a supervisor's submission", () => {
+    renderAs(OTHER_SUPERVISOR, { ...DELTA_AWAITING, submitted_by: SUPERVISOR.id })
+
+    expect(supervisorButtons()).toEqual(['Approve', 'Reject'])
+  })
+
+  it('offers a supervisor both actions when the submitter is unknown', () => {
+    renderAs(SUPERVISOR, { ...DELTA_AWAITING, submitted_by: null })
+
+    expect(supervisorButtons()).toEqual(['Approve', 'Reject'])
+  })
+
+  it('shows the salesperson a waiting note without supervisor actions', () => {
+    renderAs(SALES, DELTA_AWAITING)
+
+    expect(screen.getByText('Waiting for a supervisor decision.')).toBeInTheDocument()
+    expect(supervisorButtons()).toEqual([])
+    expect(decisionButtons()).toEqual([])
+  })
+
+  it('offers no supervisor actions on a stale draft awaiting the supervisor', () => {
+    renderAs(SUPERVISOR, { ...DELTA_AWAITING, stale: true })
+
+    expect(supervisorButtons()).toEqual([])
+    expect(screen.queryByText('Waiting for a supervisor decision.')).not.toBeInTheDocument()
+  })
+
+  it.each<ReplyDraftStatus>(['draft', 'ready_to_send', 'rejected'])(
+    'offers no supervisor actions on a %s draft',
+    (status) => {
+      renderAs(SUPERVISOR, { ...DELTA_AWAITING, status, submitted_by: null })
+
+      expect(supervisorButtons()).toEqual([])
+    },
+  )
+
+  it('keeps the salesperson actions for a supervisor on a draft', () => {
+    renderAs(SUPERVISOR, ACME_DRAFT)
+
+    expect(decisionButtons()).toEqual(['Approve', 'Edit offer', 'Reject'])
+    expect(supervisorButtons()).toEqual([])
+  })
+
+  it.each([
+    ['approve', 'Approve', 'Confirm approval', 'Enter a reason for the approval.', 'ready_to_send'],
+    ['reject', 'Reject', 'Confirm rejection', 'Enter a reason for the rejection.', 'rejected'],
+  ] as const)('requires a reason to %s as the supervisor', async (action, open, confirm, message, after) => {
+    const fetchMock = stubApi({
+      [`POST ${SUPERVISOR_DECISION_PATH}`]: [
+        () => json(200, analysis({ ...DELTA_AWAITING, status: after, submitted_by: null })),
+      ],
+    })
+    renderAs(SUPERVISOR, DELTA_AWAITING)
+
+    const group = screen.getByRole('group', { name: 'Supervisor decision' })
+    fireEvent.click(within(group).getByRole('button', { name: open }))
+    expect(screen.getByRole('form', { name: `${open} as supervisor` })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: confirm }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('Reason (required)'), {
+      target: { value: ' Decyzja przełożonego ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: confirm }))
+
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('form', { name: `${open} as supervisor` })).not.toBeInTheDocument(),
+    )
+    expect(sentBody(fetchMock, 'POST')).toEqual({
+      updated_at: DELTA_AWAITING.updated_at,
+      action,
+      reason: 'Decyzja przełożonego',
+    })
+    expect(supervisorButtons()).toEqual([])
+  })
+
+  it("shows a refused supervisor's decision at its form", async () => {
+    stubApi({
+      [`POST ${SUPERVISOR_DECISION_PATH}`]: [
+        () => json(409, { detail: 'Cannot approve your own submission' }),
+      ],
+    })
+    renderAs(SUPERVISOR, DELTA_AWAITING)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'OK' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Cannot approve your own submission',
+    )
+    expect(screen.getByRole('form', { name: 'Approve as supervisor' })).toBeInTheDocument()
+  })
+
+  it("calls onUnauthorized when the supervisor's decision answers 401", async () => {
+    stubApi({
+      [`POST ${SUPERVISOR_DECISION_PATH}`]: [() => json(401, { detail: 'Not authenticated' })],
+    })
+    const onUnauthorized = renderSection(DELTA_AWAITING, ACME_RECOMMENDATION, vi.fn(), SUPERVISOR)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Nie' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
+
+    await vi.waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+})
+
 describe('DecisionHistory', () => {
   it('lists each decision with who, when, why and an earlier version mark', () => {
     render(
@@ -485,6 +647,43 @@ describe('DecisionHistory', () => {
     expect(items[2]).toHaveTextContent('Approved')
     expect(items[2]).toHaveTextContent('Ready to send (sending is simulated)')
     expect(items[2]).toHaveTextContent('Reason—')
+  })
+
+  it("labels the supervisor's decisions and lists the rules not evaluated", () => {
+    render(
+      <DecisionHistory
+        inquiryId={7}
+        decisions={[
+          DELTA_SUBMITTED,
+          DELTA_SUPERVISOR_REJECTED,
+          {
+            ...DELTA_SUPERVISOR_REJECTED,
+            action: 'supervisor_approve',
+            status_after: 'ready_to_send',
+            reason: 'Klient strategiczny',
+          },
+        ]}
+      />,
+    )
+
+    const items = within(
+      screen.getByRole('region', { name: 'Decision history' }),
+    ).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Approved')
+    expect(items[0]).toHaveTextContent('Awaiting supervisor approval')
+    expect(items[0]).toHaveTextContent(
+      'Requires supervisor approval (failing: Margin, Discount, Order value)',
+    )
+    expect(items[0]).not.toHaveTextContent('not evaluated')
+    expect(items[1]).toHaveTextContent('Rejected by supervisor')
+    expect(items[1]).toHaveTextContent('Piotr Nowak')
+    expect(items[1]).toHaveTextContent('Marża za niska')
+    expect(items[1]).toHaveTextContent(
+      'Requires supervisor approval (failing: Margin, Discount; not evaluated: Credit)',
+    )
+    expect(items[2]).toHaveTextContent('Approved by supervisor')
+    expect(items[2]).toHaveTextContent('Ready to send (sending is simulated)')
+    expect(items[2]).toHaveTextContent('Klient strategiczny')
   })
 
   it('keeps a decision whose details are no longer readable', () => {

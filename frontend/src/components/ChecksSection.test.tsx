@@ -11,6 +11,7 @@ import {
   type StepSummary,
 } from '../api/analysis'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
+import { SALES } from '../test/userFixtures'
 import ChecksSection from './ChecksSection'
 
 const CHECKS_PATH = '/api/inquiries/7/checks'
@@ -212,6 +213,7 @@ function Harness({ initial, onUnauthorized }: { initial: Analysis; onUnauthorize
   return (
     <ChecksSection
       inquiryId={7}
+      user={SALES}
       analysis={current}
       disabled={busy !== null}
       running={busy === 'checking'}
@@ -227,6 +229,7 @@ function Harness({ initial, onUnauthorized }: { initial: Analysis; onUnauthorize
       onRegenerateDraft={async () => {}}
       onEditDraft={async () => {}}
       onDecideDraft={async () => {}}
+      onSupervisorDecideDraft={async () => {}}
       onUnauthorized={onUnauthorized}
     />
   )

@@ -28,6 +28,7 @@ const NEWER: InquiryDetail = {
   subject: 'Zapytanie o papier A4',
   received_at: '2026-11-09T10:00:00Z',
   outcome: 'exception',
+  draft_status: null,
   body: 'Dzień dobry,\nproszę o wycenę 2 palet papieru A4.',
 }
 const OLDER: InquiryDetail = {
@@ -37,6 +38,7 @@ const OLDER: InquiryDetail = {
   subject: 'Tonery do drukarek',
   received_at: '2026-11-08T09:00:00Z',
   outcome: null,
+  draft_status: null,
   body: 'Prosimy o ofertę na tonery.',
 }
 

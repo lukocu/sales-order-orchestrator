@@ -377,7 +377,12 @@ export type PolicyResult = {
 
 export type ReplyDraftStatus = 'draft' | 'ready_to_send' | 'awaiting_supervisor' | 'rejected'
 
-export type ReplyDraftAction = 'edit' | 'approve' | 'reject'
+export type ReplyDraftAction =
+  | 'edit'
+  | 'approve'
+  | 'reject'
+  | 'supervisor_approve'
+  | 'supervisor_reject'
 
 export type ReplyDraftTextSource = 'model' | 'fallback'
 
@@ -431,6 +436,8 @@ export type ReplyDraftView = {
   stale: boolean
   drafted_at: string
   updated_at: string // sent back unchanged with an edit or a decision
+  // the user who passed the draft to the supervisor, while awaiting_supervisor; null otherwise
+  submitted_by: number | null
   run: RunSummary | null // null when the run could not be traced
 }
 
@@ -439,6 +446,8 @@ export type ReplyDraftSnapshot = {
   offer: ReplyDraftOffer
   policy_outcome: PolicyOutcome | null
   failing_rules: RuleCode[]
+  // rules the verdict could not evaluate. Optional: older snapshots lack it (read as []).
+  not_evaluated_rules?: RuleCode[]
 }
 
 export type ReplyDraftDecision = {
@@ -573,7 +582,13 @@ const REPLY_DRAFT_STATUSES: readonly ReplyDraftStatus[] = [
   'rejected',
 ]
 
-const REPLY_DRAFT_ACTIONS: readonly ReplyDraftAction[] = ['edit', 'approve', 'reject']
+const REPLY_DRAFT_ACTIONS: readonly ReplyDraftAction[] = [
+  'edit',
+  'approve',
+  'reject',
+  'supervisor_approve',
+  'supervisor_reject',
+]
 
 const TEXT_SOURCES: readonly ReplyDraftTextSource[] = ['model', 'fallback']
 
@@ -600,6 +615,10 @@ function isOneOf<T>(value: unknown, options: readonly T[]): value is T {
 
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+export function isReplyDraftStatus(value: unknown): value is ReplyDraftStatus {
+  return isOneOf(value, REPLY_DRAFT_STATUSES)
 }
 
 export function isOutcome(value: unknown): value is Outcome {
@@ -1041,8 +1060,13 @@ export function isReplyDraftView(value: unknown): value is ReplyDraftView {
     typeof value.stale === 'boolean' &&
     typeof value.drafted_at === 'string' &&
     typeof value.updated_at === 'string' &&
+    isNumberOrNull(value.submitted_by) &&
     (value.run === null || isRunSummary(value.run))
   )
+}
+
+function isRuleCodeList(value: unknown): value is RuleCode[] {
+  return Array.isArray(value) && value.every((code) => isOneOf(code, RULE_CODES))
 }
 
 function isReplyDraftSnapshot(value: unknown): value is ReplyDraftSnapshot {
@@ -1050,8 +1074,8 @@ function isReplyDraftSnapshot(value: unknown): value is ReplyDraftSnapshot {
   return (
     isReplyDraftOffer(value.offer) &&
     (value.policy_outcome === null || isOneOf(value.policy_outcome, POLICY_OUTCOMES)) &&
-    Array.isArray(value.failing_rules) &&
-    value.failing_rules.every((code) => isOneOf(code, RULE_CODES))
+    isRuleCodeList(value.failing_rules) &&
+    (value.not_evaluated_rules === undefined || isRuleCodeList(value.not_evaluated_rules))
   )
 }
 
@@ -1196,6 +1220,24 @@ export function decideDraft(
   reason: string | null,
 ): Promise<Analysis> {
   return requestJson(`${draftPath(inquiryId)}/decision`, isAnalysis, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updated_at: updatedAt, action, reason }),
+  })
+}
+
+// POST: the supervisor approves or rejects a draft awaiting the supervisor, with a reason for
+// both. `updatedAt` as for editDraft; a draft written meanwhile is ApiError 409 DRAFT_CHANGED, a
+// salesperson ApiError 403 "Supervisor role required", a draft not awaiting the supervisor
+// ApiError 409 "Draft is not awaiting supervisor", approving one's own submission ApiError 409
+// "Cannot approve your own submission", a missing reason ApiError 422.
+export function decideAsSupervisor(
+  inquiryId: number,
+  updatedAt: string,
+  action: 'approve' | 'reject',
+  reason: string,
+): Promise<Analysis> {
+  return requestJson(`${draftPath(inquiryId)}/supervisor-decision`, isAnalysis, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ updated_at: updatedAt, action, reason }),

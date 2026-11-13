@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   analyzeInquiry,
+  decideAsSupervisor,
   decideDraft,
   DRAFT_CHANGED,
   editDraft,
@@ -17,7 +18,9 @@ import {
   type ParsedFields,
   type PriceKind,
   type ReplyDraftEdit,
+  type ReplyDraftStatus,
 } from '../api/analysis'
+import type { User } from '../api/auth'
 import { ApiError, UnauthorizedError } from '../api/client'
 import ChecksSection from './ChecksSection'
 import { formatDate } from './format'
@@ -26,11 +29,16 @@ import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
+  // The signed-in user: a supervisor decides on drafts awaiting the supervisor.
+  user: User
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
   // Called with the inquiry's current outcome whenever the analysis is loaded or replaced
   // (null without a current check result), so the inbox can update its badge.
   onOutcome?: (inquiryId: number, outcome: Outcome | null) => void
+  // Called with the status of the inquiry's reply draft (null without one) whenever the
+  // analysis is loaded or replaced, so the inbox can update its badge and filter.
+  onDraftStatus?: (inquiryId: number, status: ReplyDraftStatus | null) => void
 }
 
 type LoadState =
@@ -96,6 +104,11 @@ function draftChanged(error: unknown): boolean {
 function outcomeOf(analysis: Analysis | null): Outcome | null {
   const checks = analysis?.checks ?? null
   return checks === null || checks.stale ? null : checks.outcome
+}
+
+// As the inbox lists it: the stored draft's status, also of a stale draft.
+function draftStatusOf(analysis: Analysis | null): ReplyDraftStatus | null {
+  return analysis?.draft?.status ?? null
 }
 
 function substituteOf(value: boolean | null): Substitute {
@@ -219,7 +232,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
   )
 }
 
-function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
+function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -248,6 +261,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
         setDraft(analysis === null ? null : toDraft(analysis.fields))
         setReviewed([])
         onOutcome?.(inquiryId, outcomeOf(analysis))
+        onDraftStatus?.(inquiryId, draftStatusOf(analysis))
       },
       (error: unknown) => {
         if (controller.signal.aborted) return
@@ -256,13 +270,14 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
       },
     )
     return () => controller.abort()
-  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome])
+  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus])
 
   function show(analysis: Analysis) {
     setLoad({ kind: 'ok', analysis })
     setDraft(toDraft(analysis.fields))
     setReviewed([])
     onOutcome?.(inquiryId, outcomeOf(analysis))
+    onDraftStatus?.(inquiryId, draftStatusOf(analysis))
   }
 
   function reload() {
@@ -288,6 +303,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
     }
     setLoad({ kind: 'ok', analysis: next })
     onOutcome?.(inquiryId, outcomeOf(next))
+    onDraftStatus?.(inquiryId, draftStatusOf(next))
   }
 
   // Errors are left to ChecksSection, which shows them next to its button.
@@ -366,6 +382,14 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
     reason: string | null,
   ) {
     return decideOnReplyDraft(() => decideDraft(inquiryId, updatedAt, action, reason))
+  }
+
+  function decideReplyDraftAsSupervisor(
+    updatedAt: string,
+    action: 'approve' | 'reject',
+    reason: string,
+  ) {
+    return decideOnReplyDraft(() => decideAsSupervisor(inquiryId, updatedAt, action, reason))
   }
 
   async function runAnalysis() {
@@ -568,6 +592,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
 
         <ChecksSection
           inquiryId={inquiryId}
+          user={user}
           analysis={analysis}
           disabled={busy !== null}
           running={busy === 'checking'}
@@ -583,6 +608,7 @@ function AnalysisPanel({ inquiryId, onUnauthorized, onOutcome }: Props) {
           onRegenerateDraft={regenerateReplyDraft}
           onEditDraft={editReplyDraft}
           onDecideDraft={decideReplyDraft}
+          onSupervisorDecideDraft={decideReplyDraftAsSupervisor}
           onUnauthorized={onUnauthorized}
         />
 

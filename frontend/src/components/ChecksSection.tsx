@@ -11,6 +11,7 @@ import {
   type ReplyDraftEdit,
   type StockCheck,
 } from '../api/analysis'
+import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { formatDate, formatPercent, formatPln, totalCost, totalDuration } from './format'
 import OrchestrationSection from './OrchestrationSection'
@@ -21,6 +22,8 @@ import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
+  // The signed-in user, for the supervisor's decision on the reply draft.
+  user: User
   analysis: Analysis
   // True while the panel analyzes, saves or re-runs the checks, the orchestrator, the
   // recommendation or the policy, regenerates the draft or saves a decision on it.
@@ -54,6 +57,13 @@ type Props = {
     updatedAt: string,
     action: 'approve' | 'reject',
     reason: string | null,
+  ) => Promise<void>
+  // Approves or rejects, as the supervisor, the reply draft read at `updatedAt`; rejects when
+  // it failed.
+  onSupervisorDecideDraft: (
+    updatedAt: string,
+    action: 'approve' | 'reject',
+    reason: string,
   ) => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
@@ -289,6 +299,7 @@ function CreditItem({ check }: { check: CreditCheck }) {
 
 function ChecksSection({
   inquiryId,
+  user,
   analysis,
   disabled,
   running,
@@ -304,6 +315,7 @@ function ChecksSection({
   onRegenerateDraft,
   onEditDraft,
   onDecideDraft,
+  onSupervisorDecideDraft,
   onUnauthorized,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
@@ -387,6 +399,7 @@ function ChecksSection({
           {checks.outcome === 'exception' && (
             <ReplyDraftSection
               inquiryId={inquiryId}
+              user={user}
               draft={analysis.draft ?? null}
               recommendation={analysis.recommendation ?? null}
               disabled={disabled}
@@ -395,6 +408,7 @@ function ChecksSection({
               onRegenerate={onRegenerateDraft}
               onEdit={onEditDraft}
               onDecide={onDecideDraft}
+              onSupervisorDecide={onSupervisorDecideDraft}
               onUnauthorized={onUnauthorized}
             />
           )}

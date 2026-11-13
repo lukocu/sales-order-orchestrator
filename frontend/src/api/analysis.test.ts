@@ -12,9 +12,12 @@ import {
   ACME_EDITED,
   ACME_EDITED_DRAFT,
   ACME_REJECTED_EARLIER,
+  DELTA_AWAITING,
   DELTA_DRAFT,
+  DELTA_SUPERVISOR_REJECTED,
 } from '../test/replyDraftFixtures'
 import {
+  decideAsSupervisor,
   decideDraft,
   DRAFT_CHANGED,
   editDraft,
@@ -336,6 +339,7 @@ describe('isReplyDraftView', () => {
     ['ACME', ACME_DRAFT],
     ['ACME edited', ACME_EDITED_DRAFT],
     ['Delta', DELTA_DRAFT],
+    ['Delta awaiting the supervisor', DELTA_AWAITING],
   ])('accepts the %s view', (_, view) => {
     expect(isReplyDraftView(wire(view))).toBe(true)
   })
@@ -351,6 +355,8 @@ describe('isReplyDraftView', () => {
     ['an unknown text source', { ...ACME_DRAFT, text_source: 'llm' }],
     ['a missing stale flag', { ...ACME_DRAFT, stale: undefined }],
     ['a missing token', { ...ACME_DRAFT, updated_at: undefined }],
+    ['a missing submitter', { ...ACME_DRAFT, submitted_by: undefined }],
+    ['a submitter that is not an id', { ...DELTA_AWAITING, submitted_by: 'sales' }],
     [
       'a missing edited flag',
       { ...ACME_DRAFT, offer: { ...ACME_DRAFT.offer, edited: undefined } },
@@ -381,6 +387,11 @@ describe('isReplyDraftDecision', () => {
     ['an approval', ACME_APPROVED],
     ['an edit', ACME_EDITED],
     ['an earlier rejection', ACME_REJECTED_EARLIER],
+    ["a supervisor's rejection", DELTA_SUPERVISOR_REJECTED],
+    [
+      "a supervisor's approval",
+      { ...DELTA_SUPERVISOR_REJECTED, action: 'supervisor_approve', status_after: 'ready_to_send' },
+    ],
   ])('accepts %s', (_, decision) => {
     expect(isReplyDraftDecision(wire(decision))).toBe(true)
   })
@@ -394,6 +405,11 @@ describe('isReplyDraftDecision', () => {
     expect(isReplyDraftDecision(wire(decision))).toBe(true)
   })
 
+  it('accepts an older snapshot without the not evaluated rules', () => {
+    expect('not_evaluated_rules' in ACME_APPROVED.snapshot!).toBe(false)
+    expect(isReplyDraftDecision(wire(ACME_APPROVED))).toBe(true)
+  })
+
   it.each([
     ['an unknown action', { ...ACME_APPROVED, action: 'send' }],
     ['an unknown status after', { ...ACME_APPROVED, status_after: 'sent' }],
@@ -401,6 +417,20 @@ describe('isReplyDraftDecision', () => {
     [
       'an unknown failing rule',
       { ...ACME_APPROVED, snapshot: { ...ACME_APPROVED.snapshot, failing_rules: ['stock'] } },
+    ],
+    [
+      'an unknown not evaluated rule',
+      {
+        ...ACME_APPROVED,
+        snapshot: { ...ACME_APPROVED.snapshot, not_evaluated_rules: ['stock'] },
+      },
+    ],
+    [
+      'not evaluated rules that are not a list',
+      {
+        ...ACME_APPROVED,
+        snapshot: { ...ACME_APPROVED.snapshot, not_evaluated_rules: null },
+      },
     ],
   ])('rejects %s', (_, decision) => {
     expect(isReplyDraftDecision(wire(decision))).toBe(false)
@@ -454,6 +484,22 @@ describe('reply draft helpers', () => {
       updated_at: ACME_DRAFT.updated_at,
       action: 'reject',
       reason: 'Za drogo',
+    })
+  })
+
+  it("posts a supervisor's decision with its reason", async () => {
+    const fetchMock = stubFetch(analysis)
+
+    await expect(
+      decideAsSupervisor(7, DELTA_AWAITING.updated_at, 'approve', 'Klient strategiczny'),
+    ).resolves.toEqual(analysis)
+    const [path, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(path).toBe('/api/inquiries/7/draft/supervisor-decision')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(String(init.body))).toEqual({
+      updated_at: DELTA_AWAITING.updated_at,
+      action: 'approve',
+      reason: 'Klient strategiczny',
     })
   })
 

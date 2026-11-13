@@ -1,10 +1,18 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields, RunSummary } from '../api/analysis'
+import type { User } from '../api/auth'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import { ACME_POLICY } from '../test/policyFixtures'
 import { ACME_RECOMMENDATION } from '../test/recommendationFixtures'
-import { ACME_APPROVED, ACME_DRAFT, ACME_REJECTED_EARLIER } from '../test/replyDraftFixtures'
+import {
+  ACME_APPROVED,
+  ACME_DRAFT,
+  ACME_REJECTED_EARLIER,
+  DELTA_AWAITING,
+  DELTA_SUBMITTED,
+} from '../test/replyDraftFixtures'
+import { SALES, SUPERVISOR } from '../test/userFixtures'
 import AnalysisPanel from './AnalysisPanel'
 
 type Handler = () => Response | Promise<Response>
@@ -14,6 +22,7 @@ const PATH = '/api/inquiries/7/analysis'
 const CHECKS_PATH = '/api/inquiries/7/checks'
 const ORCHESTRATION_PATH = '/api/inquiries/7/orchestration'
 const DECISION_PATH = '/api/inquiries/7/draft/decision'
+const SUPERVISOR_DECISION_PATH = '/api/inquiries/7/draft/supervisor-decision'
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -191,8 +200,20 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
   }
 }
 
-function renderPanel(onUnauthorized = vi.fn(), onOutcome = vi.fn()) {
-  render(<AnalysisPanel inquiryId={7} onUnauthorized={onUnauthorized} onOutcome={onOutcome} />)
+function renderPanel(
+  onUnauthorized = vi.fn(),
+  onOutcome = vi.fn(),
+  { user = SALES, onDraftStatus = vi.fn() }: { user?: User; onDraftStatus?: () => void } = {},
+) {
+  render(
+    <AnalysisPanel
+      inquiryId={7}
+      user={user}
+      onUnauthorized={onUnauthorized}
+      onOutcome={onOutcome}
+      onDraftStatus={onDraftStatus}
+    />,
+  )
   return onUnauthorized
 }
 
@@ -671,6 +692,107 @@ describe('AnalysisPanel', () => {
 
     expect(await screen.findByRole('region', { name: 'Reply draft' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Decision history' })).not.toBeInTheDocument()
+  })
+
+  // Delta passed to the supervisor by the salesperson.
+  const AWAITING: Partial<Analysis> = {
+    ...DRAFTED,
+    draft: DELTA_AWAITING,
+    decisions: [DELTA_SUBMITTED],
+  }
+
+  it("approves as the supervisor with a reason and reports the draft's status", async () => {
+    const onDraftStatus = vi.fn()
+    const fetchMock = stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(AWAITING)),
+      [`POST ${SUPERVISOR_DECISION_PATH}`]: () =>
+        json(
+          200,
+          analysis({
+            ...AWAITING,
+            draft: { ...DELTA_AWAITING, status: 'ready_to_send', submitted_by: null },
+            decisions: [
+              DELTA_SUBMITTED,
+              {
+                ...DELTA_SUBMITTED,
+                action: 'supervisor_approve',
+                status_after: 'ready_to_send',
+                reason: 'Klient strategiczny',
+                decided_by_name: 'Piotr Nowak',
+              },
+            ],
+          }),
+        ),
+    })
+
+    renderPanel(vi.fn(), vi.fn(), { user: SUPERVISOR, onDraftStatus })
+    const group = await screen.findByRole('group', { name: 'Supervisor decision' })
+    await vi.waitFor(() =>
+      expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'awaiting_supervisor'),
+    )
+    fireEvent.click(within(group).getByRole('button', { name: 'Approve' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), {
+      target: { value: 'Klient strategiczny' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+
+    expect(await screen.findAllByText('Ready to send (sending is simulated)')).toHaveLength(2)
+    expect(screen.getByRole('region', { name: 'Decision history' })).toHaveTextContent(
+      'Approved by supervisor',
+    )
+    expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'ready_to_send')
+    const call = fetchMock.mock.calls.find(([path]) => path === SUPERVISOR_DECISION_PATH)
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      updated_at: DELTA_AWAITING.updated_at,
+      action: 'approve',
+      reason: 'Klient strategiczny',
+    })
+  })
+
+  it("reloads the analysis when the draft changed before the supervisor's decision", async () => {
+    const fetchMock = stubApi({
+      [`GET ${PATH}`]: [
+        () => json(200, analysis(AWAITING)),
+        () => json(200, analysis({ ...AWAITING, draft: { ...DELTA_AWAITING, status: 'rejected' } })),
+      ],
+      [`POST ${SUPERVISOR_DECISION_PATH}`]: () => json(409, { detail: 'Draft changed, reload' }),
+    })
+
+    renderPanel(vi.fn(), vi.fn(), { user: SUPERVISOR })
+    fireEvent.click(await screen.findByRole('button', { name: 'Reject' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), {
+      target: { value: 'Marża za niska' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'The draft changed since it was opened — reloaded, your decision was not saved.',
+    )
+    expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
+    expect(fetchMock.mock.calls.filter(([path]) => path === PATH)).toHaveLength(2)
+  })
+
+  it("calls onUnauthorized when the supervisor's decision answers 401", async () => {
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(AWAITING)),
+      [`POST ${SUPERVISOR_DECISION_PATH}`]: () => json(401, { detail: 'Not authenticated' }),
+    })
+
+    const onUnauthorized = renderPanel(vi.fn(), vi.fn(), { user: SUPERVISOR })
+    fireEvent.click(await screen.findByRole('button', { name: 'Reject' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Nie' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
+
+    await vi.waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+
+  it('shows the salesperson no supervisor actions on a submitted draft', async () => {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis(AWAITING)) })
+
+    renderPanel()
+
+    expect(await screen.findByText('Waiting for a supervisor decision.')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Supervisor decision' })).not.toBeInTheDocument()
   })
 
   it('calls onUnauthorized when the API answers 401', async () => {

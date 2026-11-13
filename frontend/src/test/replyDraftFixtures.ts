@@ -129,6 +129,7 @@ export const ACME_DRAFT: ReplyDraftView = {
   stale: false,
   drafted_at: '2026-11-10T09:00:06Z',
   updated_at: '2026-11-10T09:00:06.123456Z',
+  submitted_by: null,
   run: draftRun(),
 }
 
@@ -219,4 +220,42 @@ export const ACME_REJECTED_EARLIER: ReplyDraftDecision = {
   decided_at: '2026-11-10T08:30:00Z',
   snapshot: { offer: ACME_OFFER, policy_outcome: 'no_approval_needed', failing_rules: [] },
   current: false,
+}
+
+// Hurtownia Delta passed to the supervisor by the salesperson (user 1) after approving it.
+export const DELTA_AWAITING: ReplyDraftView = {
+  ...DELTA_DRAFT,
+  status: 'awaiting_supervisor',
+  updated_at: '2026-11-10T09:30:00Z',
+  submitted_by: 1,
+}
+
+export const DELTA_SUBMITTED: ReplyDraftDecision = {
+  action: 'approve',
+  status_after: 'awaiting_supervisor',
+  reason: null,
+  decided_by_name: 'Anna Kowalska',
+  decided_at: '2026-11-10T09:30:00Z',
+  snapshot: {
+    offer: DELTA_DRAFT.offer,
+    policy_outcome: 'requires_supervisor',
+    failing_rules: ['margin', 'discount', 'order_value'],
+    not_evaluated_rules: [],
+  },
+  current: true,
+}
+
+export const DELTA_SUPERVISOR_REJECTED: ReplyDraftDecision = {
+  action: 'supervisor_reject',
+  status_after: 'rejected',
+  reason: 'Marża za niska',
+  decided_by_name: 'Piotr Nowak',
+  decided_at: '2026-11-10T09:40:00Z',
+  snapshot: {
+    offer: DELTA_DRAFT.offer,
+    policy_outcome: 'requires_supervisor',
+    failing_rules: ['margin', 'discount'],
+    not_evaluated_rules: ['credit'],
+  },
+  current: true,
 }
