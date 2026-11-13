@@ -54,3 +54,12 @@ def get_current_user(
     if auth_user is None:
         raise not_authenticated()
     return auth_user
+
+
+def require_supervisor(user: Annotated[AuthUser, Depends(get_current_user)]) -> AuthUser:
+    """The logged-in supervisor; 403 for any other role, 401 like `get_current_user`."""
+    if user.role != "supervisor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor role required"
+        )
+    return user

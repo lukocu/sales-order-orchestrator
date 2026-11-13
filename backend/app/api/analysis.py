@@ -7,7 +7,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.errors import database_unavailable
-from app.auth.deps import AuthUser, get_current_user
+from app.auth.deps import AuthUser, get_current_user, require_supervisor
 from app.checks.service import NoAnalysis
 from app.db import get_engine
 from app.draft.drafter import Drafter, get_drafter
@@ -17,7 +17,9 @@ from app.draft.service import (
     DraftDecided,
     DraftNotEditable,
     DraftStale,
+    NotAwaitingSupervisor,
     NothingToDraft,
+    OwnSubmission,
     PolicyMissing,
     ReasonRequired,
 )
@@ -46,6 +48,7 @@ from app.parsing.service import (
     reorchestrate_inquiry,
     rerecommend_inquiry,
     save_corrections,
+    supervisor_decide_inquiry,
 )
 from app.policy.service import NothingToEvaluate
 from app.recommendation.recommender import Recommender, get_recommender
@@ -62,6 +65,7 @@ RECOMMENDATION_PATH = "/inquiries/{inquiry_id}/recommendation"
 POLICY_PATH = "/inquiries/{inquiry_id}/policy"
 DRAFT_PATH = "/inquiries/{inquiry_id}/draft"
 DECISION_PATH = "/inquiries/{inquiry_id}/draft/decision"
+SUPERVISOR_DECISION_PATH = "/inquiries/{inquiry_id}/draft/supervisor-decision"
 # inquiries.id is a Postgres int4; out-of-range ids are a 422, not a driver error.
 InquiryId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
@@ -402,6 +406,14 @@ class DraftDecisionRequest(BaseModel):
     reason: str | None = None  # required to reject, optional to approve
 
 
+class SupervisorDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    updated_at: AwareDatetime  # of the draft the decision was made on
+    action: Literal["approve", "reject"]
+    reason: str  # required for both; a blank one is a 422 "Reason is required"
+
+
 def _decision_error(error: Exception) -> HTTPException:
     """The 409/422 of an edit or a decision; `error` is one of the draft service's."""
     if isinstance(error, ReasonRequired):
@@ -417,6 +429,8 @@ def _decision_error(error: Exception) -> HTTPException:
         DraftStale: "Draft is stale",
         PolicyMissing: "Policy verdict missing",
         NothingToDraft: "Nothing to draft",
+        NotAwaitingSupervisor: "Draft is not awaiting supervisor",
+        OwnSubmission: "Cannot approve your own submission",
     }
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=details[type(error)])
 
@@ -429,6 +443,8 @@ _DECISION_ERRORS = (
     DraftStale,
     PolicyMissing,
     NothingToDraft,
+    NotAwaitingSupervisor,
+    OwnSubmission,
 )
 
 
@@ -475,6 +491,40 @@ def decide_draft(
     """Approve or reject the draft; 409 when the draft changed meanwhile."""
     try:
         return decide_draft_inquiry(
+            engine,
+            inquiry_id,
+            user,
+            updated_at=request.updated_at,
+            action=request.action,
+            reason=request.reason,
+        )
+    except InquiryNotFound:
+        raise _inquiry_not_found() from None
+    except AnalysisNotFound:
+        raise _no_analysis() from None
+    except _DECISION_ERRORS as error:
+        raise _decision_error(error) from None
+    except ValidationError:
+        raise _invalid_stored_analysis() from None
+    except SQLAlchemyError:
+        logger.exception("Analysis API: database unavailable")
+        raise database_unavailable() from None
+    except Exception as error:
+        raise _decision_failed(inquiry_id, error) from None
+
+
+@router.post(SUPERVISOR_DECISION_PATH, response_model=AnalysisView)
+def supervisor_decide_draft(
+    inquiry_id: InquiryId,
+    request: SupervisorDecisionRequest,
+    engine: Annotated[Engine, Depends(get_engine)],
+    user: Annotated[AuthUser, Depends(require_supervisor)],
+) -> AnalysisView:
+    """Approve or reject a draft awaiting the supervisor (supervisors only, with a reason);
+    409 when the draft is not awaiting the supervisor, changed meanwhile, or the approver
+    passed it to the supervisor themselves."""
+    try:
+        return supervisor_decide_inquiry(
             engine,
             inquiry_id,
             user,

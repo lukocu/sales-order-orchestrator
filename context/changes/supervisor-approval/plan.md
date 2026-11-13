@@ -418,24 +418,24 @@ przełożonego — celowo, bez kasowania audytu.
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Modele zgadzają się z migracją
-- [x] 1.3 Testy serwisu i modeli szkicu przechodzą
+- [x] 1.1 Wszystkie bramki backendu przechodzą — d562e38
+- [x] 1.2 Modele zgadzają się z migracją — d562e38
+- [x] 1.3 Testy serwisu i modeli szkicu przechodzą — d562e38
 
 #### Manual
 
-- [x] 1.4 Downgrade do 0012_drafts_decisions (bez decyzji przełożonego w bazie) i ponowny upgrade do head przechodzą lokalnie
+- [x] 1.4 Downgrade do 0012_drafts_decisions (bez decyzji przełożonego w bazie) i ponowny upgrade do head przechodzą lokalnie — d562e38
 
 ### Phase 2: API, role i lista zapytań
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
-- [ ] 2.2 Testy API szkicu, zapytań i auth przechodzą
+- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.2 Testy API szkicu, zapytań i auth przechodzą
 
 #### Manual
 
-- [ ] 2.3 Lokalnie w /docs: jako sales Approve Delty → awaiting_supervisor; supervisor-decision jako sales → 403; jako supervisor bez powodu → 422, z powodem → 200 i ready_to_send
+- [x] 2.3 Lokalnie w /docs: jako sales Approve Delty → awaiting_supervisor; supervisor-decision jako sales → 403; jako supervisor bez powodu → 422, z powodem → 200 i ready_to_send
 
 ### Phase 3: Frontend i wdrożenie
 

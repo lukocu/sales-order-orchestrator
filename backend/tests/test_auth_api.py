@@ -1,12 +1,14 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, update
 from sqlmodel import Session, col
 
 from app.api import auth as auth_api
-from app.auth.models import User, UserSession
+from app.auth.deps import AuthUser, require_supervisor
+from app.auth.models import Role, User, UserSession
 from app.auth.passwords import LOGIN_VERIFY_SLOTS, verify_password
 from app.main import app
 from app.settings import get_settings
@@ -207,3 +209,30 @@ def test_unknown_api_path_without_session_is_json_404(client: TestClient) -> Non
     assert response.status_code == 404
     assert response.headers["content-type"] == "application/json"
     assert response.json() == {"detail": "Not Found"}
+
+
+@pytest.mark.parametrize(("role", "allowed"), [("supervisor", True), ("salesperson", False)])
+def test_require_supervisor_checks_the_role(role: Role, allowed: bool) -> None:
+    user = AuthUser(id=1, username="someone", display_name="Someone", role=role)
+
+    if allowed:
+        assert require_supervisor(user) == user
+    else:
+        with pytest.raises(HTTPException) as raised:
+            require_supervisor(user)
+        assert (raised.value.status_code, raised.value.detail) == (403, "Supervisor role required")
+
+
+def test_supervisor_only_endpoint_without_session_is_401(client: TestClient) -> None:
+    response = client.post("/api/inquiries/1/draft/supervisor-decision", json={})
+
+    assert response.status_code == 401
+    assert response.json() == NOT_AUTHENTICATED
+
+
+def test_supervisor_only_endpoint_is_403_for_a_salesperson(auth_client: TestClient) -> None:
+    # The role is checked before the body or the inquiry is looked at.
+    response = auth_client.post("/api/inquiries/1/draft/supervisor-decision", json={})
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Supervisor role required"}

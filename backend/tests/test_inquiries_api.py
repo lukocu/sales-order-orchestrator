@@ -7,7 +7,7 @@ from sqlmodel import Session, col
 
 from app.checks.models import InquiryChecks
 from tests.conftest import TEST_EMAIL_DOMAIN, ExtractorSetter, InquiryFactory
-from tests.test_parsing_extractors import ACME, BIURO_MAX
+from tests.test_parsing_extractors import ACME, BIURO_MAX, DELTA
 
 
 @pytest.mark.parametrize("path", ["/api/inquiries", "/api/inquiries/1"])
@@ -36,6 +36,7 @@ def test_list_is_newest_first(auth_client: TestClient, make_inquiry: InquiryFact
         "subject",
         "received_at",
         "outcome",
+        "draft_status",
     }
 
 
@@ -124,3 +125,32 @@ def test_list_and_detail_show_only_a_current_outcome(
     for inquiry, outcome in ((checked, "standard"), (unchecked, None), (stale, None)):
         detail = auth_client.get(f"/api/inquiries/{inquiry.id}").json()
         assert detail["outcome"] == outcome
+
+
+def test_list_and_detail_show_the_draft_status(
+    auth_client: TestClient, use_extractor: ExtractorSetter, make_inquiry: InquiryFactory
+) -> None:
+    now = datetime.now(UTC)
+    drafted = make_inquiry(received_at=now, subject=ACME[0], body=ACME[1])
+    delta_day = datetime.combine(DELTA[2], datetime.min.time(), tzinfo=UTC)
+    awaiting = make_inquiry(received_at=delta_day, subject=DELTA[0], body=DELTA[1])
+    undrafted = make_inquiry(received_at=now)
+    for inquiry in (drafted, awaiting):
+        assert auth_client.post(f"/api/inquiries/{inquiry.id}/analysis").status_code == 200
+    draft = auth_client.get(f"/api/inquiries/{awaiting.id}/analysis").json()["draft"]
+    approved = auth_client.post(
+        f"/api/inquiries/{awaiting.id}/draft/decision",
+        json={"updated_at": draft["updated_at"], "action": "approve"},
+    )
+    assert approved.json()["draft"]["status"] == "awaiting_supervisor"
+
+    listed = auth_client.get("/api/inquiries").json()
+
+    ids = [r["id"] for r in listed]
+    assert len(ids) == len(set(ids))  # the join adds no rows
+    rows = {r["id"]: r for r in listed}
+    expected = ((drafted, "draft"), (awaiting, "awaiting_supervisor"), (undrafted, None))
+    for inquiry, draft_status in expected:
+        assert rows[inquiry.id]["draft_status"] == draft_status
+        detail = auth_client.get(f"/api/inquiries/{inquiry.id}").json()
+        assert detail["draft_status"] == draft_status

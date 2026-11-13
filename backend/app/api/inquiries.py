@@ -12,6 +12,8 @@ from app.api.errors import database_unavailable
 from app.checks.schema import Outcome
 from app.checks.service import current_outcome, with_current_outcome
 from app.db import get_engine
+from app.draft.models import InquiryDraft
+from app.draft.schema import DraftStatus
 from app.inquiries.models import Inquiry
 
 logger = logging.getLogger(__name__)
@@ -26,27 +28,40 @@ class InquirySummary(BaseModel):
     subject: str
     received_at: datetime
     outcome: Outcome | None = None  # of the check result, only while it is current
+    # Raw status of the stored draft (also when it is stale); None without a draft.
+    draft_status: DraftStatus | None = None
 
 
 class InquiryDetail(InquirySummary):
     body: str
 
 
-def _with_outcome[T: InquirySummary](model: type[T], inquiry: Inquiry, outcome: Any) -> T:
+def _with_outcome[T: InquirySummary](
+    model: type[T], inquiry: Inquiry, outcome: Any, draft_status: Any
+) -> T:
     summary = model.model_validate(inquiry, from_attributes=True)
-    return summary.model_copy(update={"outcome": outcome})
+    return summary.model_copy(update={"outcome": outcome, "draft_status": draft_status})
+
+
+def _inquiry_rows() -> Any:
+    """`(Inquiry, outcome, draft status)` rows, one per inquiry (a draft is unique per
+    inquiry)."""
+    return with_current_outcome(select(Inquiry, current_outcome(), InquiryDraft.status)).outerjoin(
+        InquiryDraft, col(InquiryDraft.inquiry_id) == col(Inquiry.id)
+    )
 
 
 @router.get("/inquiries", response_model=list[InquirySummary])
 def list_inquiries(engine: Annotated[Engine, Depends(get_engine)]) -> list[InquirySummary]:
     """All inquiries, newest first."""
-    statement = with_current_outcome(select(Inquiry, current_outcome())).order_by(
-        col(Inquiry.received_at).desc(), col(Inquiry.id).desc()
-    )
+    statement = _inquiry_rows().order_by(col(Inquiry.received_at).desc(), col(Inquiry.id).desc())
     try:
         with Session(engine) as session:
             rows = session.exec(statement).all()
-            return [_with_outcome(InquirySummary, inquiry, outcome) for inquiry, outcome in rows]
+            return [
+                _with_outcome(InquirySummary, inquiry, outcome, draft_status)
+                for inquiry, outcome, draft_status in rows
+            ]
     except SQLAlchemyError:
         logger.exception("Inquiries API: database unavailable")
         raise database_unavailable() from None
@@ -58,9 +73,7 @@ def read_inquiry(
     inquiry_id: Annotated[int, Path(ge=1, le=2_147_483_647)],
     engine: Annotated[Engine, Depends(get_engine)],
 ) -> InquiryDetail:
-    statement = with_current_outcome(select(Inquiry, current_outcome())).where(
-        col(Inquiry.id) == inquiry_id
-    )
+    statement = _inquiry_rows().where(col(Inquiry.id) == inquiry_id)
     try:
         with Session(engine) as session:
             row = session.exec(statement).first()

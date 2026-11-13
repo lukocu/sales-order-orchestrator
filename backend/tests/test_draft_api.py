@@ -1,5 +1,5 @@
-"""HTTP layer of the salesperson's decisions: PUT /draft (edit) and POST /draft/decision
-(approve, reject), in fake mode."""
+"""HTTP layer of the draft decisions: PUT /draft (edit), POST /draft/decision (the
+salesperson's approve, reject) and POST /draft/supervisor-decision, in fake mode."""
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -10,10 +10,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, delete, update
 from sqlmodel import Session, col
 
+from app.auth.models import User
 from app.draft.models import InquiryDraft
 from app.inquiries.models import Inquiry
 from app.policy.models import InquiryPolicyVerdict
-from tests.conftest import ExtractorSetter, InquiryFactory
+from tests.conftest import TEST_PASSWORD, ExtractorSetter, InquiryFactory, UserFactory
 from tests.test_parsing_extractors import ACME, BIURO_MAX, DELTA
 
 
@@ -421,3 +422,193 @@ def test_unexpected_error_is_a_logged_500(
 
     assert response.status_code == 500
     assert response.json() == {"detail": "Decision failed"}
+
+
+# --- Supervisor decision ----------------------------------------------------------------
+
+
+def _supervisor_path(inquiry_id: int | None) -> str:
+    return f"/api/inquiries/{inquiry_id}/draft/supervisor-decision"
+
+
+def _login(client: TestClient, user: User) -> None:
+    response = client.post(
+        "/api/auth/login", json={"username": user.username, "password": TEST_PASSWORD}
+    )
+    assert response.status_code == 200
+
+
+@pytest.fixture
+def supervisor(make_user: UserFactory) -> User:
+    return make_user(role="supervisor", password=TEST_PASSWORD)
+
+
+def _awaiting_delta(client: TestClient, make_inquiry: InquiryFactory) -> tuple[Inquiry, str]:
+    """Delta analyzed and approved by whoever is logged in: the draft awaits the supervisor;
+    returns the inquiry and the draft's token."""
+    delta = _inquiry(make_inquiry, DELTA)
+    draft = _analyze(client, delta)["draft"]
+    approved = client.post(
+        _decision_path(delta.id), json={"updated_at": draft["updated_at"], "action": "approve"}
+    )
+    assert approved.status_code == 200
+    awaiting = approved.json()["draft"]
+    assert awaiting["status"] == "awaiting_supervisor"
+    return delta, awaiting["updated_at"]
+
+
+@pytest.mark.parametrize(
+    ("action", "status_after"),
+    [("approve", "ready_to_send"), ("reject", "rejected")],
+)
+def test_supervisor_decides_a_submitted_draft(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    supervisor: User,
+    action: str,
+    status_after: str,
+) -> None:
+    delta, token = _awaiting_delta(auth_client, make_inquiry)
+    _login(auth_client, supervisor)
+
+    response = auth_client.post(
+        _supervisor_path(delta.id),
+        json={"updated_at": token, "action": action, "reason": "Decyzja przełożonego"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["draft"]["status"] == status_after
+    submitted, decided = body["decisions"]
+    assert submitted["action"] == "approve"
+    assert (decided["action"], decided["status_after"], decided["reason"]) == (
+        f"supervisor_{action}",
+        status_after,
+        "Decyzja przełożonego",
+    )
+    assert "discount" in decided["snapshot"]["failing_rules"]
+    assert auth_client.get(f"/api/inquiries/{delta.id}/analysis").json() == body
+
+
+def test_salesperson_supervisor_decision_is_403(
+    auth_client: TestClient, use_extractor: ExtractorSetter, make_inquiry: InquiryFactory
+) -> None:
+    delta, token = _awaiting_delta(auth_client, make_inquiry)
+    before = auth_client.get(f"/api/inquiries/{delta.id}/analysis").json()
+
+    response = auth_client.post(
+        _supervisor_path(delta.id),
+        json={"updated_at": token, "action": "approve", "reason": "Sam sobie"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Supervisor role required"}
+    assert auth_client.get(f"/api/inquiries/{delta.id}/analysis").json() == before
+
+
+def test_supervisor_decision_without_session_is_401(client: TestClient) -> None:
+    response = client.post(_supervisor_path(1), json={})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Not authenticated"}
+
+
+@pytest.mark.parametrize("reason", [None, "", "   "], ids=["missing", "empty", "blank"])
+def test_supervisor_decision_without_a_reason_is_422(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    supervisor: User,
+    reason: str | None,
+) -> None:
+    delta, token = _awaiting_delta(auth_client, make_inquiry)
+    _login(auth_client, supervisor)
+    request: dict[str, Any] = {"updated_at": token, "action": "approve"}
+    if reason is not None:
+        request["reason"] = reason
+
+    response = auth_client.post(_supervisor_path(delta.id), json=request)
+
+    assert response.status_code == 422
+    if reason is not None:
+        assert response.json() == {"detail": "Reason is required"}
+    after = auth_client.get(f"/api/inquiries/{delta.id}/analysis").json()
+    assert after["draft"]["status"] == "awaiting_supervisor"
+
+
+def test_supervisor_decision_on_a_draft_not_awaiting_is_409(
+    client: TestClient, use_extractor: ExtractorSetter, acme: Inquiry, supervisor: User
+) -> None:
+    _login(client, supervisor)
+    draft = _analyze(client, acme)["draft"]
+
+    response = client.post(
+        _supervisor_path(acme.id),
+        json={"updated_at": draft["updated_at"], "action": "approve", "reason": "Ok"},
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Draft is not awaiting supervisor"}
+
+
+def test_supervisor_cannot_approve_own_submission_but_can_reject_it(
+    client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    supervisor: User,
+) -> None:
+    _login(client, supervisor)
+    # The salesperson's path stays open to a supervisor.
+    delta, token = _awaiting_delta(client, make_inquiry)
+
+    approve = client.post(
+        _supervisor_path(delta.id),
+        json={"updated_at": token, "action": "approve", "reason": "Akceptuję"},
+    )
+    reject = client.post(
+        _supervisor_path(delta.id),
+        json={"updated_at": token, "action": "reject", "reason": "Wycofuję"},
+    )
+
+    assert approve.status_code == 409
+    assert approve.json() == {"detail": "Cannot approve your own submission"}
+    assert reject.status_code == 200
+    assert reject.json()["draft"]["status"] == "rejected"
+    assert reject.json()["decisions"][-1]["action"] == "supervisor_reject"
+
+
+def test_supervisor_decision_with_a_changed_token_is_409(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    supervisor: User,
+) -> None:
+    delta, _ = _awaiting_delta(auth_client, make_inquiry)
+    _login(auth_client, supervisor)
+
+    response = auth_client.post(
+        _supervisor_path(delta.id),
+        json={"updated_at": "2020-01-01T00:00:00+00:00", "action": "approve", "reason": "Ok"},
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Draft changed, reload"}
+
+
+def test_supervisor_decision_with_an_unknown_field_is_422(
+    client: TestClient, supervisor: User
+) -> None:
+    _login(client, supervisor)
+
+    response = client.post(
+        _supervisor_path(1),
+        json={
+            "updated_at": datetime.now(UTC).isoformat(),
+            "action": "approve",
+            "reason": "Ok",
+            "override": True,
+        },
+    )
+
+    assert response.status_code == 422
