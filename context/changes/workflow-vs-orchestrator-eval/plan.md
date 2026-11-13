@@ -506,27 +506,27 @@ Brak migracji. Ewaluacja tworzy i usuwa wyłącznie własne, tymczasowe wiersze 
 
 #### Automated
 
-- [x] 1.1 Wszystkie bramki backendu przechodzą
-- [x] 1.2 Testy zestawu i oceny przechodzą
-- [x] 1.3 Test zestawu potwierdza ładowanie, unikalne id, niezmiennik etykiet i pokrycie scenariuszy
-- [x] 1.4 Testy oceny pokrywają trafienia, pudła, awarie, przypadek bez wyjątku, brak run i agregację
+- [x] 1.1 Wszystkie bramki backendu przechodzą — 5ffa309
+- [x] 1.2 Testy zestawu i oceny przechodzą — 5ffa309
+- [x] 1.3 Test zestawu potwierdza ładowanie, unikalne id, niezmiennik etykiet i pokrycie scenariuszy — 5ffa309
+- [x] 1.4 Testy oceny pokrywają trafienia, pudła, awarie, przypadek bez wyjątku, brak run i agregację — 5ffa309
 
 #### Manual
 
-- [x] 1.5 Autor przegląda cases.json i akceptuje etykiety z uzasadnieniami
+- [x] 1.5 Autor przegląda cases.json i akceptuje etykiety z uzasadnieniami — 5ffa309
 
 ### Phase 2: Runner ewaluacji i CLI
 
 #### Automated
 
-- [ ] 2.1 Wszystkie bramki backendu przechodzą
-- [ ] 2.2 Testy runnera i CLI przechodzą
-- [ ] 2.3 Ramię regułowe trafia w etykietę dla każdego przypadku zestawu
-- [ ] 2.4 Po przebiegu w bazie testowej nie zostają zapytania [eval] ani ich przebiegi tracingu
+- [x] 2.1 Wszystkie bramki backendu przechodzą
+- [x] 2.2 Testy runnera i CLI przechodzą
+- [x] 2.3 Ramię regułowe trafia w etykietę dla każdego przypadku zestawu
+- [x] 2.4 Po przebiegu w bazie testowej nie zostają zapytania [eval] ani ich przebiegi tracingu
 
 #### Manual
 
-- [ ] 2.5 python -m app.eval --allow-fake --repeats 1 kończy się kodem 0, skrzynka bez zapytań [eval]
+- [x] 2.5 python -m app.eval --allow-fake --repeats 1 kończy się kodem 0, skrzynka bez zapytań [eval]
 
 ### Phase 3: Raport i prawdziwy przebieg
 
