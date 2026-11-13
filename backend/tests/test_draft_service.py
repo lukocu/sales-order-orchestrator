@@ -1818,6 +1818,44 @@ def test_supervisor_cannot_approve_their_own_submission(
     ]
 
 
+def test_submitter_is_the_last_decision_by_id_not_by_clock(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    migrated_engine: Engine,
+    test_user: User,
+    supervisor: User,
+) -> None:
+    delta = _inquiry(make_inquiry, DELTA)
+    assert delta.id is not None
+    draft = _analyze(auth_client, delta)["draft"]
+    edit_draft(
+        migrated_engine,
+        delta.id,
+        _auth(test_user),
+        updated_at=_token(draft),
+        option_id=draft["offer"]["option_id"],
+        lines=_edits(draft),
+        reason="Bez zmian",
+    )
+    _submit(migrated_engine, delta, _read(auth_client, delta)["draft"], supervisor)
+    # Clock skew between workers: the earlier edit carries a later `decided_at`.
+    with Session(migrated_engine) as session:
+        session.execute(
+            update(InquiryDraftDecision)
+            .where(
+                col(InquiryDraftDecision.inquiry_id) == delta.id,
+                col(InquiryDraftDecision.action) == "edit",
+            )
+            .values(decided_at=datetime(2999, 1, 1, tzinfo=UTC))
+        )
+        session.commit()
+
+    assert _read(auth_client, delta)["draft"]["submitted_by"] == supervisor.id
+    with pytest.raises(OwnSubmission):
+        _supervisor_decide(migrated_engine, auth_client, delta, supervisor, action="approve")
+
+
 def test_submission_by_a_deleted_user_does_not_block_the_supervisor(
     auth_client: TestClient,
     use_extractor: ExtractorSetter,

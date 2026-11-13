@@ -926,14 +926,16 @@ def _decide(
 
 def _submitted_by(session: Session, row: InquiryDraft) -> int | None:
     """`decided_by` of the last decision on the draft (same inquiry and recommendation);
-    None without one or when its author was deleted."""
+    None without one or when its author was deleted. Ordered by id, not `decided_at`:
+    decisions on a draft are serialized by the analysis lock, so id is the commit order
+    regardless of the application clock."""
     last = session.exec(
         select(InquiryDraftDecision)
         .where(
             col(InquiryDraftDecision.inquiry_id) == row.inquiry_id,
             col(InquiryDraftDecision.recommended_at) == row.recommended_at,
         )
-        .order_by(col(InquiryDraftDecision.decided_at).desc(), col(InquiryDraftDecision.id).desc())
+        .order_by(col(InquiryDraftDecision.id).desc())
         .limit(1)
     ).first()
     return None if last is None else last.decided_by

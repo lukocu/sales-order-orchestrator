@@ -244,6 +244,11 @@ function ReplyDraftSection({
         />
       )}
 
+      {draft?.stale && draft.status === 'awaiting_supervisor' && (
+        <p className="checks__line">
+          No supervisor decision is possible on this draft; re-run the recommendation to continue.
+        </p>
+      )}
       {awaiting && user.role !== 'supervisor' && (
         <p className="checks__line">Waiting for a supervisor decision.</p>
       )}

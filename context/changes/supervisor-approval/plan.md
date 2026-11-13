@@ -410,6 +410,18 @@ przełożonego — celowo, bez kasowania audytu.
 - Poprzednia zmiana: `context/archive/2026-11-12-draft-and-human-decision/plan.md`
 - Lessons: `context/foundation/lessons.md`
 
+## Addendum (impl-review)
+
+- `ix_inquiry_drafts_status` (migracja 0013) na razie nie jest używany przez żadne zapytanie —
+  filtr „Awaiting supervisor only” działa w przeglądarce na liście z `GET /inquiries`. Indeks
+  zostaje jako przygotowanie pod filtr po stronie serwera (bez migracji 0014).
+- Faza 3 zmieniła też `frontend/src/components/ChecksSection.tsx`: `ReplyDraftSection` jest
+  renderowany w `ChecksSection`, więc `user` i `onSupervisorDecideDraft` przechodzą przez nią.
+  `frontend/src/App.tsx` nie wymagał zmian — `Inbox` już dostawał `user`.
+- Po przeglądzie: `_submitted_by` sortuje po `id` (kolejność commitów pod blokadą analizy), nie
+  po `decided_at` z zegara aplikacji; nieaktualny szkic w `awaiting_supervisor` pokazuje obu rolom
+  podpowiedź, że trzeba ponownie uruchomić rekomendację.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

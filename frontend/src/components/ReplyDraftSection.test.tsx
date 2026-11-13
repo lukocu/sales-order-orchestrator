@@ -540,6 +540,31 @@ describe("ReplyDraftSection: the supervisor's decision", () => {
 
     expect(supervisorButtons()).toEqual([])
     expect(screen.queryByText('Waiting for a supervisor decision.')).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'No supervisor decision is possible on this draft; re-run the recommendation to continue.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('tells the salesperson how to continue on a stale draft awaiting the supervisor', () => {
+    renderAs(SALES, { ...DELTA_AWAITING, stale: true })
+
+    expect(
+      screen.getByText(
+        'No supervisor decision is possible on this draft; re-run the recommendation to continue.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows no stale-awaiting hint on a current draft awaiting the supervisor', () => {
+    renderAs(SALES, DELTA_AWAITING)
+
+    expect(
+      screen.queryByText(
+        'No supervisor decision is possible on this draft; re-run the recommendation to continue.',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it.each<ReplyDraftStatus>(['draft', 'ready_to_send', 'rejected'])(
