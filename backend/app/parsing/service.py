@@ -34,6 +34,7 @@ from app.draft.service import (
     get_decision_views,
     get_draft_view,
     regenerate_draft,
+    supervisor_decide,
 )
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import Planner
@@ -397,6 +398,26 @@ def decide_draft_inquiry(
     """
     _require_analysis(engine, inquiry_id)
     decide(engine, inquiry_id, user, updated_at=updated_at, action=action, reason=reason)
+    return _current_view(engine, inquiry_id)
+
+
+def supervisor_decide_inquiry(
+    engine: Engine,
+    inquiry_id: int,
+    user: AuthUser,
+    *,
+    updated_at: datetime,
+    action: Literal["approve", "reject"],
+    reason: str | None,
+) -> AnalysisView:
+    """Approve or reject a draft awaiting the supervisor (see
+    `app.draft.service.supervisor_decide`).
+
+    Raises `InquiryNotFound`, `AnalysisNotFound` without an analysis and whatever
+    `supervisor_decide` raises.
+    """
+    _require_analysis(engine, inquiry_id)
+    supervisor_decide(engine, inquiry_id, user, updated_at=updated_at, action=action, reason=reason)
     return _current_view(engine, inquiry_id)
 
 

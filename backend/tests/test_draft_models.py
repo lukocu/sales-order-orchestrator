@@ -148,6 +148,19 @@ def test_decision_snapshot_round_trips() -> None:
     assert DecisionSnapshot.model_validate(snapshot.model_dump(mode="json")) == snapshot
 
 
+def test_decision_snapshot_without_not_evaluated_rules_reads() -> None:
+    # Stored before `not_evaluated_rules` existed.
+    stored = {
+        "offer": _offer().model_dump(mode="json"),
+        "policy_outcome": "requires_supervisor",
+        "failing_rules": ["discount"],
+    }
+
+    snapshot = DecisionSnapshot.model_validate(stored)
+
+    assert (snapshot.failing_rules, snapshot.not_evaluated_rules) == (["discount"], [])
+
+
 @pytest.mark.parametrize(
     ("model", "data"),
     [
@@ -210,6 +223,19 @@ def test_decision_action_rejects_unknown_value(
     row.action = "send"  # type: ignore[assignment]
 
     _assert_rejected(migrated_engine, row, "ck_inquiry_draft_decisions_action")
+
+
+@pytest.mark.parametrize(
+    ("action", "status_after"),
+    [("supervisor_approve", "ready_to_send"), ("supervisor_reject", "rejected")],
+)
+def test_supervisor_actions_are_accepted(
+    migrated_engine: Engine, make_inquiry: InquiryFactory, action: str, status_after: str
+) -> None:
+    inquiry = make_inquiry(received_at=datetime.now(UTC))
+    _add(migrated_engine, _decision(inquiry, action=action, status_after=status_after))
+
+    assert [d.action for d in _decisions_of(migrated_engine, inquiry)] == [action]
 
 
 def test_decision_status_after_rejects_unknown_value(

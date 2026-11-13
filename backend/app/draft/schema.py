@@ -19,7 +19,7 @@ from app.policy.schema import PolicyOutcome, PolicyResult, RuleCode
 from app.recommendation.schema import LineSource, OptionKind
 
 DraftStatus = Literal["draft", "ready_to_send", "awaiting_supervisor", "rejected"]
-DecisionAction = Literal["edit", "approve", "reject"]
+DecisionAction = Literal["edit", "approve", "reject", "supervisor_approve", "supervisor_reject"]
 TextSource = Literal["model", "fallback"]
 
 
@@ -91,3 +91,5 @@ class DecisionSnapshot(BaseModel):
     offer: DraftOffer
     policy_outcome: PolicyOutcome | None
     failing_rules: list[RuleCode] = Field(default_factory=list)
+    # Rules the verdict could not judge; added later, so older snapshots read as none.
+    not_evaluated_rules: list[RuleCode] = Field(default_factory=list)

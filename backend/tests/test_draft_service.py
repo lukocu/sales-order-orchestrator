@@ -4,7 +4,7 @@ store guard, regenerate and the decision history, in fake mode."""
 from collections.abc import Callable, Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -33,7 +33,9 @@ from app.draft.service import (
     DraftDecided,
     DraftNotEditable,
     DraftStale,
+    NotAwaitingSupervisor,
     NothingToDraft,
+    OwnSubmission,
     PolicyMissing,
     ReasonRequired,
     decide,
@@ -41,13 +43,14 @@ from app.draft.service import (
     edit_draft,
     generate_draft,
     regenerate_draft,
+    supervisor_decide,
 )
 from app.inquiries.models import Inquiry
 from app.policy.models import InquiryPolicyVerdict, PolicyRule
 from app.recommendation.models import InquiryRecommendation
 from app.tracing.models import StepKind, TraceRun, TraceStep
 from app.tracing.pricing import LlmUsage
-from tests.conftest import DrafterSetter, ExtractorSetter, InquiryFactory
+from tests.conftest import DrafterSetter, ExtractorSetter, InquiryFactory, UserFactory
 from tests.test_parsing_extractors import ACME, BIURO_MAX, DELTA, OMEGA
 
 USAGE = LlmUsage(provider="groq", model="openai/gpt-oss-120b", input_tokens=500, output_tokens=80)
@@ -1583,3 +1586,329 @@ def test_edit_traces_its_policy_evaluation(
     assert [(step.name, step.kind, step.status) for step in steps] == [
         ("rules", "deterministic", "ok")
     ]
+
+
+# --- Supervisor decisions ---------------------------------------------------------------
+
+
+@pytest.fixture
+def supervisor(make_user: UserFactory) -> User:
+    return make_user(role="supervisor")
+
+
+def _submit(engine: Engine, inquiry: Inquiry, draft: dict[str, Any], user: User) -> None:
+    """Approve as the salesperson a draft whose verdict needs the supervisor."""
+    assert inquiry.id is not None
+    decide(
+        engine,
+        inquiry.id,
+        _auth(user),
+        updated_at=_token(draft),
+        action="approve",
+        reason="Klient strategiczny",
+    )
+    row = _stored(engine, inquiry)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+
+
+@pytest.fixture
+def awaiting(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    migrated_engine: Engine,
+    test_user: User,
+) -> Inquiry:
+    """The DELTA inquiry with its draft passed to the supervisor by `test_user`."""
+    delta = _inquiry(make_inquiry, DELTA)
+    draft = _analyze(auth_client, delta)["draft"]
+    _submit(migrated_engine, delta, draft, test_user)
+    return delta
+
+
+def _supervisor_decide(
+    engine: Engine,
+    client: TestClient,
+    inquiry: Inquiry,
+    user: User,
+    *,
+    action: Literal["approve", "reject"],
+    reason: str | None = "Zgoda kierownika",
+    updated_at: datetime | None = None,
+) -> None:
+    assert inquiry.id is not None
+    supervisor_decide(
+        engine,
+        inquiry.id,
+        _auth(user),
+        updated_at=updated_at or _token(_read(client, inquiry)["draft"]),
+        action=action,
+        reason=reason,
+    )
+
+
+def _set_policy(engine: Engine, inquiry: Inquiry, change: Callable[[dict[str, Any]], None]) -> None:
+    with Session(engine) as session:
+        verdict = session.exec(
+            select(InquiryPolicyVerdict).where(col(InquiryPolicyVerdict.inquiry_id) == inquiry.id)
+        ).one()
+        result = dict(verdict.result)
+        change(result)
+        session.execute(
+            update(InquiryPolicyVerdict)
+            .where(col(InquiryPolicyVerdict.inquiry_id) == inquiry.id)
+            .values(result=result)
+        )
+        session.commit()
+
+
+def _credit_not_evaluated(result: dict[str, Any]) -> None:
+    result["rules"] = [
+        {**rule, "verdict": "not_evaluated", "actual": None} if rule["code"] == "credit" else rule
+        for rule in result["rules"]
+    ]
+
+
+@pytest.mark.parametrize(
+    ("action", "status_after"),
+    [("approve", "ready_to_send"), ("reject", "rejected")],
+)
+def test_supervisor_decides_a_draft_awaiting_the_supervisor(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+    action: Literal["approve", "reject"],
+    status_after: DraftStatus,
+) -> None:
+    _set_policy(migrated_engine, awaiting, _credit_not_evaluated)
+    before = _read(auth_client, awaiting)["draft"]
+
+    _supervisor_decide(
+        migrated_engine, auth_client, awaiting, supervisor, action=action, reason=" Uzasadnione "
+    )
+
+    row = _stored(migrated_engine, awaiting)
+    assert row is not None
+    assert row.status == status_after
+    assert row.updated_at != _token(before)
+    submission, decision = _decisions(migrated_engine, awaiting)
+    assert submission.action == "approve"
+    assert (decision.action, decision.status_after, decision.reason) == (
+        f"supervisor_{action}",
+        status_after,
+        "Uzasadnione",
+    )
+    assert decision.decided_by == supervisor.id
+    assert decision.decided_at == row.updated_at
+    assert decision.recommended_at == row.recommended_at
+    snapshot = DecisionSnapshot.model_validate(decision.snapshot)
+    assert snapshot.offer == DraftOffer.model_validate(before["offer"])
+    assert snapshot.policy_outcome == "requires_supervisor"
+    assert "discount" in snapshot.failing_rules
+    assert snapshot.not_evaluated_rules == ["credit"]
+    assert _read(auth_client, awaiting)["draft"]["submitted_by"] is None
+
+
+@pytest.mark.parametrize("action", ["approve", "reject"])
+def test_supervisor_decision_needs_a_reason(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+    action: Literal["approve", "reject"],
+) -> None:
+    for reason in (None, "", "   "):
+        with pytest.raises(ReasonRequired):
+            _supervisor_decide(
+                migrated_engine, auth_client, awaiting, supervisor, action=action, reason=reason
+            )
+
+    row = _stored(migrated_engine, awaiting)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+    assert len(_decisions(migrated_engine, awaiting)) == 1
+
+
+@pytest.mark.parametrize("status", ["draft", "ready_to_send", "rejected"])
+@pytest.mark.parametrize("action", ["approve", "reject"])
+def test_supervisor_decision_needs_a_draft_awaiting_the_supervisor(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+    status: DraftStatus,
+    action: Literal["approve", "reject"],
+) -> None:
+    _set_draft(migrated_engine, awaiting, status=status)
+
+    with pytest.raises(NotAwaitingSupervisor):
+        _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action=action)
+
+    assert len(_decisions(migrated_engine, awaiting)) == 1
+
+
+def test_supervisor_decision_on_a_changed_draft_is_refused(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+) -> None:
+    token = _token(_read(auth_client, awaiting)["draft"])
+    # Changed and no longer awaiting: the token is checked first.
+    _set_draft(migrated_engine, awaiting, status="rejected", updated_at=datetime.now(UTC))
+
+    with pytest.raises(DraftChanged):
+        _supervisor_decide(
+            migrated_engine, auth_client, awaiting, supervisor, action="approve", updated_at=token
+        )
+
+    assert len(_decisions(migrated_engine, awaiting)) == 1
+
+
+def test_supervisor_decision_on_a_stale_draft_is_refused(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+) -> None:
+    _set_draft(migrated_engine, awaiting, recommended_at=datetime(2020, 1, 1, tzinfo=UTC))
+
+    for action in ("approve", "reject"):
+        with pytest.raises(DraftStale):
+            _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action=action)
+
+    row = _stored(migrated_engine, awaiting)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+    assert len(_decisions(migrated_engine, awaiting)) == 1
+
+
+def test_supervisor_cannot_approve_their_own_submission(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    migrated_engine: Engine,
+    supervisor: User,
+) -> None:
+    delta = _inquiry(make_inquiry, DELTA)
+    _submit(migrated_engine, delta, _analyze(auth_client, delta)["draft"], supervisor)
+    assert _read(auth_client, delta)["draft"]["submitted_by"] == supervisor.id
+
+    with pytest.raises(OwnSubmission):
+        _supervisor_decide(migrated_engine, auth_client, delta, supervisor, action="approve")
+
+    row = _stored(migrated_engine, delta)
+    assert row is not None
+    assert row.status == "awaiting_supervisor"
+    assert len(_decisions(migrated_engine, delta)) == 1
+
+    # Rejecting their own submission is the way out of `awaiting_supervisor`.
+    _supervisor_decide(
+        migrated_engine, auth_client, delta, supervisor, action="reject", reason="Wycofuję"
+    )
+
+    row = _stored(migrated_engine, delta)
+    assert row is not None
+    assert row.status == "rejected"
+    assert [d.action for d in _decisions(migrated_engine, delta)] == [
+        "approve",
+        "supervisor_reject",
+    ]
+
+
+def test_submission_by_a_deleted_user_does_not_block_the_supervisor(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    make_user: UserFactory,
+    migrated_engine: Engine,
+    supervisor: User,
+) -> None:
+    delta = _inquiry(make_inquiry, DELTA)
+    submitter = make_user()
+    _submit(migrated_engine, delta, _analyze(auth_client, delta)["draft"], submitter)
+    with Session(migrated_engine) as session:
+        session.delete(session.get_one(User, submitter.id))
+        session.commit()
+    assert _read(auth_client, delta)["draft"]["submitted_by"] is None
+
+    _supervisor_decide(migrated_engine, auth_client, delta, supervisor, action="approve")
+
+    row = _stored(migrated_engine, delta)
+    assert row is not None
+    assert row.status == "ready_to_send"
+
+
+def test_supervisor_approve_is_ready_to_send_whatever_the_verdict_in_force(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+) -> None:
+    def no_approval_needed(result: dict[str, Any]) -> None:
+        result["outcome"] = "no_approval_needed"
+
+    _set_policy(migrated_engine, awaiting, no_approval_needed)
+
+    _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="approve")
+
+    row = _stored(migrated_engine, awaiting)
+    assert row is not None
+    assert row.status == "ready_to_send"
+    snapshot = DecisionSnapshot.model_validate(_decisions(migrated_engine, awaiting)[-1].snapshot)
+    assert snapshot.policy_outcome == "no_approval_needed"
+
+
+def test_supervisor_decision_without_a_verdict_in_force_is_refused(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+) -> None:
+    with Session(migrated_engine) as session:
+        session.execute(
+            delete(InquiryPolicyVerdict).where(col(InquiryPolicyVerdict.inquiry_id) == awaiting.id)
+        )
+        session.commit()
+
+    with pytest.raises(PolicyMissing):
+        _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="approve")
+    with pytest.raises(DraftStale):
+        _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="reject")
+
+    assert len(_decisions(migrated_engine, awaiting)) == 1
+
+
+def test_draft_rejected_by_the_supervisor_can_be_regenerated(
+    auth_client: TestClient,
+    migrated_engine: Engine,
+    awaiting: Inquiry,
+    supervisor: User,
+) -> None:
+    assert awaiting.id is not None
+    _supervisor_decide(
+        migrated_engine, auth_client, awaiting, supervisor, action="reject", reason="Za drogo"
+    )
+
+    regenerate_draft(migrated_engine, awaiting.id, FakeDrafter())
+
+    draft = _read(auth_client, awaiting)["draft"]
+    assert (draft["status"], draft["stale"], draft["submitted_by"]) == ("draft", False, None)
+
+
+def test_draft_view_names_who_submitted_it(
+    auth_client: TestClient,
+    use_extractor: ExtractorSetter,
+    make_inquiry: InquiryFactory,
+    migrated_engine: Engine,
+    test_user: User,
+) -> None:
+    delta = _inquiry(make_inquiry, DELTA)
+    draft = _analyze(auth_client, delta)["draft"]
+    assert draft["submitted_by"] is None
+
+    _submit(migrated_engine, delta, draft, test_user)
+
+    assert _read(auth_client, delta)["draft"]["submitted_by"] == test_user.id

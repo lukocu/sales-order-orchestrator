@@ -33,14 +33,16 @@ class InquiryDraft(SQLModel, table=True):
     )
     # `recommended_at` of the recommendation the draft was built from.
     recommended_at: datetime = Field(sa_type=DateTime(timezone=True))
-    status: DraftStatus = Field(sa_type=String(ENUM_LENGTH))
+    # Indexed for the supervisor's inbox (drafts awaiting the supervisor).
+    status: DraftStatus = Field(sa_type=String(ENUM_LENGTH), index=True)
     result: dict[str, Any] = Field(sa_type=JSONB)
     drafted_at: datetime = Field(sa_type=DateTime(timezone=True))
     updated_at: datetime = Field(sa_type=DateTime(timezone=True))
 
 
 class InquiryDraftDecision(SQLModel, table=True):
-    """One decision of a salesperson on a draft; append-only, kept when the draft is replaced.
+    """One decision of a salesperson or a supervisor on a draft; append-only, kept when the
+    draft is replaced.
 
     `snapshot` holds `DecisionSnapshot.model_dump(mode="json")`.
     """
@@ -48,7 +50,7 @@ class InquiryDraftDecision(SQLModel, table=True):
     __tablename__ = "inquiry_draft_decisions"
     __table_args__ = (
         CheckConstraint(
-            "action IN ('edit', 'approve', 'reject')",
+            "action IN ('edit', 'approve', 'reject', 'supervisor_approve', 'supervisor_reject')",
             name="ck_inquiry_draft_decisions_action",
         ),
         CheckConstraint(

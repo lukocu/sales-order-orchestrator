@@ -112,6 +112,14 @@ class DraftStale(Exception):
     recommendation is not computed from the current data)."""
 
 
+class NotAwaitingSupervisor(Exception):
+    """The draft is not in status `awaiting_supervisor`: it is not waiting for a supervisor."""
+
+
+class OwnSubmission(Exception):
+    """A supervisor approving a draft they passed to the supervisor themselves."""
+
+
 class PolicyMissing(Exception):
     """Approve without a verdict in force: the policy stage's verdict of the offer as
     recommended is missing or stale, or an edited offer carries no verdict."""
@@ -143,6 +151,9 @@ class DraftView(BaseModel):
     drafted_at: datetime
     updated_at: datetime
     run: RunSummary | None  # None when the run could not be traced or was deleted
+    # Id of the user who passed the draft to the supervisor, while it is `awaiting_supervisor`;
+    # None otherwise or when that user was deleted.
+    submitted_by: int | None
 
 
 class DecisionView(BaseModel):
@@ -330,6 +341,54 @@ def decide(
         _decide(session, row, user, action, status_after, reason, result.offer, policy)
 
 
+def supervisor_decide(
+    engine: Engine,
+    inquiry_id: int,
+    user: AuthUser,
+    *,
+    updated_at: datetime,
+    action: Literal["approve", "reject"],
+    reason: str | None,
+) -> None:
+    """Approve or reject a draft awaiting the supervisor and append the decision.
+
+    Approve sets `ready_to_send` whatever the outcome of the verdict in force (approving is
+    the supervisor's override of the policy); reject sets `rejected`. Both need a reason. The
+    four-eyes rule only binds approve: the user who passed the draft to the supervisor cannot
+    approve it, but may reject it (the way out when there is no other supervisor). The role is
+    not checked here; the API is the boundary. Raises `ReasonRequired`, `NothingToDraft`
+    without a draft, `DraftChanged`, `NotAwaitingSupervisor`, `DraftStale`, `OwnSubmission`
+    and `PolicyMissing` (approve without a verdict in force); nothing is written then.
+    """
+    reason = _required(reason)
+    with Session(engine) as session:
+        analysis, row, result, _ = _locked_draft(
+            session, inquiry_id, updated_at, status="awaiting_supervisor"
+        )
+        # Read under the same lock as the status: while the draft awaits the supervisor, its
+        # last decision is the Approve that put it there.
+        if action == "approve" and _submitted_by(session, row) == user.id:
+            raise OwnSubmission
+        policy = _policy_in_force(session, analysis, row, result)
+        if policy is None:
+            raise PolicyMissing if action == "approve" else DraftStale
+        if action == "approve":
+            _decide(
+                session,
+                row,
+                user,
+                "supervisor_approve",
+                "ready_to_send",
+                reason,
+                result.offer,
+                policy,
+            )
+        else:
+            _decide(
+                session, row, user, "supervisor_reject", "rejected", reason, result.offer, policy
+            )
+
+
 def get_draft_view(session: Session, analysis: InquiryAnalysis) -> DraftView | None:
     """The stored draft for the analysis' inquiry; None when there is none.
 
@@ -390,6 +449,7 @@ def get_draft_view(session: Session, analysis: InquiryAnalysis) -> DraftView | N
         drafted_at=row.drafted_at,
         updated_at=row.updated_at,
         run=None if row.run_id is None else get_run_summary(session, row.run_id),
+        submitted_by=(_submitted_by(session, row) if row.status == "awaiting_supervisor" else None),
     )
 
 
@@ -740,10 +800,18 @@ def _list_prices(session: Session, codes: set[str]) -> dict[str, Decimal] | None
 
 
 def _locked_draft(
-    session: Session, inquiry_id: int, updated_at: datetime
+    session: Session,
+    inquiry_id: int,
+    updated_at: datetime,
+    *,
+    status: DraftStatus = "draft",
 ) -> tuple[InquiryAnalysis, InquiryDraft, DraftResult, RecommendationResult]:
-    """The draft read at `updated_at`, in status `draft` and of the current recommendation,
-    with the analysis locked until the session commits."""
+    """The draft read at `updated_at`, in `status` and of the current recommendation, with
+    the analysis locked until the session commits.
+
+    Another status raises `NotAwaitingSupervisor` when `awaiting_supervisor` is expected
+    (the supervisor's path) and `DraftNotEditable` otherwise (the salesperson's path).
+    """
     analysis = lock_analysis(session, inquiry_id)
     if analysis is None:
         raise NothingToDraft
@@ -754,8 +822,8 @@ def _locked_draft(
         raise NothingToDraft
     if row.updated_at != updated_at:
         raise DraftChanged
-    if row.status != "draft":
-        raise DraftNotEditable
+    if row.status != status:
+        raise NotAwaitingSupervisor if status == "awaiting_supervisor" else DraftNotEditable
     recommendation = _recommendation(session, inquiry_id)
     if (
         recommendation is None
@@ -836,6 +904,7 @@ def _decide(
         offer=offer,
         policy_outcome=None if policy is None else policy.outcome,
         failing_rules=[rule.code for rule in rules if rule.verdict == "fail"],
+        not_evaluated_rules=[rule.code for rule in rules if rule.verdict == "not_evaluated"],
     )
     row.status = status_after
     row.updated_at = now
@@ -853,6 +922,21 @@ def _decide(
         )
     )
     session.commit()
+
+
+def _submitted_by(session: Session, row: InquiryDraft) -> int | None:
+    """`decided_by` of the last decision on the draft (same inquiry and recommendation);
+    None without one or when its author was deleted."""
+    last = session.exec(
+        select(InquiryDraftDecision)
+        .where(
+            col(InquiryDraftDecision.inquiry_id) == row.inquiry_id,
+            col(InquiryDraftDecision.recommended_at) == row.recommended_at,
+        )
+        .order_by(col(InquiryDraftDecision.decided_at).desc(), col(InquiryDraftDecision.id).desc())
+        .limit(1)
+    ).first()
+    return None if last is None else last.decided_by
 
 
 def _user_name(session: Session, user_id: int | None) -> str | None:
