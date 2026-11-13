@@ -441,14 +441,14 @@ przełożonego — celowo, bez kasowania audytu.
 
 #### Automated
 
-- [x] 3.1 Testy przechodzą
-- [x] 3.2 Typy przechodzą
-- [x] 3.3 Lint przechodzi
-- [x] 3.4 Build przechodzi
-- [x] 3.5 Obraz się buduje
+- [x] 3.1 Testy przechodzą — 245f9e0
+- [x] 3.2 Typy przechodzą — 245f9e0
+- [x] 3.3 Lint przechodzi — 245f9e0
+- [x] 3.4 Build przechodzi — 245f9e0
+- [x] 3.5 Obraz się buduje — 245f9e0
 
 #### Manual
 
-- [x] 3.6 Lokalnie w trybie fake: sales Approve Delty → Awaiting supervisor i badge; supervisor filtruje, widzi reguły, odrzuca z powodem; sales widzi Rejected by supervisor i może Regenerate
-- [x] 3.7 Lokalnie: supervisor Approve Delty jako handlowiec, potem widzi tylko Reject przełożonego i po nim może Regenerate
-- [ ] 3.8 Na Render health pokazuje migrację 0013_supervisor_decisions, a demo sales → supervisor kończy Deltę w Ready to send
+- [x] 3.6 Lokalnie w trybie fake: sales Approve Delty → Awaiting supervisor i badge; supervisor filtruje, widzi reguły, odrzuca z powodem; sales widzi Rejected by supervisor i może Regenerate — 245f9e0
+- [x] 3.7 Lokalnie: supervisor Approve Delty jako handlowiec, potem widzi tylko Reject przełożonego i po nim może Regenerate — 245f9e0
+- [x] 3.8 Na Render health pokazuje migrację 0013_supervisor_decisions, a demo sales → supervisor kończy Deltę w Ready to send — 245f9e0
