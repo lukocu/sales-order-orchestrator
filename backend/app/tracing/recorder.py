@@ -1,6 +1,9 @@
 """Context managers that time runs and steps and persist them, also when the body raises.
 
-Durations come only from `time.perf_counter_ns()`; `started_at` is wall-clock UTC for ordering.
+Durations come only from `time.perf_counter_ns()`. The wall clock is read once per run, when it
+opens; a step's `started_at` is that reading plus the monotonic time elapsed since. The wall clock
+can step backwards (an NTP or VM clock resync), and reading it per step could then order a later
+step before an earlier one; the monotonic offset keeps `started_at` in execution order.
 The run and every step write through their own short session and commit at once, so finished
 steps survive a run that fails later.
 
@@ -16,7 +19,7 @@ import logging
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -87,15 +90,23 @@ class StepRecorder:
 class RunHandle:
     """An open run; steps are opened from it. `id` is None when the run could not be saved."""
 
-    def __init__(self, engine: Engine, run_id: int | None) -> None:
+    def __init__(
+        self, engine: Engine, run_id: int | None, started_at: datetime, start_ns: int
+    ) -> None:
         self._engine = engine
         self.id = run_id
+        self._started_at = started_at  # the run's single wall-clock reading
+        self._start_ns = start_ns  # the monotonic reading taken with it
+
+    def _now(self) -> datetime:
+        """Wall-clock time derived from the monotonic clock, so it never goes backwards in a run."""
+        return self._started_at + timedelta(microseconds=_elapsed_us(self._start_ns))
 
     @contextmanager
     def step(self, name: str, *, kind: StepKind) -> Iterator[StepRecorder]:
         recorder = StepRecorder(kind)
-        started_at = datetime.now(UTC)
         start_ns = time.perf_counter_ns()
+        started_at = self._now()
         status: StepStatus = "ok"
         error_type: str | None = None
         try:
@@ -122,12 +133,14 @@ class RunHandle:
                     logger.exception("Tracing: could not save step %r of run %s", name, self.id)
 
 
-def _open_run(engine: Engine, subject_type: str, subject_id: str) -> int | None:
+def _open_run(
+    engine: Engine, subject_type: str, subject_id: str, started_at: datetime
+) -> int | None:
     trace_run = TraceRun(
         subject_type=subject_type,
         subject_id=subject_id,
         status="running",
-        started_at=datetime.now(UTC),
+        started_at=started_at,
     )
     try:
         with Session(engine) as session:
@@ -155,11 +168,12 @@ def _finish_run(engine: Engine, run_id: int, status: RunStatus, duration_us: int
 @contextmanager
 def run(engine: Engine, *, subject_type: str, subject_id: str) -> Iterator[RunHandle]:
     """Open a traced run: inserted as `running`, finished as `completed` or `failed`."""
-    run_id = _open_run(engine, subject_type, subject_id)
+    started_at = datetime.now(UTC)
     start_ns = time.perf_counter_ns()
+    run_id = _open_run(engine, subject_type, subject_id, started_at)
     status: RunStatus = "completed"
     try:
-        yield RunHandle(engine, run_id)
+        yield RunHandle(engine, run_id, started_at, start_ns)
     except BaseException:
         status = "failed"
         raise

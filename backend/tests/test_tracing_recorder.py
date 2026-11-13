@@ -20,6 +20,8 @@ USAGE = LlmUsage(
     raw={"promptTokenCount": 1200, "candidatesTokenCount": 300},
 )
 
+START_OF_RUN = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
+
 
 class BoomError(Exception):
     pass
@@ -216,3 +218,26 @@ def test_failed_step_write_is_dropped_and_the_run_completes(migrated_engine: Eng
 
     assert _run(migrated_engine, r.id).status == "completed"
     assert [step.name for step in _steps(migrated_engine, r.id)] == ["after"]
+
+
+def test_step_start_follows_execution_even_when_the_wall_clock_steps_back(
+    migrated_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A VM or NTP clock resync can move the wall clock backwards between two steps.
+    readings = iter([START_OF_RUN, START_OF_RUN - timedelta(seconds=10)])
+
+    class SteppingBackClock(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> datetime:  # type: ignore[override]
+            return next(readings, START_OF_RUN - timedelta(seconds=20))
+
+    monkeypatch.setattr("app.tracing.recorder.datetime", SteppingBackClock)
+    with run(migrated_engine, subject_type=TEST_SUBJECT_TYPE, subject_id=_subject()) as r:
+        with r.step("first", kind="deterministic"):
+            pass
+        with r.step("second", kind="deterministic"):
+            pass
+
+    first, second = _steps(migrated_engine, r.id)
+    assert _run(migrated_engine, r.id).started_at == START_OF_RUN
+    assert START_OF_RUN <= first.started_at <= second.started_at
