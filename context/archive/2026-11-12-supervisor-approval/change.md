@@ -1,10 +1,10 @@
 ---
 change_id: supervisor-approval
 title: Supervisor approval
-status: impl_reviewed
+status: archived
 created: 2026-11-12
 updated: 2026-11-13
-archived_at: null
+archived_at: 2026-11-13T18:02:05Z
 ---
 
 ## Notes

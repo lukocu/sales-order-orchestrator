@@ -50,7 +50,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-05 | recommendation-with-confidence     | handlowiec widzi rekomendację z uzasadnieniem i pewnością                              | S-04          | FR-007, US-01                    | done |
 | S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | done        |
 | S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | done |
-| S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | in-progress |
+| S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | done |
 | S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | blocked |
 | S-10 | workflow-vs-orchestrator-eval      | autor porównuje stały workflow i orchestrator na zestawie testowym                    | S-06, F-02, labelled test inquiry set | FR-012 | proposed |
 
@@ -203,7 +203,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Druga rola z Access Control wchodzi dopiero tu, gdzie ma realną pracę; niezależne od szkicu, więc może iść równolegle z S-07.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-09: Odczyt testowej skrzynki e-mail
 
@@ -277,3 +277,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-05: handlowiec widzi jedną rekomendowaną opcję realizacji (częściowa dostawa, zamiennik, inne źródło) z uzasadnieniem odwołującym się do danych firmowych i pewnością wyliczoną z jawnych sygnałów.** — Archived 2026-11-11 → `context/archive/2026-11-11-recommendation-with-confidence/`. Lesson: —.
 - **S-06: handlowiec widzi werdykt każdej reguły (marża, rabat, wartość zamówienia, kredyt) dla rekomendacji oraz wynik łączny: bez akceptacji albo wymaga przełożonego; reguły i progi są konfiguracją oznaczoną jako przykładowa.** — Archived 2026-11-12 → `context/archive/2026-11-11-policy-verdict/`. Lesson: —.
 - **S-07: handlowiec widzi szkic odpowiedzi z liczbami z wyliczonych danych i sekcją „Why this recommendation?”, zatwierdza go (status READY TO SEND, wysyłka symulowana), edytuje (zmiana ceny, ilości lub produktu ponownie uruchamia politykę) lub odrzuca; decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-12 → `context/archive/2026-11-12-draft-and-human-decision/`. Lesson: —.
+- **S-08: przełożony widzi rekomendacje odrzucone przez politykę wraz z regułą, która nie przeszła, i zatwierdza lub odrzuca je; handlowiec widzi wynik, a decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-13 → `context/archive/2026-11-12-supervisor-approval/`. Lesson: —.
