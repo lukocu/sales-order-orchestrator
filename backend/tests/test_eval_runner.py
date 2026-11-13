@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from sqlalchemy import Engine, func
@@ -198,16 +199,36 @@ def test_cli_refuses_without_an_llm_provider(
 
 
 def test_cli_runs_on_fakes_when_allowed(
-    monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine
+    monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine, tmp_path: Path
 ) -> None:
     settings = get_settings().model_copy(update={"llm_provider": "fake", "llm_api_key": None})
     monkeypatch.setattr(cli, "get_settings", lambda: settings)
     monkeypatch.setattr(cli, "get_engine", lambda: migrated_engine)
     before = _max_run_id(migrated_engine)
+    out_dir = tmp_path / "reports"
 
     code = cli.main(
-        ["--allow-fake", "--only", EXCEPTION_CASE, "--repeats", "1", "--pause-seconds", "0"]
+        [
+            "--allow-fake",
+            "--only",
+            EXCEPTION_CASE,
+            "--repeats",
+            "1",
+            "--pause-seconds",
+            "0",
+            "--out",
+            str(out_dir),
+        ]
     )
 
     assert code == 0
     _assert_clean(migrated_engine, before)
+    (md_path,) = out_dir.glob("*.md")
+    (json_path,) = out_dir.glob("*.json")
+    assert md_path.stem == json_path.stem
+    assert md_path.stem.endswith("-fake-none")
+    markdown = md_path.read_text(encoding="utf-8")
+    assert "## Arm comparison" in markdown
+    assert "| Arm | Full accuracy |" in markdown
+    assert "## Cases" in markdown
+    assert f"| {EXCEPTION_CASE} |" in markdown

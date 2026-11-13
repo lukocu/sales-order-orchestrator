@@ -519,22 +519,22 @@ Brak migracji. Ewaluacja tworzy i usuwa wyłącznie własne, tymczasowe wiersze 
 
 #### Automated
 
-- [x] 2.1 Wszystkie bramki backendu przechodzą
-- [x] 2.2 Testy runnera i CLI przechodzą
-- [x] 2.3 Ramię regułowe trafia w etykietę dla każdego przypadku zestawu
-- [x] 2.4 Po przebiegu w bazie testowej nie zostają zapytania [eval] ani ich przebiegi tracingu
+- [x] 2.1 Wszystkie bramki backendu przechodzą — e459707
+- [x] 2.2 Testy runnera i CLI przechodzą — e459707
+- [x] 2.3 Ramię regułowe trafia w etykietę dla każdego przypadku zestawu — e459707
+- [x] 2.4 Po przebiegu w bazie testowej nie zostają zapytania [eval] ani ich przebiegi tracingu — e459707
 
 #### Manual
 
-- [x] 2.5 python -m app.eval --allow-fake --repeats 1 kończy się kodem 0, skrzynka bez zapytań [eval]
+- [x] 2.5 python -m app.eval --allow-fake --repeats 1 kończy się kodem 0, skrzynka bez zapytań [eval] — e459707
 
 ### Phase 3: Raport i prawdziwy przebieg
 
 #### Automated
 
-- [ ] 3.1 Wszystkie bramki backendu przechodzą
-- [ ] 3.2 Testy raportu przechodzą
-- [ ] 3.3 Raport z przebiegu --allow-fake zawiera tabelę porównania ramion i tabelę przypadków
+- [x] 3.1 Wszystkie bramki backendu przechodzą
+- [x] 3.2 Testy raportu przechodzą
+- [x] 3.3 Raport z przebiegu --allow-fake zawiera tabelę porównania ramion i tabelę przypadków
 
 #### Manual
 

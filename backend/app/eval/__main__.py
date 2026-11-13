@@ -8,8 +8,9 @@ The `workflow` arm plans with the rule-based planner; the `orchestrator` arm and
 recommender come from the settings (`LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL`). Without
 `--allow-fake` the command refuses to run when no LLM provider is configured, because the
 orchestrator would silently be the rule-based planner. Runs only against the local database:
-it writes and then deletes temporary `[eval] ` inquiries. LLM failures are part of the result,
-so the exit code is 0 even when some runs failed.
+it writes and then deletes temporary `[eval] ` inquiries. The report goes to `--out` as
+Markdown and JSON. LLM failures are part of the result, so the exit code is 0 even when some
+runs failed.
 """
 
 import argparse
@@ -23,6 +24,7 @@ from app.auth.deps import AuthUser
 from app.auth.models import User
 from app.db import get_engine
 from app.eval.cases import CASES_PATH, load_cases
+from app.eval.report import write_report
 from app.eval.runner import Arm, cases_sha256, run_eval
 from app.eval.scoring import summarize
 from app.llm.client import DEFAULT_MODELS
@@ -132,6 +134,9 @@ def main(argv: list[str] | None = None) -> int:
             summary.cost_complete,
             summary.duration_ms_mean,
         )
+
+    md_path, json_path = write_report(eval_run, args.out)
+    logger.info("Report written to %s and %s", md_path, json_path)
     return 0
 
 

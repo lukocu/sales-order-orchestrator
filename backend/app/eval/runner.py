@@ -24,7 +24,7 @@ from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.draft.drafter import FakeDrafter
-from app.eval.cases import EvalCase
+from app.eval.cases import EvalCase, ExpectedDecision
 from app.eval.scoring import ArmName, ArmRun, observe, score
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import Planner, RuleBasedPlanner
@@ -70,6 +70,7 @@ class EvalRun(BaseModel):
     recommender: str
     cases_sha256: str
     cases: list[str]  # case ids in run order
+    expected: dict[str, ExpectedDecision]  # case id -> label
     not_orchestrated: list[str]  # case ids without an exception: no arm run differs
     setup_errors: list[tuple[str, str]]  # (case id, reason)
     runs: list[ArmRun]
@@ -177,6 +178,7 @@ def run_eval(
         recommender=recommender.name,
         cases_sha256=cases_version,
         cases=[case.id for case in cases],
+        expected={case.id: case.expected for case in cases},
         not_orchestrated=not_orchestrated,
         setup_errors=setup_errors,
         runs=runs,
