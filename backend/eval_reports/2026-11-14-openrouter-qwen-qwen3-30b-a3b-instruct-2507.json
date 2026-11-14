@@ -1,0 +1,1784 @@
+{
+  "run": {
+    "started_at": "2026-11-14T13:15:02.734371Z",
+    "finished_at": "2026-11-14T13:23:28.209995Z",
+    "provider": "openrouter",
+    "model": "qwen/qwen3-30b-a3b-instruct-2507",
+    "repeats": 3,
+    "planners": {
+      "workflow": "fake",
+      "orchestrator": "openrouter"
+    },
+    "recommender": "openrouter",
+    "cases_sha256": "49ec9f5e0c29a8baee7d0030a0f3d0c11edbed150faa91e801fceb54c4436769",
+    "cases": [
+      "acme-abc100-substitute",
+      "biuromax-abc200-standard",
+      "delta-abc100-combined",
+      "omega-xyz300-other-source",
+      "biuromax-abc110-partial",
+      "delta-abc200-partial-discount",
+      "acme-abc100-refused-no-deadline",
+      "delta-abc100-refused-margin",
+      "omega-xyz300-refused-late-supplier",
+      "acme-xyz300-discount",
+      "omega-xyz300-substitute-value",
+      "acme-abc100-needs-input"
+    ],
+    "expected": {
+      "acme-abc100-substitute": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "no_approval_needed"
+      },
+      "biuromax-abc200-standard": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "delta-abc100-combined": {
+        "checks_outcome": "exception",
+        "option_kind": "combined",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-other-source": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "biuromax-abc110-partial": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc200-partial-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "requires_supervisor"
+      },
+      "acme-abc100-refused-no-deadline": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc100-refused-margin": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-refused-late-supplier": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "acme-xyz300-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-substitute-value": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "requires_supervisor"
+      },
+      "acme-abc100-needs-input": {
+        "checks_outcome": "needs_input",
+        "option_kind": null,
+        "policy_outcome": null
+      }
+    },
+    "not_orchestrated": [
+      "biuromax-abc200-standard",
+      "acme-abc100-needs-input"
+    ],
+    "setup_errors": [],
+    "runs": [
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002202300",
+          "cost_complete": true,
+          "duration_ms": 4961,
+          "input_tokens": 1647,
+          "output_tokens": 240
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0003557100",
+          "cost_complete": true,
+          "duration_ms": 11370,
+          "input_tokens": 2289,
+          "output_tokens": 499
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002220300",
+          "cost_complete": true,
+          "duration_ms": 7249,
+          "input_tokens": 1647,
+          "output_tokens": 246
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0003548100",
+          "cost_complete": true,
+          "duration_ms": 9418,
+          "input_tokens": 2289,
+          "output_tokens": 496
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002211300",
+          "cost_complete": true,
+          "duration_ms": 3674,
+          "input_tokens": 1647,
+          "output_tokens": 243
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0003494100",
+          "cost_complete": true,
+          "duration_ms": 8311,
+          "input_tokens": 2289,
+          "output_tokens": 478
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc200-standard",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc200-standard",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002837100",
+          "cost_complete": true,
+          "duration_ms": 9240,
+          "input_tokens": 2159,
+          "output_tokens": 298
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0004233600",
+          "cost_complete": true,
+          "duration_ms": 16712,
+          "input_tokens": 2804,
+          "output_tokens": 570
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002927100",
+          "cost_complete": true,
+          "duration_ms": 9856,
+          "input_tokens": 2159,
+          "output_tokens": 328
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0003185400",
+          "cost_complete": true,
+          "duration_ms": 12616,
+          "input_tokens": 1976,
+          "output_tokens": 469
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002822100",
+          "cost_complete": true,
+          "duration_ms": 9584,
+          "input_tokens": 2159,
+          "output_tokens": 293
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0003354300",
+          "cost_complete": true,
+          "duration_ms": 13922,
+          "input_tokens": 2067,
+          "output_tokens": 498
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001921500",
+          "cost_complete": true,
+          "duration_ms": 8004,
+          "input_tokens": 1255,
+          "output_tokens": 264
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002903100",
+          "cost_complete": true,
+          "duration_ms": 10832,
+          "input_tokens": 1899,
+          "output_tokens": 398
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001738500",
+          "cost_complete": true,
+          "duration_ms": 19430,
+          "input_tokens": 1255,
+          "output_tokens": 203
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002801100",
+          "cost_complete": true,
+          "duration_ms": 9961,
+          "input_tokens": 1899,
+          "output_tokens": 364
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001885500",
+          "cost_complete": true,
+          "duration_ms": 5320,
+          "input_tokens": 1255,
+          "output_tokens": 252
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002822100",
+          "cost_complete": true,
+          "duration_ms": 8314,
+          "input_tokens": 1899,
+          "output_tokens": 371
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001566900",
+          "cost_complete": true,
+          "duration_ms": 3397,
+          "input_tokens": 961,
+          "output_tokens": 234
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002865600",
+          "cost_complete": true,
+          "duration_ms": 9398,
+          "input_tokens": 1604,
+          "output_tokens": 474
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001461900",
+          "cost_complete": true,
+          "duration_ms": 3433,
+          "input_tokens": 961,
+          "output_tokens": 199
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002787600",
+          "cost_complete": true,
+          "duration_ms": 8242,
+          "input_tokens": 1604,
+          "output_tokens": 448
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001632900",
+          "cost_complete": true,
+          "duration_ms": 4389,
+          "input_tokens": 961,
+          "output_tokens": 256
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002868600",
+          "cost_complete": true,
+          "duration_ms": 7775,
+          "input_tokens": 1604,
+          "output_tokens": 475
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001581600",
+          "cost_complete": true,
+          "duration_ms": 3107,
+          "input_tokens": 954,
+          "output_tokens": 241
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002784300",
+          "cost_complete": true,
+          "duration_ms": 6471,
+          "input_tokens": 1637,
+          "output_tokens": 437
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001590600",
+          "cost_complete": true,
+          "duration_ms": 4244,
+          "input_tokens": 954,
+          "output_tokens": 244
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002865300",
+          "cost_complete": true,
+          "duration_ms": 7164,
+          "input_tokens": 1637,
+          "output_tokens": 464
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001614600",
+          "cost_complete": true,
+          "duration_ms": 4137,
+          "input_tokens": 954,
+          "output_tokens": 252
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002889300",
+          "cost_complete": true,
+          "duration_ms": 7785,
+          "input_tokens": 1637,
+          "output_tokens": 472
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001899600",
+          "cost_complete": true,
+          "duration_ms": 4999,
+          "input_tokens": 1244,
+          "output_tokens": 260
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002535600",
+          "cost_complete": true,
+          "duration_ms": 5593,
+          "input_tokens": 1634,
+          "output_tokens": 355
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001926600",
+          "cost_complete": true,
+          "duration_ms": 4463,
+          "input_tokens": 1244,
+          "output_tokens": 269
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002511600",
+          "cost_complete": true,
+          "duration_ms": 6284,
+          "input_tokens": 1634,
+          "output_tokens": 347
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001725600",
+          "cost_complete": true,
+          "duration_ms": 3139,
+          "input_tokens": 1244,
+          "output_tokens": 202
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002502600",
+          "cost_complete": true,
+          "duration_ms": 5856,
+          "input_tokens": 1634,
+          "output_tokens": 344
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001883100",
+          "cost_complete": true,
+          "duration_ms": 4182,
+          "input_tokens": 1249,
+          "output_tokens": 253
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002907600",
+          "cost_complete": true,
+          "duration_ms": 6150,
+          "input_tokens": 1894,
+          "output_tokens": 401
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001892100",
+          "cost_complete": true,
+          "duration_ms": 3967,
+          "input_tokens": 1249,
+          "output_tokens": 256
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": "orchestration_failed:failed",
+          "cost_usd": "0.0001222500",
+          "cost_complete": true,
+          "duration_ms": 3258,
+          "input_tokens": 645,
+          "output_tokens": 214
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0001862100",
+          "cost_complete": true,
+          "duration_ms": 3684,
+          "input_tokens": 1249,
+          "output_tokens": 246
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002985600",
+          "cost_complete": true,
+          "duration_ms": 10609,
+          "input_tokens": 1894,
+          "output_tokens": 427
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001991400",
+          "cost_complete": true,
+          "duration_ms": 4762,
+          "input_tokens": 1276,
+          "output_tokens": 281
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0003000000",
+          "cost_complete": true,
+          "duration_ms": 5341,
+          "input_tokens": 1920,
+          "output_tokens": 424
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001955400",
+          "cost_complete": true,
+          "duration_ms": 10123,
+          "input_tokens": 1276,
+          "output_tokens": 269
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0002997000",
+          "cost_complete": true,
+          "duration_ms": 8010,
+          "input_tokens": 1920,
+          "output_tokens": 423
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "cost_usd": "0.0001937400",
+          "cost_complete": true,
+          "duration_ms": 5157,
+          "input_tokens": 1276,
+          "output_tokens": 263
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": "orchestration_failed:failed",
+          "cost_usd": "0.0001104600",
+          "cost_complete": true,
+          "duration_ms": 3007,
+          "input_tokens": 644,
+          "output_tokens": 175
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002216400",
+          "cost_complete": true,
+          "duration_ms": 4335,
+          "input_tokens": 1636,
+          "output_tokens": 248
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0003500100",
+          "cost_complete": true,
+          "duration_ms": 7970,
+          "input_tokens": 2279,
+          "output_tokens": 483
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002219400",
+          "cost_complete": true,
+          "duration_ms": 4827,
+          "input_tokens": 1636,
+          "output_tokens": 249
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0003407100",
+          "cost_complete": true,
+          "duration_ms": 13714,
+          "input_tokens": 2279,
+          "output_tokens": 452
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0002237400",
+          "cost_complete": true,
+          "duration_ms": 5488,
+          "input_tokens": 1636,
+          "output_tokens": 255
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "cost_usd": "0.0003440100",
+          "cost_complete": true,
+          "duration_ms": 9049,
+          "input_tokens": 2279,
+          "output_tokens": 463
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "cost_usd": "0.0002292300",
+          "cost_complete": true,
+          "duration_ms": 4850,
+          "input_tokens": 1667,
+          "output_tokens": 264
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "cost_usd": "0.0003528000",
+          "cost_complete": true,
+          "duration_ms": 9480,
+          "input_tokens": 2310,
+          "output_tokens": 483
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "cost_usd": "0.0002178300",
+          "cost_complete": true,
+          "duration_ms": 4341,
+          "input_tokens": 1667,
+          "output_tokens": 226
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "cost_usd": "0.0003513000",
+          "cost_complete": true,
+          "duration_ms": 9941,
+          "input_tokens": 2310,
+          "output_tokens": 478
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "cost_usd": "0.0002277300",
+          "cost_complete": true,
+          "duration_ms": 5697,
+          "input_tokens": 1667,
+          "output_tokens": 259
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "cost_usd": "0.0003579000",
+          "cost_complete": true,
+          "duration_ms": 9001,
+          "input_tokens": 2310,
+          "output_tokens": 500
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-needs-input",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-needs-input",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      }
+    ]
+  },
+  "summaries": [
+    {
+      "arm": "workflow",
+      "all_runs": {
+        "arm": "workflow",
+        "runs": 32,
+        "full": {
+          "hits": 26,
+          "total": 32,
+          "rate": 0.8125
+        },
+        "option": {
+          "hits": 24,
+          "total": 30,
+          "rate": 0.8
+        },
+        "policy": {
+          "hits": 30,
+          "total": 30,
+          "rate": 1.0
+        },
+        "checks": {
+          "hits": 32,
+          "total": 32,
+          "rate": 1.0
+        },
+        "failures": {},
+        "cost_usd_total": "0.0060708600",
+        "cost_usd_mean": "0.0001897144",
+        "cost_complete": true,
+        "duration_ms_mean": 5438.71875,
+        "duration_ms_max": 19430,
+        "input_tokens": 42144,
+        "output_tokens": 7593
+      },
+      "orchestrated": {
+        "arm": "workflow",
+        "runs": 30,
+        "full": {
+          "hits": 24,
+          "total": 30,
+          "rate": 0.8
+        },
+        "option": {
+          "hits": 24,
+          "total": 30,
+          "rate": 0.8
+        },
+        "policy": {
+          "hits": 30,
+          "total": 30,
+          "rate": 1.0
+        },
+        "checks": {
+          "hits": 30,
+          "total": 30,
+          "rate": 1.0
+        },
+        "failures": {},
+        "cost_usd_total": "0.0060708600",
+        "cost_usd_mean": "0.0002023620",
+        "cost_complete": true,
+        "duration_ms_mean": 5801.3,
+        "duration_ms_max": 19430,
+        "input_tokens": 42144,
+        "output_tokens": 7593
+      }
+    },
+    {
+      "arm": "orchestrator",
+      "all_runs": {
+        "arm": "orchestrator",
+        "runs": 32,
+        "full": {
+          "hits": 22,
+          "total": 32,
+          "rate": 0.6875
+        },
+        "option": {
+          "hits": 20,
+          "total": 30,
+          "rate": 0.6666666666666666
+        },
+        "policy": {
+          "hits": 28,
+          "total": 30,
+          "rate": 0.9333333333333333
+        },
+        "checks": {
+          "hits": 32,
+          "total": 32,
+          "rate": 1.0
+        },
+        "failures": {
+          "orchestration_failed:failed": 2
+        },
+        "cost_usd_total": "0.0089694000",
+        "cost_usd_mean": "0.0002802938",
+        "cost_complete": true,
+        "duration_ms_mean": 8173.5625,
+        "duration_ms_max": 16712,
+        "input_tokens": 56720,
+        "output_tokens": 12882
+      },
+      "orchestrated": {
+        "arm": "orchestrator",
+        "runs": 30,
+        "full": {
+          "hits": 20,
+          "total": 30,
+          "rate": 0.6666666666666666
+        },
+        "option": {
+          "hits": 20,
+          "total": 30,
+          "rate": 0.6666666666666666
+        },
+        "policy": {
+          "hits": 28,
+          "total": 30,
+          "rate": 0.9333333333333333
+        },
+        "checks": {
+          "hits": 30,
+          "total": 30,
+          "rate": 1.0
+        },
+        "failures": {
+          "orchestration_failed:failed": 2
+        },
+        "cost_usd_total": "0.0089694000",
+        "cost_usd_mean": "0.0002989800",
+        "cost_complete": true,
+        "duration_ms_mean": 8718.466666666667,
+        "duration_ms_max": 16712,
+        "input_tokens": 56720,
+        "output_tokens": 12882
+      }
+    }
+  ],
+  "unstable": [
+    {
+      "case_id": "delta-abc100-combined",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor"
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor"
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor"
+        }
+      ]
+    },
+    {
+      "case_id": "delta-abc100-refused-margin",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor"
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor"
+        }
+      ]
+    },
+    {
+      "case_id": "omega-xyz300-refused-late-supplier",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed"
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed"
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null
+        }
+      ]
+    }
+  ]
+}

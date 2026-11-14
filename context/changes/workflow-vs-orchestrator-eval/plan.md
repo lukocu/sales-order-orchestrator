@@ -532,12 +532,12 @@ Brak migracji. Ewaluacja tworzy i usuwa wyłącznie własne, tymczasowe wiersze 
 
 #### Automated
 
-- [x] 3.1 Wszystkie bramki backendu przechodzą
-- [x] 3.2 Testy raportu przechodzą
-- [x] 3.3 Raport z przebiegu --allow-fake zawiera tabelę porównania ramion i tabelę przypadków
+- [x] 3.1 Wszystkie bramki backendu przechodzą — 154d20d
+- [x] 3.2 Testy raportu przechodzą — 154d20d
+- [x] 3.3 Raport z przebiegu --allow-fake zawiera tabelę porównania ramion i tabelę przypadków — 154d20d
 
 #### Manual
 
-- [ ] 3.4 Przebieg z Groq (--repeats 3) kończy się, raport pokazuje oba ramiona z trafnością, kosztem i czasem
-- [ ] 3.5 Autor potwierdza wiarygodność liczb w raporcie
-- [ ] 3.6 Raport z prawdziwego przebiegu zacommitowany, bez klucza API
+- [x] 3.4 Przebieg z Groq (--repeats 3) kończy się, raport pokazuje oba ramiona z trafnością, kosztem i czasem
+- [x] 3.5 Autor potwierdza wiarygodność liczb w raporcie
+- [x] 3.6 Raport z prawdziwego przebiegu zacommitowany, bez klucza API
