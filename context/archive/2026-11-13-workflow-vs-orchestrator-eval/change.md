@@ -1,10 +1,10 @@
 ---
 change_id: workflow-vs-orchestrator-eval
 title: Workflow vs orchestrator eval
-status: impl_reviewed
+status: archived
 created: 2026-11-13
 updated: 2026-11-14
-archived_at: null
+archived_at: 2026-11-14T16:23:52Z
 ---
 
 ## Notes

@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-13
+updated: 2026-11-14
 prd_version: 1
 main_goal: quality
 top_blocker: decisions
@@ -52,7 +52,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | done |
 | S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | done |
 | S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | blocked |
-| S-10 | workflow-vs-orchestrator-eval      | autor porównuje stały workflow i orchestrator na zestawie testowym                    | S-06, F-02, labelled test inquiry set | FR-012 | in-progress |
+| S-10 | workflow-vs-orchestrator-eval      | autor porównuje stały workflow i orchestrator na zestawie testowym                    | S-06, F-02, labelled test inquiry set | FR-012 | done |
 
 ## Streams
 
@@ -229,7 +229,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Ile zapytań i jakie typy wyjątków obejmuje zestaw testowy? — Owner: autor. Block: no.
 - **Risk:** Nice-to-have, ale realizuje drugorzędne kryterium sukcesu i jest najsilniejszym dowodem w portfolio AI Engineer; ustawione po S-06, bo „decyzja” to rekomendacja plus werdykt.
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -278,3 +278,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-06: handlowiec widzi werdykt każdej reguły (marża, rabat, wartość zamówienia, kredyt) dla rekomendacji oraz wynik łączny: bez akceptacji albo wymaga przełożonego; reguły i progi są konfiguracją oznaczoną jako przykładowa.** — Archived 2026-11-12 → `context/archive/2026-11-11-policy-verdict/`. Lesson: —.
 - **S-07: handlowiec widzi szkic odpowiedzi z liczbami z wyliczonych danych i sekcją „Why this recommendation?”, zatwierdza go (status READY TO SEND, wysyłka symulowana), edytuje (zmiana ceny, ilości lub produktu ponownie uruchamia politykę) lub odrzuca; decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-12 → `context/archive/2026-11-12-draft-and-human-decision/`. Lesson: —.
 - **S-08: przełożony widzi rekomendacje odrzucone przez politykę wraz z regułą, która nie przeszła, i zatwierdza lub odrzuca je; handlowiec widzi wynik, a decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-13 → `context/archive/2026-11-12-supervisor-approval/`. Lesson: —.
+- **S-10: autor puszcza ten sam zestaw testowych zapytań z zapisanymi oczekiwanymi decyzjami przez stały workflow i przez orchestrator i widzi porównanie trafności, kosztu i czasu.** — Archived 2026-11-14 → `context/archive/2026-11-13-workflow-vs-orchestrator-eval/`. Lesson: —.
