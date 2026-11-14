@@ -538,6 +538,6 @@ Brak migracji. Ewaluacja tworzy i usuwa wyłącznie własne, tymczasowe wiersze 
 
 #### Manual
 
-- [x] 3.4 Przebieg z Groq (--repeats 3) kończy się, raport pokazuje oba ramiona z trafnością, kosztem i czasem
-- [x] 3.5 Autor potwierdza wiarygodność liczb w raporcie
-- [x] 3.6 Raport z prawdziwego przebiegu zacommitowany, bez klucza API
+- [x] 3.4 Przebieg z Groq (--repeats 3) kończy się, raport pokazuje oba ramiona z trafnością, kosztem i czasem — 7bda4b3
+- [x] 3.5 Autor potwierdza wiarygodność liczb w raporcie — 7bda4b3
+- [x] 3.6 Raport z prawdziwego przebiegu zacommitowany, bez klucza API — 7bda4b3
