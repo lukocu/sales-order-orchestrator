@@ -7,10 +7,11 @@
 The `workflow` arm plans with the rule-based planner; the `orchestrator` arm and the shared
 recommender come from the settings (`LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL`). Without
 `--allow-fake` the command refuses to run when no LLM provider is configured, because the
-orchestrator would silently be the rule-based planner. Runs only against the local database:
-it writes and then deletes temporary `[eval] ` inquiries. The report goes to `--out` as
-Markdown and JSON. LLM failures are part of the result, so the exit code is 0 even when some
-runs failed.
+orchestrator would silently be the rule-based planner. Runs only against the local database
+(host `localhost`, `127.0.0.1`, `::1` or the compose service `db`) unless `--allow-remote-db`
+is passed: it writes and then deletes temporary `[eval] ` inquiries. The report goes to
+`--out` as Markdown and JSON. LLM failures are part of the result, so the exit code is 0 even
+when some runs failed; a database error or another eval run in progress exits with 1.
 """
 
 import argparse
@@ -18,6 +19,8 @@ import logging
 import sys
 from pathlib import Path
 
+from sqlalchemy import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
@@ -25,7 +28,7 @@ from app.auth.models import User
 from app.db import get_engine
 from app.eval.cases import CASES_PATH, load_cases
 from app.eval.report import write_report
-from app.eval.runner import Arm, cases_sha256, run_eval
+from app.eval.runner import Arm, EvalAlreadyRunning, cases_sha256, run_eval
 from app.eval.scoring import summarize
 from app.llm.client import DEFAULT_MODELS
 from app.orchestration.planning import RuleBasedPlanner, get_planner
@@ -35,6 +38,11 @@ from app.settings import get_settings
 logger = logging.getLogger("app.eval")
 
 SETUP_USERNAME = "sales"
+LOCAL_DB_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "db"})
+
+
+def _is_local(engine: Engine) -> bool:
+    return engine.url.host in LOCAL_DB_HOSTS
 
 
 def _repeats(value: str) -> int:
@@ -58,6 +66,11 @@ def _parser() -> argparse.ArgumentParser:
         "--allow-fake",
         action="store_true",
         help="run without an LLM provider (both arms plan with rules; for tests)",
+    )
+    parser.add_argument(
+        "--allow-remote-db",
+        action="store_true",
+        help="run against a database that is not local (writes and deletes [eval] inquiries)",
     )
     return parser
 
@@ -84,32 +97,47 @@ def main(argv: list[str] | None = None) -> int:
         cases = [case for case in cases if case.id in args.only]
 
     engine = get_engine()
-    with Session(engine) as session:
-        user = session.exec(select(User).where(col(User.username) == SETUP_USERNAME)).first()
-        if user is None:
-            logger.error(
-                "Demo account %s does not exist; run the migrations first.", SETUP_USERNAME
-            )
-            return 1
-        setup_user = AuthUser.from_user(user)
+    if not args.allow_remote_db and not _is_local(engine):
+        logger.error(
+            "The database host %s is not local. The eval writes and deletes [eval] inquiries; "
+            "pass --allow-remote-db to run it there anyway.",
+            engine.url.host,
+        )
+        return 2
 
     provider = settings.llm_provider
     model = None if provider == "fake" else settings.llm_model or DEFAULT_MODELS[provider]
-    eval_run = run_eval(
-        engine,
-        cases,
-        [
-            Arm(name="workflow", planner=RuleBasedPlanner()),
-            Arm(name="orchestrator", planner=get_planner(settings)),
-        ],
-        get_recommender(settings),
-        repeats=args.repeats,
-        pause_seconds=args.pause_seconds,
-        user=setup_user,
-        provider=provider,
-        model=model,
-        cases_version=cases_sha256(args.cases),
-    )
+    try:
+        with Session(engine) as session:
+            user = session.exec(select(User).where(col(User.username) == SETUP_USERNAME)).first()
+            if user is None:
+                logger.error(
+                    "Demo account %s does not exist; run the migrations first.", SETUP_USERNAME
+                )
+                return 1
+            setup_user = AuthUser.from_user(user)
+
+        eval_run = run_eval(
+            engine,
+            cases,
+            [
+                Arm(name="workflow", planner=RuleBasedPlanner()),
+                Arm(name="orchestrator", planner=get_planner(settings)),
+            ],
+            get_recommender(settings),
+            repeats=args.repeats,
+            pause_seconds=args.pause_seconds,
+            user=setup_user,
+            provider=provider,
+            model=model,
+            cases_version=cases_sha256(args.cases),
+        )
+    except EvalAlreadyRunning as error:
+        logger.error("%s; try again when it has finished.", error)
+        return 1
+    except SQLAlchemyError as error:
+        logger.error("Database error during the eval: %s", type(error).__name__)
+        return 1
 
     for case_id, reason in eval_run.setup_errors:
         logger.warning("Setup error · %s: %s", case_id, reason)

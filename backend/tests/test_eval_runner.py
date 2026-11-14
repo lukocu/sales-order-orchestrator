@@ -6,14 +6,23 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from sqlalchemy import Engine, func
+from sqlalchemy import Engine, create_engine, text
 from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.auth.models import User
 from app.eval import __main__ as cli
+from app.eval import runner
 from app.eval.cases import CASES_PATH, EvalCase, load_cases
-from app.eval.runner import SUBJECT_PREFIX, Arm, EvalRun, cases_sha256, run_eval
+from app.eval.runner import (
+    RUN_LOCK_KEY,
+    SUBJECT_PREFIX,
+    Arm,
+    EvalAlreadyRunning,
+    EvalRun,
+    cases_sha256,
+    run_eval,
+)
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import PlannerRateLimited, PlanningResult, RuleBasedPlanner
 from app.orchestration.schema import PlanFacts
@@ -41,6 +50,21 @@ class BrokenPlanner:
 
     def plan(self, facts: PlanFacts) -> PlanningResult:
         raise RuntimeError("unexpected")
+
+
+@pytest.fixture
+def created(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Ids of the inquiries the runner inserts, so cleanup checks see only this test's rows."""
+    ids: list[int] = []
+    insert = runner._insert_inquiry
+
+    def recording(engine: Engine, case: EvalCase) -> int:
+        inquiry_id = insert(engine, case)
+        ids.append(inquiry_id)
+        return inquiry_id
+
+    monkeypatch.setattr(runner, "_insert_inquiry", recording)
+    return ids
 
 
 @pytest.fixture
@@ -79,30 +103,30 @@ def _run(
     )
 
 
-def _max_run_id(engine: Engine) -> int:
+def _assert_clean(engine: Engine, inquiry_ids: Sequence[int]) -> None:
+    """None of these inquiries is left, nor any trace run of them."""
+    assert inquiry_ids
     with Session(engine) as session:
-        return session.exec(select(func.max(TraceRun.id))).one() or 0
-
-
-def _assert_clean(engine: Engine, runs_after: int) -> None:
-    """No `[eval] ` inquiry is left, nor any inquiry run created after `runs_after`."""
-    with Session(engine) as session:
-        inquiries = session.exec(
-            select(Inquiry.id).where(col(Inquiry.subject).startswith(SUBJECT_PREFIX))
-        ).all()
+        inquiries = session.exec(select(Inquiry.id).where(col(Inquiry.id).in_(inquiry_ids))).all()
         runs = session.exec(
             select(TraceRun.id).where(
-                col(TraceRun.subject_type) == "inquiry", col(TraceRun.id) > runs_after
+                col(TraceRun.subject_type) == "inquiry",
+                col(TraceRun.subject_id).in_([str(i) for i in inquiry_ids]),
             )
         ).all()
     assert inquiries == []
     assert runs == []
 
 
+def _cli_settings(monkeypatch: pytest.MonkeyPatch, engine: Engine, **update: object) -> None:
+    settings = get_settings().model_copy(update=update)
+    monkeypatch.setattr(cli, "get_settings", lambda: settings)
+    monkeypatch.setattr(cli, "get_engine", lambda: engine)
+
+
 def test_full_set_matches_the_labels_and_leaves_no_rows(
-    migrated_engine: Engine, sales_user: AuthUser
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
 ) -> None:
-    before = _max_run_id(migrated_engine)
     cases = _cases()
 
     result = _run(migrated_engine, cases, sales_user)
@@ -118,14 +142,13 @@ def test_full_set_matches_the_labels_and_leaves_no_rows(
     )
     assert result.planners == {"workflow": "fake", "orchestrator": "fake"}
     assert result.recommender == "rule-based"
-    _assert_clean(migrated_engine, before)
+    assert len(created) == len(cases)
+    _assert_clean(migrated_engine, created)
 
 
 def test_rate_limited_planner_is_a_failure_with_its_cost(
-    migrated_engine: Engine, sales_user: AuthUser
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
 ) -> None:
-    before = _max_run_id(migrated_engine)
-
     result = _run(
         migrated_engine,
         _cases(EXCEPTION_CASE),
@@ -140,27 +163,62 @@ def test_rate_limited_planner_is_a_failure_with_its_cost(
     assert failed.score.full_hit is False
     assert failed.observation.cost_usd > Decimal(0)
     assert failed.observation.input_tokens > 0
-    _assert_clean(migrated_engine, before)
+    _assert_clean(migrated_engine, created)
 
 
-def test_cleanup_after_an_unexpected_error(migrated_engine: Engine, sales_user: AuthUser) -> None:
-    before = _max_run_id(migrated_engine)
+def test_unexpected_arm_error_is_a_failure_and_keeps_the_other_runs(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    result = _run(
+        migrated_engine,
+        _cases(EXCEPTION_CASE),
+        sales_user,
+        orchestrator=Arm(name="orchestrator", planner=BrokenPlanner()),
+    )
+
+    by_arm = {run.arm: run for run in result.runs}
+    assert by_arm["workflow"].score.full_hit
+    failed = by_arm["orchestrator"]
+    assert failed.observation.failure == "unexpected:RuntimeError"
+    assert failed.observation.cost_complete is False
+    assert failed.score.full_hit is False
+    _assert_clean(migrated_engine, created)
+
+
+def test_cleanup_after_an_error_in_the_setup(
+    monkeypatch: pytest.MonkeyPatch,
+    migrated_engine: Engine,
+    sales_user: AuthUser,
+    created: list[int],
+) -> None:
+    def broken_set_up(*args: object) -> object:
+        raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(runner, "_set_up", broken_set_up)
 
     with pytest.raises(RuntimeError):
-        _run(
-            migrated_engine,
-            _cases(EXCEPTION_CASE),
-            sales_user,
-            orchestrator=Arm(name="orchestrator", planner=BrokenPlanner()),
-        )
+        _run(migrated_engine, _cases(EXCEPTION_CASE), sales_user)
 
-    _assert_clean(migrated_engine, before)
+    _assert_clean(migrated_engine, created)
+
+
+def test_a_second_run_is_refused_while_one_holds_the_lock(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    with migrated_engine.connect() as connection:
+        connection.execute(text("SELECT pg_advisory_lock(:key)"), {"key": RUN_LOCK_KEY})
+        try:
+            with pytest.raises(EvalAlreadyRunning):
+                _run(migrated_engine, _cases(EXCEPTION_CASE), sales_user)
+        finally:
+            connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": RUN_LOCK_KEY})
+
+    assert created == []  # refused before inserting anything
 
 
 def test_leftovers_of_an_interrupted_run_are_deleted(
     migrated_engine: Engine, sales_user: AuthUser
 ) -> None:
-    before = _max_run_id(migrated_engine)
     with Session(migrated_engine) as session:
         leftover = Inquiry(
             sender_name="Left over",
@@ -172,10 +230,12 @@ def test_leftovers_of_an_interrupted_run_are_deleted(
         session.add(leftover)
         session.commit()
         session.refresh(leftover)
+        leftover_id = leftover.id
+        assert leftover_id is not None
         session.add(
             TraceRun(
                 subject_type="inquiry",
-                subject_id=str(leftover.id),
+                subject_id=str(leftover_id),
                 status="completed",
                 started_at=datetime.now(UTC),
             )
@@ -185,26 +245,37 @@ def test_leftovers_of_an_interrupted_run_are_deleted(
     result = _run(migrated_engine, [], sales_user)
 
     assert result.runs == []
-    _assert_clean(migrated_engine, before)
+    _assert_clean(migrated_engine, [leftover_id])
 
 
 def test_cli_refuses_without_an_llm_provider(
     monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine
 ) -> None:
-    settings = get_settings().model_copy(update={"llm_provider": "fake", "llm_api_key": None})
-    monkeypatch.setattr(cli, "get_settings", lambda: settings)
-    monkeypatch.setattr(cli, "get_engine", lambda: migrated_engine)
+    _cli_settings(monkeypatch, migrated_engine, llm_provider="fake", llm_api_key=None)
 
     assert cli.main(["--only", EXCEPTION_CASE]) == 2
 
 
-def test_cli_runs_on_fakes_when_allowed(
-    monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine, tmp_path: Path
+def test_cli_refuses_a_provider_without_a_key(
+    monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine
 ) -> None:
-    settings = get_settings().model_copy(update={"llm_provider": "fake", "llm_api_key": None})
-    monkeypatch.setattr(cli, "get_settings", lambda: settings)
-    monkeypatch.setattr(cli, "get_engine", lambda: migrated_engine)
-    before = _max_run_id(migrated_engine)
+    _cli_settings(monkeypatch, migrated_engine, llm_provider="groq", llm_api_key=None)
+
+    assert cli.main(["--only", EXCEPTION_CASE]) == 2
+
+
+def test_cli_refuses_a_remote_database(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Never connected: the guard runs before the first query.
+    remote = create_engine("postgresql://user:secret@db.example.com:5432/orchestrator")
+    _cli_settings(monkeypatch, remote, llm_provider="fake", llm_api_key=None)
+
+    assert cli.main(["--allow-fake", "--only", EXCEPTION_CASE]) == 2
+
+
+def test_cli_runs_on_fakes_when_allowed(
+    monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine, tmp_path: Path, created: list[int]
+) -> None:
+    _cli_settings(monkeypatch, migrated_engine, llm_provider="fake", llm_api_key=None)
     out_dir = tmp_path / "reports"
 
     code = cli.main(
@@ -222,7 +293,7 @@ def test_cli_runs_on_fakes_when_allowed(
     )
 
     assert code == 0
-    _assert_clean(migrated_engine, before)
+    _assert_clean(migrated_engine, created)
     (md_path,) = out_dir.glob("*.md")
     (json_path,) = out_dir.glob("*.json")
     assert md_path.stem == json_path.stem

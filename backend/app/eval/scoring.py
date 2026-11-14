@@ -29,15 +29,21 @@ COST_QUANTUM = Decimal("0.0000000001")
 FAILURE_ORCHESTRATION_PARTIAL = "orchestration_partial"
 FAILURE_CHOICE_REJECTED = "choice_rejected"
 FAILURE_MISSING_RUN = "missing_run"
+FAILURE_STALE_RESULT = "stale_result"
+FAILURE_UNEXPECTED_PREFIX = "unexpected:"
 
 
 class Observation(BaseModel):
     """What one arm's run ended in.
 
     `failure` is one of `orchestration_failed:<code>`, `orchestration_partial`,
-    `recommender_failed:<code>`, `choice_rejected` or `missing_run` (an expected stage, or
-    the trace run of a stage, is missing). `orchestration_partial` is only noted: a partial
-    orchestration that still reaches the expected decision is a hit.
+    `recommender_failed:<code>`, `choice_rejected`, `missing_run` (an expected stage, or
+    the trace run of a stage, is missing), `stale_result` (a stage still holds the result
+    of an earlier run, e.g. after an unexpected recommender error) or
+    `unexpected:<ClassName>` (the arm's call raised; set by the runner).
+    `orchestration_partial` is only noted: a partial orchestration that still reaches the
+    expected decision is a hit. `failure_detail` is the stage's English error message, never
+    inquiry content.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -47,8 +53,10 @@ class Observation(BaseModel):
     policy_outcome: PolicyOutcome | None
     band: ConfidenceBand | None  # of the chosen option; informational, not scored
     failure: str | None
+    failure_detail: str | None = None
     cost_usd: Decimal
-    cost_complete: bool  # false when a step is unpriced or a stage's run is missing
+    # False when a step is unpriced, or a stage's run (or its duration) is missing or stale.
+    cost_complete: bool
     duration_ms: int
     input_tokens: int
     output_tokens: int
@@ -128,36 +136,51 @@ class Instability(BaseModel):
     decisions: list[ObservedDecision]  # by repeat
 
 
-def _decision_failure(view: AnalysisView) -> str | None:
-    """The failure that leaves an exception without a decision, if any."""
+def _decision_failure(view: AnalysisView) -> tuple[str | None, str | None]:
+    """The failure that leaves an exception without a decision, if any, and its detail."""
     orchestration = view.orchestration
     if orchestration is None:
-        return FAILURE_MISSING_RUN
+        return FAILURE_MISSING_RUN, None
     if orchestration.status == "failed":
-        code = "unknown" if orchestration.error is None else orchestration.error.code
-        return f"orchestration_failed:{code}"
+        error = orchestration.error
+        if error is None:
+            return "orchestration_failed:unknown", None
+        return f"orchestration_failed:{error.code}", f"{error.kind}: {error.message}"
+    if _stale_stages(view):
+        return FAILURE_STALE_RESULT, None
     recommendation = view.recommendation
     if recommendation is None:
-        return FAILURE_MISSING_RUN
+        return FAILURE_MISSING_RUN, None
     if recommendation.error is not None:
+        detail = f"{recommendation.error.kind}: {recommendation.error.message}"
         if recommendation.error.kind == "choice_rejected":
-            return FAILURE_CHOICE_REJECTED
-        return f"recommender_failed:{recommendation.error.code}"
+            return FAILURE_CHOICE_REJECTED, detail
+        return f"recommender_failed:{recommendation.error.code}", detail
     if recommendation.choice is None:
-        return FAILURE_CHOICE_REJECTED
+        return FAILURE_CHOICE_REJECTED, None
     if view.policy is None:
-        return FAILURE_MISSING_RUN
-    return None
+        return FAILURE_MISSING_RUN, None
+    return None, None
+
+
+def _stale_stages(view: AnalysisView) -> bool:
+    """Whether a present stage holds a result of an earlier run than the current data."""
+    stages = (view.orchestration, view.recommendation, view.policy)
+    return any(stage is not None and stage.stale for stage in stages)
 
 
 def _stage_runs(view: AnalysisView) -> tuple[list[RunSummary], bool]:
-    """Runs of the stages that are present, and whether any present stage lacks its run."""
+    """Runs of the current stages, and whether any present stage lacks a current run.
+
+    A stale stage's run belongs to an earlier arm run, so it is left out and counts as
+    missing.
+    """
     runs: list[RunSummary] = []
     missing = False
     for stage in (view.orchestration, view.recommendation, view.policy):
         if stage is None:
             continue
-        if stage.run is None:
+        if stage.stale or stage.run is None:
             missing = True
         else:
             runs.append(stage.run)
@@ -173,18 +196,22 @@ def observe(view: AnalysisView) -> Observation:
     checks_outcome = None if view.checks is None else view.checks.outcome
     exception = checks_outcome == "exception"
 
+    # A stale stage holds an earlier run's result: it is not this run's decision.
+    current = not _stale_stages(view)
     option_kind: OptionKind | None = None
     band: ConfidenceBand | None = None
     recommendation = view.recommendation
-    if recommendation is not None and recommendation.choice is not None:
+    if current and recommendation is not None and recommendation.choice is not None:
         option_id = recommendation.choice.option_id
         chosen = next((o for o in recommendation.options if o.id == option_id), None)
         if chosen is not None:
             option_kind, band = chosen.kind, chosen.band
-    policy_outcome = None if view.policy is None else view.policy.outcome
+    policy_outcome = None if view.policy is None or not current else view.policy.outcome
 
     runs, run_missing = _stage_runs(view)
-    failure = _decision_failure(view) if exception else None
+    # A run without a duration (still running, or never finished) adds no time: flag it.
+    timeless = any(r.duration_ms is None for r in runs)
+    failure, failure_detail = _decision_failure(view) if exception else (None, None)
     stage_missing = failure == FAILURE_MISSING_RUN
     if failure is None and run_missing:
         failure = FAILURE_MISSING_RUN
@@ -198,8 +225,9 @@ def observe(view: AnalysisView) -> Observation:
         policy_outcome=policy_outcome,
         band=band,
         failure=failure,
+        failure_detail=failure_detail,
         cost_usd=sum((r.totals.cost_usd for r in runs), Decimal(0)),
-        cost_complete=not (run_missing or stage_missing)
+        cost_complete=not (run_missing or stage_missing or timeless)
         and all(r.totals.cost_complete for r in runs),
         duration_ms=round(sum(r.duration_ms or 0.0 for r in runs)),
         input_tokens=sum(r.totals.input_tokens for r in runs),

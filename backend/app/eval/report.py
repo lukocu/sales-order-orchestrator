@@ -248,9 +248,10 @@ def _failures(run: EvalRun) -> str:
         counts.items(), key=lambda item: (item[0][0], item[0][1] or "")
     ):
         lines.append(_row([arm, f"`{failure}`", str(runs)]))
-    lines += ["", "| Case | Arm | Repeat | Failure |", "|---|---|---|---|"]
+    lines += ["", "| Case | Arm | Repeat | Failure | Detail |", "|---|---|---|---|---|"]
     for r in failed:
-        lines.append(_row([r.case_id, r.arm, str(r.repeat), f"`{r.observation.failure}`"]))
+        detail = r.observation.failure_detail or "—"
+        lines.append(_row([r.case_id, r.arm, str(r.repeat), f"`{r.observation.failure}`", detail]))
     return "\n".join(lines)
 
 

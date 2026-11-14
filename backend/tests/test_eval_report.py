@@ -42,6 +42,7 @@ def _exception_run(
             policy_outcome=verdict,
             band=None if failure else "HIGH",
             failure=failure,
+            failure_detail=None if failure is None else "recommender_failed: groq answered 429",
             cost_usd=Decimal(cost),
             cost_complete=True,
             duration_ms=duration_ms,
@@ -181,6 +182,10 @@ def test_markdown_has_every_section_and_the_numbers(tmp_path: Path) -> None:
         "2: exception · no decision |"
     ) in markdown
     assert f"| orchestrator | `{RATE_LIMITED}` | 1 |" in markdown
+    assert (
+        f"| {EXCEPTION_CASE} | orchestrator | 2 | `{RATE_LIMITED}` | "
+        "recommender_failed: groq answered 429 |"
+    ) in markdown
     assert "checks outcome standard, expected needs_input" in markdown
     assert "genai-prices" in markdown
 

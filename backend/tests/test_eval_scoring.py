@@ -322,6 +322,38 @@ def test_observe_a_failed_orchestration() -> None:
     assert obs.input_tokens == 40
 
 
+def test_observe_a_failed_orchestration_keeps_the_error_detail() -> None:
+    view = _view(orchestration=_orchestration("failed", error_code="failed", run=_run(1)))
+    obs = observe(view)
+    assert obs.failure == "orchestration_failed:failed"
+    assert obs.failure_detail == "planner_failed: failed"
+
+
+def test_observe_a_stale_recommendation_is_not_this_runs_decision() -> None:
+    # An unexpected recommender error leaves the previous arm run's recommendation (and the
+    # policy evaluated from it) in place, marked stale.
+    view = _full_view()
+    assert view.recommendation is not None and view.policy is not None
+    view.recommendation.stale = True
+    view.policy.stale = True
+    obs = observe(view)
+    assert obs.failure == "stale_result"
+    assert (obs.option_kind, obs.policy_outcome, obs.band) == (None, None, None)
+    assert obs.cost_usd == Decimal("0.0012")  # only the current orchestration run
+    assert obs.cost_complete is False
+    assert score(_case(), obs).full_hit is False
+
+
+def test_observe_a_run_without_a_duration_makes_the_cost_incomplete() -> None:
+    view = _full_view()
+    assert view.policy is not None
+    view.policy.run = _run(3, duration_ms=None)
+    obs = observe(view)
+    assert obs.failure is None
+    assert obs.cost_complete is False
+    assert obs.duration_ms == 2401  # 1500.4 + 900.3, rounded
+
+
 def test_observe_a_partial_orchestration_keeps_the_decision() -> None:
     obs = observe(_full_view(status="partial"))
     assert obs.failure == "orchestration_partial"
@@ -422,6 +454,8 @@ def test_score_a_verdict_miss() -> None:
         "recommender_failed:unavailable",
         "choice_rejected",
         "missing_run",
+        "stale_result",
+        "unexpected:RuntimeError",
     ],
 )
 def test_score_a_failure_without_a_decision_misses_everything(failure: str) -> None:

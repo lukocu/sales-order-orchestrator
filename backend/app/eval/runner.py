@@ -7,25 +7,36 @@ re-orchestrated once per repeat and arm (interleaved: workflow, orchestrator, wo
 with the arm's planner, the shared recommender and the template drafter; a case without an
 exception never reaches the orchestration, so its single observation after the setup counts
 for both arms. The temporary inquiries and their trace runs are deleted in `finally`, and a
-run first deletes what an interrupted run left behind.
+run first deletes what an interrupted run left behind. A Postgres advisory lock held for the
+whole run keeps a second run (or the eval tests) from starting meanwhile, so that sweep never
+deletes the inquiries of a run in progress.
 """
 
 import hashlib
 import logging
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Engine, delete
+from sqlalchemy import Engine, delete, text
 from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.draft.drafter import FakeDrafter
 from app.eval.cases import EvalCase, ExpectedDecision
-from app.eval.scoring import ArmName, ArmRun, observe, score
+from app.eval.scoring import (
+    FAILURE_UNEXPECTED_PREFIX,
+    ArmName,
+    ArmRun,
+    Observation,
+    observe,
+    score,
+)
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import Planner, RuleBasedPlanner
 from app.parsing.extractor import ExtractionError
@@ -44,6 +55,12 @@ from app.tracing.models import TraceRun
 logger = logging.getLogger(__name__)
 
 SUBJECT_PREFIX = "[eval] "
+# Key of the session-level advisory lock that makes eval runs exclusive ("eval" in ASCII).
+RUN_LOCK_KEY = 0x6576616C
+
+
+class EvalAlreadyRunning(RuntimeError):
+    """Another eval run (or the eval tests) holds the run lock on this database."""
 
 
 @dataclass(frozen=True)
@@ -96,12 +113,58 @@ def run_eval(
 ) -> EvalRun:
     """Run every case through every arm `repeats` times; the database ends clean either way.
 
-    `pause_seconds` separates consecutive arm calls (free-tier rate limits). LLM failures end
-    in an observation with `failure`, not in an exception; unexpected errors propagate after
-    the cleanup.
+    `pause_seconds` separates consecutive arm calls (free-tier rate limits). LLM failures, and
+    any other error raised by an arm's call, end in an observation with `failure`, so the
+    runs collected so far are kept; an error in a case's setup propagates after the cleanup.
+    Raises `EvalAlreadyRunning` when another run holds the run lock.
     """
     if repeats < 1:
         raise ValueError("repeats must be at least 1")
+    with _run_lock(engine):
+        return _run_locked(
+            engine,
+            cases,
+            arms,
+            recommender,
+            repeats=repeats,
+            pause_seconds=pause_seconds,
+            user=user,
+            provider=provider,
+            model=model,
+            cases_version=cases_version,
+        )
+
+
+@contextmanager
+def _run_lock(engine: Engine) -> Iterator[None]:
+    """Hold the eval run lock on a dedicated connection for the duration of the block."""
+    with engine.connect() as connection:
+        locked = connection.execute(
+            text("SELECT pg_try_advisory_lock(:key)"), {"key": RUN_LOCK_KEY}
+        ).scalar_one()
+        connection.commit()
+        if not locked:
+            raise EvalAlreadyRunning("Another eval run is in progress on this database")
+        try:
+            yield
+        finally:
+            connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": RUN_LOCK_KEY})
+            connection.commit()
+
+
+def _run_locked(
+    engine: Engine,
+    cases: Sequence[EvalCase],
+    arms: Sequence[Arm],
+    recommender: Recommender,
+    *,
+    repeats: int,
+    pause_seconds: float,
+    user: AuthUser,
+    provider: str,
+    model: str | None,
+    cases_version: str,
+) -> EvalRun:
     started_at = datetime.now(UTC)
     setup_errors: list[tuple[str, str]] = []
     not_orchestrated: list[str] = []
@@ -152,10 +215,24 @@ def run_eval(
                     logger.info(
                         "case %d/%d · %s · %d/%d", index, len(cases), arm.name, repeat, repeats
                     )
-                    arm_view = reorchestrate_inquiry(
-                        engine, inquiry_id, arm.planner, recommender, FakeDrafter()
-                    )
-                    observation = observe(arm_view)
+                    try:
+                        arm_view = reorchestrate_inquiry(
+                            engine, inquiry_id, arm.planner, recommender, FakeDrafter()
+                        )
+                    except Exception as error:
+                        # Class name only, as the services log it: never inquiry content.
+                        logger.warning(
+                            "case %d/%d · %s · %d/%d failed with %s",
+                            index,
+                            len(cases),
+                            arm.name,
+                            repeat,
+                            repeats,
+                            type(error).__name__,
+                        )
+                        observation = _unexpected(error)
+                    else:
+                        observation = observe(arm_view)
                     runs.append(
                         ArmRun(
                             case_id=case.id,
@@ -182,6 +259,22 @@ def run_eval(
         not_orchestrated=not_orchestrated,
         setup_errors=setup_errors,
         runs=runs,
+    )
+
+
+def _unexpected(error: Exception) -> Observation:
+    """An arm call that raised: no decision, and its cost and time are unknown."""
+    return Observation(
+        checks_outcome="exception",  # only exception cases reach an arm call
+        option_kind=None,
+        policy_outcome=None,
+        band=None,
+        failure=FAILURE_UNEXPECTED_PREFIX + type(error).__name__,
+        cost_usd=Decimal(0),
+        cost_complete=False,
+        duration_ms=0,
+        input_tokens=0,
+        output_tokens=0,
     )
 
 
