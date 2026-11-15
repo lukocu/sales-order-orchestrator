@@ -40,7 +40,17 @@ class Server:
     logout_error: BaseException | None = None
     calls: list[tuple[Any, ...]] = field(default_factory=list)
 
-    def connect(self, host: str, port: int, *, timeout: float | None = None) -> Connection:
+    ssl_context: ssl.SSLContext | None = None
+
+    def connect(
+        self,
+        host: str,
+        port: int,
+        *,
+        ssl_context: ssl.SSLContext | None = None,
+        timeout: float | None = None,
+    ) -> Connection:
+        self.ssl_context = ssl_context
         self.calls.append(("connect", host, port, timeout))
         if self.connect_error is not None:
             raise self.connect_error
@@ -144,6 +154,16 @@ def test_fewer_messages_than_the_limit_are_all_read(server: Server) -> None:
 def test_empty_folder_fetches_nothing(server: Server) -> None:
     assert _mailbox().latest(20) == []
     assert server.names() == ["connect", "login", "select", "uid", "logout"]
+
+
+def test_tls_verifies_the_server_certificate_and_host_name(server: Server) -> None:
+    server.uids = [1]
+
+    _mailbox().latest(5)
+
+    assert server.ssl_context is not None
+    assert server.ssl_context.verify_mode == ssl.CERT_REQUIRED
+    assert server.ssl_context.check_hostname is True
 
 
 def test_plain_imap_without_tls_uses_imap4(server: Server, monkeypatch: pytest.MonkeyPatch) -> None:

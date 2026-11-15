@@ -8,6 +8,7 @@ answer, so they are mapped to the mailbox errors with constant messages and not 
 import contextlib
 import imaplib
 import re
+import ssl
 from typing import Any
 
 from app.mailbox.client import (
@@ -65,7 +66,13 @@ class ImapMailbox:
 
     def _connect(self) -> imaplib.IMAP4:
         if self._ssl:
-            return imaplib.IMAP4_SSL(self._host, self._port, timeout=self._timeout_seconds)
+            # imaplib's default context does not check the certificate or the host name.
+            return imaplib.IMAP4_SSL(
+                self._host,
+                self._port,
+                ssl_context=ssl.create_default_context(),
+                timeout=self._timeout_seconds,
+            )
         return imaplib.IMAP4(self._host, self._port, timeout=self._timeout_seconds)
 
     def _latest(self, limit: int) -> list[bytes]:
