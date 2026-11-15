@@ -484,26 +484,26 @@ Jedno pobranie to jedno połączenie IMAP, jedno `SEARCH` i jedno `FETCH` co naj
 
 #### Automated
 
-- [x] 2.1 Testy skrzynki przechodzą
-- [x] 2.2 Wszystkie bramki backendu przechodzą
+- [x] 2.1 Testy skrzynki przechodzą — 1c6b3e0
+- [x] 2.2 Wszystkie bramki backendu przechodzą — 1c6b3e0
 
 #### Manual
 
-- [x] 2.3 curl na POST /api/mailbox/fetch w trybie fake: 2 nowe, potem 0 nowych
-- [x] 2.4 Logi po pobraniu zawierają tylko liczby
+- [x] 2.3 curl na POST /api/mailbox/fetch w trybie fake: 2 nowe, potem 0 nowych — 1c6b3e0
+- [x] 2.4 Logi po pobraniu zawierają tylko liczby — 1c6b3e0
 
 ### Phase 3: Frontend — przycisk i znaczek
 
 #### Automated
 
-- [ ] 3.1 Lint przechodzi
-- [ ] 3.2 Typy przechodzą
-- [ ] 3.3 Testy frontendu przechodzą
+- [x] 3.1 Lint przechodzi
+- [x] 3.2 Typy przechodzą
+- [x] 3.3 Testy frontendu przechodzą
 
 #### Manual
 
-- [ ] 3.4 Fetch mail w trybie fake pokazuje 2 zapytania ze znaczkiem, potem No new mail
-- [ ] 3.5 Zapytanie z poczty da się przeanalizować
+- [x] 3.4 Fetch mail w trybie fake pokazuje 2 zapytania ze znaczkiem, potem No new mail
+- [x] 3.5 Zapytanie z poczty da się przeanalizować
 
 ### Phase 4: GreenMail, przykładowe maile i dokumentacja
 

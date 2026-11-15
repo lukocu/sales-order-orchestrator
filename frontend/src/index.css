@@ -223,10 +223,37 @@ button:disabled {
   background: var(--warn);
 }
 
+/* Source badge: quiet, it only tells where the inquiry came from. */
+.badge--mailbox {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
 .inquiry__badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+}
+
+.inbox__list-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.inbox__list-header h2 {
+  margin: 0;
+}
+
+.inbox__fetch-status {
+  margin-bottom: 0.75rem;
+}
+
+.inbox__fetch-status:empty {
+  display: none;
 }
 
 .inbox__filter {

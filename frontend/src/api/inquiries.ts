@@ -6,6 +6,9 @@ import {
 } from './analysis'
 import { requestJson } from './client'
 
+// Where an inquiry came from: the seeded samples or the test mailbox.
+export type InquirySource = 'sample' | 'mailbox'
+
 // Mirrors InquirySummary / InquiryDetail in backend/app/api/inquiries.py.
 export type InquirySummary = {
   id: number
@@ -13,6 +16,7 @@ export type InquirySummary = {
   sender_email: string
   subject: string
   received_at: string
+  source: InquirySource
   outcome: Outcome | null // of the check result, only while it is current
   draft_status: ReplyDraftStatus | null // of the inquiry's reply draft, null without one
 }
@@ -28,6 +32,7 @@ function isInquirySummary(value: unknown): value is InquirySummary {
     typeof v.sender_email === 'string' &&
     typeof v.subject === 'string' &&
     typeof v.received_at === 'string' &&
+    (v.source === 'sample' || v.source === 'mailbox') &&
     (v.outcome === null || isOutcome(v.outcome)) &&
     (v.draft_status === null || isReplyDraftStatus(v.draft_status))
   )
