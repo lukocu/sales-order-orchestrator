@@ -35,9 +35,11 @@ def test_list_is_newest_first(auth_client: TestClient, make_inquiry: InquiryFact
         "sender_email",
         "subject",
         "received_at",
+        "source",
         "outcome",
         "draft_status",
     }
+    assert {r["source"] for r in rows} == {"sample"}
 
 
 def test_same_time_is_ordered_by_id_desc(
@@ -69,6 +71,7 @@ def test_detail_includes_body(auth_client: TestClient, make_inquiry: InquiryFact
         "Test inquiry body.",
     )
     assert body["sender_email"] == inquiry.sender_email
+    assert body["source"] == "sample"
 
 
 def test_unknown_inquiry_is_json_404(auth_client: TestClient) -> None:

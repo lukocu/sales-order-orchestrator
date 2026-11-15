@@ -30,3 +30,16 @@ services:
       # Dashboard (Environment) or through the Render API, then restart. Never stored here.
       - key: LLM_API_KEY
         sync: false
+      # Test mailbox ingest. Unset = `fake` (two built-in sample messages). For a dedicated,
+      # read-only test mailbox set MAILBOX_PROVIDER=imap with IMAP_HOST, IMAP_USERNAME and
+      # IMAP_PASSWORD (e.g. a Gmail app password). Like LLM_API_KEY: Render asks for
+      # sync: false values only when a Blueprint is created; for the existing service set
+      # them in the Dashboard (Environment), then restart. Never stored here.
+      - key: MAILBOX_PROVIDER
+        sync: false
+      - key: IMAP_HOST
+        sync: false
+      - key: IMAP_USERNAME
+        sync: false
+      - key: IMAP_PASSWORD
+        sync: false

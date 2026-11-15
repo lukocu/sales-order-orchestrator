@@ -14,7 +14,7 @@ from app.checks.service import current_outcome, with_current_outcome
 from app.db import get_engine
 from app.draft.models import InquiryDraft
 from app.draft.schema import DraftStatus
-from app.inquiries.models import Inquiry
+from app.inquiries.models import Inquiry, InquirySource
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class InquirySummary(BaseModel):
     sender_email: str
     subject: str
     received_at: datetime
+    source: InquirySource  # sample or mailbox; the external id is not exposed
     outcome: Outcome | None = None  # of the check result, only while it is current
     # Raw status of the stored draft (also when it is stale); None without a draft.
     draft_status: DraftStatus | None = None

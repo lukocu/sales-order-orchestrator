@@ -3,7 +3,7 @@ change_id: test-mailbox-ingest
 title: Test mailbox ingest
 status: implementing
 created: 2026-11-14
-updated: 2026-11-14
+updated: 2026-11-15
 archived_at: null
 ---
 

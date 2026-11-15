@@ -27,6 +27,13 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
+      MAILBOX_PROVIDER: ${MAILBOX_PROVIDER:-fake}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_SSL: ${IMAP_SSL:-true}
+      IMAP_USERNAME: ${IMAP_USERNAME:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      IMAP_FOLDER: ${IMAP_FOLDER:-INBOX}
     ports:
       # Host port is configurable (APP_HOST_PORT in .env) for machines where 8000 is taken.
       - "${APP_HOST_PORT:-8000}:8000"
@@ -49,6 +56,13 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
+      MAILBOX_PROVIDER: ${MAILBOX_PROVIDER:-fake}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_SSL: ${IMAP_SSL:-true}
+      IMAP_USERNAME: ${IMAP_USERNAME:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      IMAP_FOLDER: ${IMAP_FOLDER:-INBOX}
       UV_PROJECT_ENVIRONMENT: /opt/venv
       UV_LINK_MODE: copy
       WATCHFILES_FORCE_POLLING: "true"

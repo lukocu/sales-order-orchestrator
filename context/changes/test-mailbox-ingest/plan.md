@@ -472,25 +472,25 @@ Jedno pobranie to jedno połączenie IMAP, jedno `SEARCH` i jedno `FETCH` co naj
 
 #### Automated
 
-- [x] 1.1 Migracja 0014 wchodzi i schodzi
-- [x] 1.2 Testy konwersji i zapisu przechodzą
-- [x] 1.3 Wszystkie bramki backendu przechodzą
+- [x] 1.1 Migracja 0014 wchodzi i schodzi — 40504d7
+- [x] 1.2 Testy konwersji i zapisu przechodzą — 40504d7
+- [x] 1.3 Wszystkie bramki backendu przechodzą — 40504d7
 
 #### Manual
 
-- [x] 1.4 Przykładowe zapytania mają source = sample i external_id NULL
+- [x] 1.4 Przykładowe zapytania mają source = sample i external_id NULL — 40504d7
 
 ### Phase 2: Klient skrzynki i endpoint
 
 #### Automated
 
-- [ ] 2.1 Testy skrzynki przechodzą
-- [ ] 2.2 Wszystkie bramki backendu przechodzą
+- [x] 2.1 Testy skrzynki przechodzą
+- [x] 2.2 Wszystkie bramki backendu przechodzą
 
 #### Manual
 
-- [ ] 2.3 curl na POST /api/mailbox/fetch w trybie fake: 2 nowe, potem 0 nowych
-- [ ] 2.4 Logi po pobraniu zawierają tylko liczby
+- [x] 2.3 curl na POST /api/mailbox/fetch w trybie fake: 2 nowe, potem 0 nowych
+- [x] 2.4 Logi po pobraniu zawierają tylko liczby
 
 ### Phase 3: Frontend — przycisk i znaczek
 
