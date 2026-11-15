@@ -134,6 +134,99 @@ The cost shown in the UI is an estimate from list prices (see [Step tracing](#st
 not the amount on the provider's invoice. Prompts and model responses are not stored, only
 the validated fields and the step metrics.
 
+## Test mailbox (read-only)
+
+**Fetch mail** in the inbox reads a dedicated test mailbox and stores its 20 newest messages
+as inquiries (marked *E-mail* in the list); messages already stored are skipped, so clicking
+again adds nothing. The new inquiries are analysed like the sample ones, with **Analyze
+request**. It calls:
+
+```sh
+curl -b cookies.txt -X POST http://localhost:8000/api/mailbox/fetch
+```
+
+and answers `{"fetched": …, "created": …, "duplicates": …, "skipped": …}`. The mailbox is
+chosen with environment variables (see `.env.example`):
+
+| Variable           | Values                                    | Default |
+| ------------------ | ----------------------------------------- | ------- |
+| `MAILBOX_PROVIDER` | `fake`, `imap`                            | `fake`  |
+| `IMAP_HOST`        | IMAP server, e.g. `imap.gmail.com`        | unset   |
+| `IMAP_PORT`        | port                                      | `993`   |
+| `IMAP_SSL`         | `true` (IMAP over TLS), `false` (plain)   | `true`  |
+| `IMAP_USERNAME`    | login                                     | unset   |
+| `IMAP_PASSWORD`    | password (for Gmail an app password)      | unset   |
+| `IMAP_FOLDER`      | folder to read                            | `INBOX` |
+
+- `fake` (default locally, in tests and on Render): two built-in sample messages, no
+  network. The first fetch adds two inquiries, the next ones report *No new mail*.
+- `imap`: reads `IMAP_FOLDER` on `IMAP_HOST`. Without host, username or password the fetch
+  answers `503 Mailbox not configured`; a rejected login is `502 Mailbox login failed`, a
+  network or TLS failure `502 Mailbox unavailable`. A second fetch while one is running
+  answers `409`.
+
+**Locally with GreenMail** (an in-memory IMAP server, no account needed). Start it, it is
+not part of a plain `docker compose up`:
+
+```sh
+docker compose --profile mail up -d mail
+```
+
+Put this in `.env` (the values are the GreenMail test user from `docker-compose.yml`) and
+recreate the app so it reads them:
+
+```sh
+MAILBOX_PROVIDER=imap
+IMAP_HOST=mail
+IMAP_PORT=3143
+IMAP_SSL=false
+IMAP_USERNAME=sales
+IMAP_PASSWORD=demo
+```
+
+```sh
+docker compose up -d app
+docker compose run --rm backend uv run python -m app.mailbox.demo
+```
+
+The last command appends three sample mails: plain text with a signature, an HTML-only
+message and a reply quoting an earlier message (the quote is cut off in the inquiry). It
+refuses (exit code 2) unless `MAILBOX_PROVIDER=imap`, `IMAP_SSL=false` and `IMAP_HOST` is
+`mail`, `localhost` or `127.0.0.1`, so it never writes to a real mailbox. Each run appends
+new copies, but they have fixed Message-IDs and are stored once. GreenMail listens on host
+port 3143 (`MAIL_IMAP_HOST_PORT` in `.env`) and loses its messages when it stops.
+
+**Gmail.** Use a dedicated account, never a personal one: turn on 2-Step Verification,
+create an app password (Google Account → Security → App passwords) and set:
+
+```sh
+MAILBOX_PROVIDER=imap
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_SSL=true
+IMAP_USERNAME=<the account's address>
+IMAP_PASSWORD=<the app password>
+```
+
+Never commit the password. Then `docker compose up -d app` and send a few test mails to the
+account.
+
+**Render.** The service stays on `fake` until you set `MAILBOX_PROVIDER=imap`,
+`IMAP_HOST`, `IMAP_USERNAME` and `IMAP_PASSWORD` in the Dashboard (**Environment**; they are
+`sync: false` in `render.yaml`) and restart the service.
+
+Guarantees and limits:
+
+- Read only: the folder is opened with `EXAMINE` and messages are fetched with
+  `BODY.PEEK[]`, so no flag changes (messages stay unread) and nothing is moved, deleted or
+  sent.
+- Logs and error messages carry counts and error classes only, never subjects, senders,
+  bodies or server responses.
+- Only the 20 newest messages of the folder are read on each click; there is no automatic
+  or periodic fetch and no memory of the last message read.
+- Password login only (no OAuth2); attachments and threads are ignored, a reply becomes a
+  new inquiry. Anyone signed in can fetch; mail inquiries cannot be deleted from the UI.
+
 ## Checks and exceptions
 
 After every analysis and every saved correction the backend checks the current fields

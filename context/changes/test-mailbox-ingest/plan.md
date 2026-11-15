@@ -496,25 +496,25 @@ Jedno pobranie to jedno połączenie IMAP, jedno `SEARCH` i jedno `FETCH` co naj
 
 #### Automated
 
-- [x] 3.1 Lint przechodzi
-- [x] 3.2 Typy przechodzą
-- [x] 3.3 Testy frontendu przechodzą
+- [x] 3.1 Lint przechodzi — 861a8e3
+- [x] 3.2 Typy przechodzą — 861a8e3
+- [x] 3.3 Testy frontendu przechodzą — 861a8e3
 
 #### Manual
 
-- [x] 3.4 Fetch mail w trybie fake pokazuje 2 zapytania ze znaczkiem, potem No new mail
-- [x] 3.5 Zapytanie z poczty da się przeanalizować
+- [x] 3.4 Fetch mail w trybie fake pokazuje 2 zapytania ze znaczkiem, potem No new mail — 861a8e3
+- [x] 3.5 Zapytanie z poczty da się przeanalizować — 861a8e3
 
 ### Phase 4: GreenMail, przykładowe maile i dokumentacja
 
 #### Automated
 
-- [ ] 4.1 Test strażnika demo przechodzi
-- [ ] 4.2 Wszystkie bramki backendu przechodzą
-- [ ] 4.3 Konfiguracja compose jest poprawna
+- [x] 4.1 Test strażnika demo przechodzi
+- [x] 4.2 Wszystkie bramki backendu przechodzą
+- [x] 4.3 Konfiguracja compose jest poprawna
 
 #### Manual
 
-- [ ] 4.4 GreenMail: 3 nowe zapytania, cytat odcięty, HTML jako tekst, potem No new mail
+- [x] 4.4 GreenMail: 3 nowe zapytania, cytat odcięty, HTML jako tekst, potem No new mail
 - [ ] 4.5 Gmail: maile pobrane i nadal nieprzeczytane
-- [ ] 4.6 Złe hasło: komunikat w UI, w logach tylko klasa błędu
+- [x] 4.6 Złe hasło: komunikat w UI, w logach tylko klasa błędu

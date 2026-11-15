@@ -2,29 +2,32 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import Engine, insert
+from sqlalchemy import Engine, insert, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.inquiries.models import Inquiry
 from tests.conftest import TEST_EMAIL_DOMAIN, InquiryFactory
 
-# Sender addresses of the four sample inquiries seeded by migration 0003.
-SAMPLE_SENDERS = [
-    "zakupy@acme.example",
-    "biuro@biuromax.example",
-    "handel@hurtowniadelta.example",
-    "zaopatrzenie@technikaomega.example",
+# (sender, subject) of the four sample inquiries seeded by migration 0003. The sender alone
+# is not enough: the fake mailbox's sample messages come from the same companies.
+SAMPLE_INQUIRIES = [
+    ("zakupy@acme.example", "Zapytanie ofertowe: 80 szt. ABC-100"),
+    ("biuro@biuromax.example", "Zamówienie ABC-200, 20 szt."),
+    ("handel@hurtowniadelta.example", "500 szt. ABC-100 — prośba o rabat"),
+    ("zaopatrzenie@technikaomega.example", "Pilne: 120 szt. XYZ-300"),
 ]
 
 
 def test_seeded_inquiries_are_samples_without_external_id(migrated_engine: Engine) -> None:
     with Session(migrated_engine) as session:
         seeds = session.exec(
-            select(Inquiry).where(col(Inquiry.sender_email).in_(SAMPLE_SENDERS))
+            select(Inquiry).where(
+                tuple_(col(Inquiry.sender_email), col(Inquiry.subject)).in_(SAMPLE_INQUIRIES)
+            )
         ).all()
 
-    assert seeds
+    assert len(seeds) == len(SAMPLE_INQUIRIES)
     assert {s.source for s in seeds} == {"sample"}
     assert {s.external_id for s in seeds} == {None}
 
