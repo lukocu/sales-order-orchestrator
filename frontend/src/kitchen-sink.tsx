@@ -7,10 +7,11 @@ import { createMemoryHistory, RouterContextProvider, RouterProvider } from '@tan
 import { useTranslation } from 'react-i18next'
 import './index.css'
 import './i18n'
-import type { Analysis, OrchestrationView, RunSummary } from './api/analysis'
+import type { Analysis, ChecksView, OrchestrationView, RunSummary } from './api/analysis'
 import type { User } from './api/auth'
 import type { InquiryDetail, InquirySummary } from './api/inquiries'
 import AppNav from './components/AppNav'
+import AnalysisPanel from './components/AnalysisPanel'
 import AppShell from './components/AppShell'
 import Inbox from './components/Inbox'
 import LanguageSwitch from './components/LanguageSwitch'
@@ -26,13 +27,22 @@ import { SessionContext, type Session } from './session'
 import {
   ACME_ORCHESTRATION,
   COMPATIBILITY_TASK,
+  DELTA_ORCHESTRATION,
   HISTORY_TASK,
   orchestrationRun,
   SUPPLIER_TASK,
 } from './test/orchestrationFixtures'
-import { ACME_POLICY } from './test/policyFixtures'
-import { ACME_RECOMMENDATION } from './test/recommendationFixtures'
-import { ACME_DRAFT } from './test/replyDraftFixtures'
+import { ACME_POLICY, DELTA_POLICY } from './test/policyFixtures'
+import { ACME_RECOMMENDATION, DELTA_RECOMMENDATION } from './test/recommendationFixtures'
+import {
+  ACME_APPROVED,
+  ACME_DRAFT,
+  DELTA_AWAITING,
+  DELTA_DRAFT,
+  DELTA_SUBMITTED,
+  DELTA_SUPERVISOR_REJECTED,
+} from './test/replyDraftFixtures'
+import { SALES, SUPERVISOR as REVIEWER } from './test/userFixtures'
 
 // --- Static data --------------------------------------------------------------------
 
@@ -130,6 +140,133 @@ const FAILED_ORCHESTRATION: OrchestrationView = {
   ]),
 }
 
+// --- Step view data (AnalysisPanel, one inquiry id per state) -------------------------------
+// The panel is rendered by itself with the e-mail body and a user; it loads its analysis from
+// the stubbed fetch (DEFAULTS), so each cell's data is fixed by its inquiry id.
+
+const MAIL_BODY =
+  'Dzień dobry,\n\nprosimy o ofertę na 80 szt. ABC-100 (lub zamiennik) z dostawą do piątku.\n\nZ poważaniem\nJan Kowalski'
+
+const EXCEPTION_CHECKS: ChecksView = {
+  outcome: 'exception',
+  exception_type: 'insufficient_stock',
+  reasons: [],
+  results: {
+    customer: { status: 'matched', matched_by: 'name', customer_id: 1, name: 'ACME', candidates: [] },
+    stock: {
+      status: 'insufficient', product_code: 'ABC-100', product_name: 'Czujnik ciśnienia ABC-100',
+      requested: 80, available: 50, shortage: 30,
+    },
+    price: {
+      status: 'ok', list_price: '120.00', discount_percent: '5.00', unit_price: '114.00',
+      total: '9120.00', currency: 'PLN',
+    },
+    discount: { status: 'ok', standard_percent: '5.00', requested_kind: 'best_price', requested_value: null },
+    credit: { status: 'ok', limit: '30000.00', balance: '2000.00', order_value: '9120.00' },
+    reasons: [],
+  },
+  checked_at: '2026-11-10T09:00:02Z',
+  stale: false,
+  uncertain_inputs: [],
+  run: null,
+}
+const STANDARD_CHECKS: ChecksView = {
+  ...EXCEPTION_CHECKS,
+  outcome: 'standard',
+  exception_type: null,
+  results: {
+    ...EXCEPTION_CHECKS.results,
+    stock: { ...EXCEPTION_CHECKS.results.stock, status: 'ok', requested: 20, shortage: 0 },
+  },
+}
+const NEEDS_INPUT_CHECKS: ChecksView = {
+  ...EXCEPTION_CHECKS,
+  outcome: 'needs_input',
+  exception_type: null,
+  reasons: ['customer_missing'],
+}
+
+// ACME exception with every stage current (analysisOf's defaults): the draft is awaiting a decision.
+const AT_APPROVAL: Partial<Analysis> = { checks: EXCEPTION_CHECKS }
+// Hurtownia Delta: the policy stage requires a supervisor.
+const DELTA_BASE: Partial<Analysis> = {
+  checks: EXCEPTION_CHECKS,
+  orchestration: DELTA_ORCHESTRATION,
+  recommendation: DELTA_RECOMMENDATION,
+  policy: DELTA_POLICY,
+}
+
+type PanelCase = {
+  id: number
+  anchor: string
+  label: string
+  user: User
+  // null: not analysed; 'pending': never answers (loading)
+  analysis: Partial<Analysis> | null | 'pending'
+}
+
+const PANEL_CASES = {
+  loading: { id: 10, anchor: 'step-loading', label: 'Step view: analysis loading', user: SALES, analysis: 'pending' },
+  notAnalysed: {
+    id: 11, anchor: 'step-not-analysed', label: 'Step view: not analysed (Inquiry, Analyze request)',
+    user: SALES, analysis: null,
+  },
+  needsInput: {
+    id: 12, anchor: 'step-needs-input', label: 'Step view: needs_input (Inquiry, missing customer)', user: SALES,
+    analysis: { checks: NEEDS_INPUT_CHECKS, orchestration: null, recommendation: null, policy: null, draft: null },
+  },
+  standard: {
+    id: 13, anchor: 'step-standard', label: 'Step view: standard (Inquiry done, later steps not needed)', user: SALES,
+    analysis: { checks: STANDARD_CHECKS, orchestration: null, recommendation: null, policy: null, draft: null },
+  },
+  variantsFailed: {
+    id: 14, anchor: 'step-variants-failed', label: 'Step view: exception at Variants, failed recommendation', user: SALES,
+    analysis: {
+      ...AT_APPROVAL,
+      recommendation: {
+        ...ACME_RECOMMENDATION, status: 'failed', choice: null,
+        error: { kind: 'recommender_failed', code: 'rate_limited', message: 'Rate limit reached' },
+      },
+      policy: null,
+      draft: null,
+    },
+  },
+  approval: {
+    id: 15, anchor: 'step-approval-draft', label: 'Step view: Approval, current draft (salesperson)',
+    user: SALES, analysis: AT_APPROVAL,
+  },
+  awaitingSales: {
+    id: 16, anchor: 'step-awaiting-sales', label: 'Step view: awaiting supervisor, as the salesperson who submitted it',
+    user: SALES, analysis: { ...DELTA_BASE, draft: DELTA_AWAITING, decisions: [DELTA_SUBMITTED] },
+  },
+  awaitingSupervisor: {
+    id: 17, anchor: 'step-awaiting-supervisor', label: 'Step view: awaiting supervisor, as a supervisor (decides)',
+    user: REVIEWER, analysis: { ...DELTA_BASE, draft: DELTA_AWAITING, decisions: [DELTA_SUBMITTED] },
+  },
+  rejected: {
+    id: 18, anchor: 'step-rejected', label: 'Step view: rejected by the supervisor (Approval, with the reason)', user: SALES,
+    analysis: {
+      ...DELTA_BASE,
+      draft: { ...DELTA_DRAFT, status: 'rejected' },
+      decisions: [DELTA_SUBMITTED, DELTA_SUPERVISOR_REJECTED],
+    },
+  },
+  ready: {
+    id: 19, anchor: 'step-ready-to-send', label: 'Step view: ready_to_send (Reply)', user: SALES,
+    analysis: { ...AT_APPROVAL, draft: { ...ACME_DRAFT, status: 'ready_to_send' }, decisions: [ACME_APPROVED] },
+  },
+} satisfies Record<string, PanelCase>
+
+function PanelCell({ panel }: { panel: PanelCase }) {
+  return (
+    <Cell id={panel.anchor} label={`${panel.label} · #${panel.anchor}`} wide>
+      <Routed>
+        <AnalysisPanel inquiryId={panel.id} body={MAIL_BODY} user={panel.user} onUnauthorized={() => {}} />
+      </Routed>
+    </Cell>
+  )
+}
+
 // --- fetch stub -----------------------------------------------------------------------
 // Every request gets a reply from `scope` when one is set, else from DEFAULTS. A scope is set
 // only while a scenario's own code runs synchronously: around its components' mount effects
@@ -158,6 +295,15 @@ const DEFAULTS: Replies = {
     status: 200,
     body: analysisOf(4, { orchestration: FAILED_ORCHESTRATION, recommendation: null, policy: null, draft: null }),
   },
+  // The step view cells (PANEL_CASES), one inquiry id per state.
+  ...Object.fromEntries(
+    Object.values<PanelCase>(PANEL_CASES).map((panel): [string, Reply] => [
+      `GET /api/inquiries/${panel.id}/analysis`,
+      panel.analysis === 'pending'
+        ? 'pending'
+        : { status: 200, body: panel.analysis === null ? null : analysisOf(panel.id, panel.analysis) },
+    ]),
+  ),
 }
 let scope: Replies | null = null
 
@@ -356,9 +502,9 @@ function Section({ state, caption, children }: { state: string; caption: string;
 }
 
 // `shell` cells hold an AppShell, whose min-h-screen is cancelled so the cell fits its content.
-function Cell({ label, wide, shell, children }: { label: string; wide?: boolean; shell?: boolean; children: ReactNode }) {
+function Cell({ id, label, wide, shell, children }: { id?: string; label: string; wide?: boolean; shell?: boolean; children: ReactNode }) {
   return (
-    <div className={cn('min-w-0 overflow-hidden rounded-lg border', wide && 'lg:col-span-2')}>
+    <div id={id} className={cn('min-w-0 overflow-clip rounded-lg border', wide && 'lg:col-span-2')}>
       <p className="border-b bg-card px-3 py-1.5 text-sm text-muted-foreground">{label}</p>
       <div className={cn(shell ? '*:min-h-0' : 'bg-background p-4')}>{children}</div>
     </div>
@@ -456,6 +602,12 @@ function KitchenSink() {
           <Cell label="Run inspector: every run, the plan by stage and the grand total (inquiry 1)" wide shell>
             <InspectorCell inquiryId={1} />
           </Cell>
+          <PanelCell panel={PANEL_CASES.needsInput} />
+          <PanelCell panel={PANEL_CASES.standard} />
+          <PanelCell panel={PANEL_CASES.approval} />
+          <PanelCell panel={PANEL_CASES.awaitingSales} />
+          <PanelCell panel={PANEL_CASES.awaitingSupervisor} />
+          <PanelCell panel={PANEL_CASES.ready} />
         </Section>
 
         <Section state="hover" caption="Forced hover look (static classes matching each hover: rule). Hover the real controls in “default” to compare.">
@@ -576,6 +728,8 @@ function KitchenSink() {
           <Cell label="Run inspector: a failed agent task with its error type (inquiry 4)" wide shell>
             <InspectorCell inquiryId={4} />
           </Cell>
+          <PanelCell panel={PANEL_CASES.variantsFailed} />
+          <PanelCell panel={PANEL_CASES.rejected} />
           <NotApplicable items={[['Language switch', 'bundled resources, nothing to fail']]} />
         </Section>
 
@@ -599,6 +753,7 @@ function KitchenSink() {
           <Cell label="Run inspector: the inquiry has no analysis (inquiry 3)" wide shell>
             <InspectorCell inquiryId={3} />
           </Cell>
+          <PanelCell panel={PANEL_CASES.notAnalysed} />
           <NotApplicable items={[['Login, header', 'always have content']]} />
         </Section>
 
@@ -621,6 +776,7 @@ function KitchenSink() {
           <Cell label="Run inspector: the analysis is loading (inquiry 2)" wide shell>
             <InspectorCell inquiryId={2} />
           </Cell>
+          <PanelCell panel={PANEL_CASES.loading} />
           <NotApplicable
             items={[
               ['Sign in, Sign out, Fetch mail', 'their in-progress state is the disabled label, shown under “disabled”'],

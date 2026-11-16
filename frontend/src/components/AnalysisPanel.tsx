@@ -678,7 +678,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
           onUnauthorized={onUnauthorized}
         />
 
-        <div role="group" aria-label={t('steps.actions')} className="grid gap-2">
+        <div role="group" aria-label={t('steps.actions')} className="sticky bottom-0 z-10 border-t border-border bg-background py-3 grid gap-2">
           {formError && (
             <p className="error" role="alert">
               {formError}
@@ -829,7 +829,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
             </details>
           )}
           {exception && !orchestrationRerun && steps.states.variants === 'done' && (
-            <div role="group" aria-label={t('steps.actions')} className="analysis__actions">
+            <div role="group" aria-label={t('steps.actions')} className="sticky bottom-0 z-10 border-t border-border bg-background py-3 analysis__actions">
               <Button type="button" onClick={() => showStep('approval')} disabled={busy !== null}>
                 {t('steps.nextApproval')}
               </Button>

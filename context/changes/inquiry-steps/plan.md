@@ -376,27 +376,27 @@ No data or API change. Users with an open inquiry get the stepper on reload.
 
 #### Automated
 
-- [x] 4.1 Lint, typecheck, tests and build pass
-- [x] 4.2 Justification and policy table render once
-- [x] 4.3 Decision tests pass
-- [x] 4.4 No VerdictInForce copy remains
+- [x] 4.1 Lint, typecheck, tests and build pass — 65ca4d7
+- [x] 4.2 Justification and policy table render once — 65ca4d7
+- [x] 4.3 Decision tests pass — 65ca4d7
+- [x] 4.4 No VerdictInForce copy remains — 65ca4d7
 
 #### Manual
 
-- [x] 4.5 Sales approve waits for supervisor; supervisor approve reaches Odpowiedź
-- [x] 4.6 Reject is visibly destructive and requires a reason
+- [x] 4.5 Sales approve waits for supervisor; supervisor approve reaches Odpowiedź — 65ca4d7
+- [x] 4.6 Reject is visibly destructive and requires a reason — 65ca4d7
 
 ### Phase 5: Stany, bramka i porządki
 
 #### Automated
 
-- [ ] 5.1 Lint, typecheck, tests and build pass
-- [ ] 5.2 AGENTS.md colour scan with the extended list prints nothing
-- [ ] 5.3 Kitchen sink is not in the production build
+- [x] 5.1 Lint, typecheck, tests and build pass
+- [x] 5.2 AGENTS.md colour scan with the extended list prints nothing
+- [x] 5.3 Kitchen sink is not in the production build
 
 #### Manual
 
-- [ ] 5.4 Primary action within 900 px at 1440×900 in every step
-- [ ] 5.5 No horizontal scroll at 375 px in every step
-- [ ] 5.6 Keyboard-only pass: data before action, focus always visible
-- [ ] 5.7 One final screenshot per breakpoint
+- [x] 5.4 Primary action within 900 px at 1440×900 in every step
+- [x] 5.5 No horizontal scroll at 375 px in every step
+- [x] 5.6 Keyboard-only pass: data before action, focus always visible
+- [x] 5.7 One final screenshot per breakpoint

@@ -141,7 +141,7 @@ function ReplyDraftSection({
       {draft !== null && showEmail && <DraftEmail draft={draft} />}
 
       {offerRegenerate && (
-        <div className="analysis__actions">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-background py-3 analysis__actions">
           <Button
             type="button"
             variant={primary ? 'default' : 'outline'}
@@ -162,7 +162,7 @@ function ReplyDraftSection({
       )}
 
       {draft !== null && canDecide && mode === null && (
-        <div className="analysis__actions" role="group" aria-label={t('draft.decisionGroup')}>
+        <div className="sticky bottom-0 z-10 border-t border-border bg-background py-3 analysis__actions" role="group" aria-label={t('draft.decisionGroup')}>
           <Button
             type="button"
             variant={primary ? 'default' : 'outline'}
@@ -223,7 +223,7 @@ function ReplyDraftSection({
         <p className="checks__line">{t('draft.submittedBySelf')}</p>
       )}
       {draft !== null && asSupervisor.length > 0 && supervisorMode === null && (
-        <div className="analysis__actions" role="group" aria-label={t('draft.supervisorGroup')}>
+        <div className="sticky bottom-0 z-10 border-t border-border bg-background py-3 analysis__actions" role="group" aria-label={t('draft.supervisorGroup')}>
           {asSupervisor.includes('approve') && (
             <Button
               type="button"
