@@ -1,0 +1,67 @@
+{
+  "app": {
+    "title": "Orkiestrator zamówień sprzedażowych",
+    "loading": "Ładowanie…",
+    "sessionError": "Nie udało się sprawdzić sesji: {{message}}",
+    "unknownError": "Nieznany błąd",
+    "retry": "Spróbuj ponownie"
+  },
+  "login": {
+    "title": "Logowanie",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "submit": "Zaloguj się",
+    "submitting": "Logowanie…",
+    "invalidCredentials": "Nieprawidłowa nazwa użytkownika lub hasło",
+    "failed": "Logowanie nie powiodło się"
+  },
+  "inbox": {
+    "signOut": "Wyloguj się",
+    "heading": "Skrzynka zapytań",
+    "fetchMail": "Pobierz pocztę",
+    "fetching": "Pobieranie…",
+    "loading": "Ładowanie zapytań…",
+    "retry": "Spróbuj ponownie",
+    "awaitingOnly": "Tylko czekające na przełożonego ({{count}})",
+    "empty": "Brak zapytań.",
+    "emptyAwaiting": "Brak zapytań czekających na przełożonego.",
+    "badgeMailbox": "E-mail",
+    "badgeAwaiting": "Czeka na przełożonego",
+    "detailLabel": "Zapytanie",
+    "selectPrompt": "Wybierz zapytanie, aby je przeczytać.",
+    "loadingDetail": "Ładowanie zapytania…",
+    "genericError": "Coś poszło nie tak",
+    "fetchNoNew": "Brak nowej poczty",
+    "fetchNew": "nowe: {{count}}",
+    "fetchDuplicates": "już w skrzynce: {{count}}",
+    "fetchSkipped": "pominięte: {{count}}",
+    "fetchInProgress": "Pobieranie poczty już trwa",
+    "mailboxUnavailable": "Skrzynka pocztowa niedostępna, spróbuj ponownie"
+  },
+  "role": {
+    "salesperson": "Handlowiec",
+    "supervisor": "Przełożony"
+  },
+  "outcome": {
+    "standard": "Standard",
+    "exception": "Wyjątek",
+    "needs_input": "Wymaga uzupełnienia"
+  },
+  "health": {
+    "heading": "Stan systemu",
+    "loading": "Sprawdzanie…",
+    "ok": "Wszystkie systemy działają",
+    "degraded": "Częściowa awaria",
+    "error": "Niedostępny",
+    "api": "API",
+    "apiOk": "ok",
+    "database": "Baza danych",
+    "migration": "Migracja",
+    "unknown": "nieznana"
+  },
+  "language": {
+    "label": "Język",
+    "pl": "Polski",
+    "en": "English"
+  }
+}

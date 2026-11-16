@@ -543,21 +543,21 @@ There is no data migration. Rollback is a revert of the change's commits. The le
 
 #### Automated
 
-- [x] 2.1 Lint, typecheck, tests and build pass
-- [x] 2.2 Raw colours appear only in the token blocks
-- [x] 2.3 The five component files exist under src/components/ui
+- [x] 2.1 Lint, typecheck, tests and build pass — 852754e
+- [x] 2.2 Raw colours appear only in the token blocks — 852754e
+- [x] 2.3 The five component files exist under src/components/ui — 852754e
 
 #### Manual
 
-- [x] 2.4 Dark-mode token values switch and the inquiry view still matches
+- [x] 2.4 Dark-mode token values switch and the inquiry view still matches — 852754e
 
 ### Phase 3: i18n foundation
 
 #### Automated
 
-- [ ] 3.1 Lint, typecheck, tests and build pass
-- [ ] 3.2 The key-parity test passes
-- [ ] 3.3 The language-switch test passes
+- [x] 3.1 Lint, typecheck, tests and build pass
+- [x] 3.2 The key-parity test passes
+- [x] 3.3 The language-switch test passes
 
 ### Phase 4: App shell (the one view)
 
