@@ -142,7 +142,13 @@ const EXCEPTION: ChecksView = {
   exception_type: 'insufficient_stock',
   reasons: [],
   results: {
-    customer: { status: 'matched', matched_by: 'name', customer_id: 1, name: 'ACME', candidates: [] },
+    customer: {
+      status: 'matched',
+      matched_by: 'name',
+      customer_id: 1,
+      name: 'ACME',
+      candidates: [],
+    },
     stock: {
       status: 'insufficient',
       product_code: 'ABC-100',
@@ -529,7 +535,11 @@ describe('AnalysisPanel', () => {
               ...ACME_ORCHESTRATION,
               status: 'failed',
               tasks: [],
-              error: { kind: 'planner_failed', code: 'unavailable', message: 'Planner unavailable' },
+              error: {
+                kind: 'planner_failed',
+                code: 'unavailable',
+                message: 'Planner unavailable',
+              },
             },
           }),
         ),
@@ -552,9 +562,7 @@ describe('AnalysisPanel', () => {
     )
     answer(json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
 
-    await vi.waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled(),
-    )
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled())
     expect(screen.getByLabelText('Customer')).toHaveValue('ACME SA')
     await openStep(/Variants/)
     expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
@@ -734,9 +742,7 @@ describe('AnalysisPanel', () => {
 
     renderPanel(vi.fn(), vi.fn(), { user: SUPERVISOR, onDraftStatus })
     const group = await screen.findByRole('group', { name: 'Supervisor decision' })
-    await vi.waitFor(() =>
-      expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'awaiting_supervisor'),
-    )
+    await vi.waitFor(() => expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'awaiting_supervisor'))
     fireEvent.click(within(group).getByRole('button', { name: 'Approve' }))
     fireEvent.change(screen.getByLabelText('Reason (required)'), {
       target: { value: 'Klient strategiczny' },
@@ -762,7 +768,8 @@ describe('AnalysisPanel', () => {
     const fetchMock = stubApi({
       [`GET ${PATH}`]: [
         () => json(200, analysis(AWAITING)),
-        () => json(200, analysis({ ...AWAITING, draft: { ...DELTA_AWAITING, status: 'rejected' } })),
+        () =>
+          json(200, analysis({ ...AWAITING, draft: { ...DELTA_AWAITING, status: 'rejected' } })),
       ],
       [`POST ${SUPERVISOR_DECISION_PATH}`]: () => json(409, { detail: 'Draft changed, reload' }),
     })
@@ -848,20 +855,23 @@ describe('AnalysisPanel steps', () => {
     ],
     ['a reply draft', DRAFTED, 'Approval', ['Reply']],
     ['a draft ready to send', READY, 'Reply', []],
-  ])('opens %s at the active step and locks the later ones', async (_name, overrides, active, locked) => {
-    stubApi({ [`GET ${PATH}`]: () => json(200, analysis(overrides)) })
+  ])(
+    'opens %s at the active step and locks the later ones',
+    async (_name, overrides, active, locked) => {
+      stubApi({ [`GET ${PATH}`]: () => json(200, analysis(overrides)) })
 
-    renderPanel()
+      renderPanel()
 
-    expect(
-      await screen.findByRole('tab', { name: new RegExp(active), selected: true }),
-    ).toHaveTextContent('active')
-    for (const name of locked) {
-      expect(tab(new RegExp(name))).toBeDisabled()
-      expect(tab(new RegExp(name))).toHaveTextContent('locked')
-    }
-    expect(screen.getAllByRole('tab', { selected: true })).toHaveLength(1)
-  })
+      expect(
+        await screen.findByRole('tab', { name: new RegExp(active), selected: true }),
+      ).toHaveTextContent('active')
+      for (const name of locked) {
+        expect(tab(new RegExp(name))).toBeDisabled()
+        expect(tab(new RegExp(name))).toHaveTextContent('locked')
+      }
+      expect(screen.getAllByRole('tab', { selected: true })).toHaveLength(1)
+    },
+  )
 
   it('opens an inquiry that was not analysed at the inquiry step', async () => {
     stubApi({ [`GET ${PATH}`]: () => json(200, null) })
@@ -1023,8 +1033,7 @@ describe('AnalysisPanel steps', () => {
   it('goes back to Inquiry with a message when the request is analysed again', async () => {
     const fetchMock = stubApi({
       [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)),
-      [`POST ${PATH}`]: () =>
-        json(200, analysis({ analyzed_at: '2026-11-10T10:00:00.000000Z' })),
+      [`POST ${PATH}`]: () => json(200, analysis({ analyzed_at: '2026-11-10T10:00:00.000000Z' })),
     })
 
     renderPanel()
@@ -1224,6 +1233,233 @@ describe('AnalysisPanel primary actions', () => {
     await show(WITH_EXCEPTION, /Variants/)
 
     expect(screen.getByText('Findings').closest('details')).toHaveAttribute('open')
+  })
+})
+
+describe('AnalysisPanel approval and reply steps', () => {
+  const ORCHESTRATED: Partial<Analysis> = { checks: EXCEPTION, orchestration: ACME_ORCHESTRATION }
+  const DRAFTED: Partial<Analysis> = {
+    ...ORCHESTRATED,
+    recommendation: ACME_RECOMMENDATION,
+    policy: ACME_POLICY,
+    draft: ACME_DRAFT,
+    decisions: [],
+  }
+  const AWAITING: Partial<Analysis> = {
+    ...DRAFTED,
+    draft: DELTA_AWAITING,
+    decisions: [DELTA_SUBMITTED],
+  }
+  const READY: Partial<Analysis> = {
+    ...DRAFTED,
+    draft: { ...ACME_DRAFT, status: 'ready_to_send' },
+    decisions: [ACME_APPROVED],
+  }
+
+  async function show(overrides: Partial<Analysis>, step: RegExp, user: User = SALES) {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis(overrides)) })
+    renderPanel(vi.fn(), vi.fn(), { user })
+    await screen.findByRole('tabpanel')
+    await openStep(step)
+    await screen.findByRole('tab', { name: step, selected: true })
+  }
+
+  it('tells why the recommendation was chosen once, in Variants only', async () => {
+    await show(READY, /Inquiry/)
+    const counts: Record<string, number> = {}
+    for (const step of [/Inquiry/, /Variants/, /Approval/, /Reply/]) {
+      await openStep(step)
+      await screen.findByRole('tab', { name: step, selected: true })
+      counts[String(step)] = screen.queryAllByText('Why this recommendation?').length
+    }
+    expect(counts).toEqual({ '/Inquiry/': 0, '/Variants/': 1, '/Approval/': 0, '/Reply/': 0 })
+  })
+
+  it('shows the policy verdict in force once, in Approval only', async () => {
+    await show(DRAFTED, /Variants/)
+    expect(screen.queryAllByRole('table', { name: /^Policy/ })).toHaveLength(0)
+
+    await openStep(/Approval/)
+    expect(await screen.findAllByRole('table', { name: /^Policy/ })).toHaveLength(1)
+    expect(screen.getByRole('table', { name: /^Policy verdict in force:/ })).toHaveTextContent(
+      'No approval needed',
+    )
+    expect(screen.queryByText('Policy rules')).not.toBeInTheDocument()
+  })
+
+  it('shows the evaluation as the verdict when there is no draft yet', async () => {
+    await show({ ...DRAFTED, draft: null }, /Approval/)
+
+    expect(screen.getAllByRole('table', { name: /^Policy/ })).toHaveLength(1)
+    expect(screen.getByRole('table', { name: 'Policy rules' })).toBeInTheDocument()
+  })
+
+  it('orders the variant summary, the verdict, the e-mail and the decision bar', async () => {
+    await show({ ...DRAFTED, decisions: [ACME_APPROVED] }, /Approval/)
+
+    const summary = screen.getByText('Offer value')
+    const verdict = screen.getByRole('region', { name: 'Policy' })
+    const email = screen.getByRole('region', { name: 'E-mail preview' })
+    const decision = screen.getByRole('group', { name: 'Decision' })
+    const history = screen.getByRole('region', { name: 'Decision history' })
+    expect(follows(summary, verdict)).toBe(true)
+    expect(follows(verdict, email)).toBe(true)
+    expect(follows(email, decision)).toBe(true)
+    expect(follows(decision, history)).toBe(true)
+    // The history is a collapsed list.
+    expect(history.querySelector('details')).not.toHaveAttribute('open')
+  })
+
+  it.each<[string, Partial<Analysis>, User, string[]]>([
+    ['a current draft', DRAFTED, SALES, ['Approve']],
+    ['a draft awaiting the supervisor, as sales', AWAITING, SALES, []],
+    ['a draft awaiting the supervisor, as supervisor', AWAITING, SUPERVISOR, ['Approve']],
+    [
+      'a draft the supervisor submitted themselves',
+      { ...AWAITING, draft: { ...DELTA_AWAITING, submitted_by: SUPERVISOR.id } },
+      SUPERVISOR,
+      [],
+    ],
+    [
+      'a rejected draft',
+      { ...DRAFTED, draft: { ...ACME_DRAFT, status: 'rejected' } },
+      SALES,
+      ['Regenerate draft'],
+    ],
+    [
+      'a stale draft',
+      { ...DRAFTED, draft: { ...ACME_DRAFT, stale: true } },
+      SALES,
+      ['Regenerate draft'],
+    ],
+    ['a missing policy', { ...DRAFTED, policy: null }, SALES, ['Re-run policy']],
+    [
+      'a stale policy',
+      { ...DRAFTED, policy: { ...ACME_POLICY, stale: true } },
+      SALES,
+      ['Re-run policy'],
+    ],
+    [
+      'no draft and a missing policy',
+      { ...DRAFTED, policy: null, draft: null },
+      SALES,
+      ['Re-run policy'],
+    ],
+    ['no draft and a current policy', { ...DRAFTED, draft: null }, SALES, ['Regenerate draft']],
+  ])('has one primary action in Approval for %s', async (_name, overrides, user, expected) => {
+    await show(overrides, /Approval/, user)
+
+    expect(primaryButtons()).toEqual(expected)
+  })
+
+  it('makes Edit offer secondary and Reject destructive', async () => {
+    await show(DRAFTED, /Approval/)
+
+    expect(screen.getByRole('button', { name: 'Edit offer' })).toHaveAttribute(
+      'data-variant',
+      'outline',
+    )
+    expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    )
+  })
+
+  it('makes the supervisor Reject destructive', async () => {
+    await show(AWAITING, /Approval/, SUPERVISOR)
+
+    const group = screen.getByRole('group', { name: 'Supervisor decision' })
+    expect(within(group).getByRole('button', { name: 'Reject' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    )
+  })
+
+  it('offers only Reject, destructive, to a supervisor on their own submission', async () => {
+    await show(
+      { ...AWAITING, draft: { ...DELTA_AWAITING, submitted_by: SUPERVISOR.id } },
+      /Approval/,
+      SUPERVISOR,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    )
+  })
+
+  it('shows the reason with Regenerate for a rejected draft', async () => {
+    await show(
+      {
+        ...DRAFTED,
+        draft: { ...ACME_DRAFT, status: 'rejected' },
+        decisions: [{ ...ACME_REJECTED_EARLIER, current: true }],
+      },
+      /Approval/,
+    )
+
+    expect(screen.getByText('Rejected', { selector: 'span.draft__status' })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Decision history' })).getByText(
+        'Klient zmienił ilość',
+      ),
+    ).toBeInTheDocument()
+    expect(primaryButtons()).toEqual(['Regenerate draft'])
+  })
+
+  it('shows only the result in Reply, without an action', async () => {
+    await show(READY, /Reply/)
+
+    const result = screen.getByRole('region', { name: 'Reply to the customer' })
+    expect(within(result).getAllByText('Ready to send (sending is simulated)')).toHaveLength(1)
+    expect(within(result).getByRole('region', { name: 'E-mail preview' })).toHaveTextContent(
+      'Subject: Re: Zapytanie ofertowe ABC-100',
+    )
+    expect(result).toHaveTextContent('Approved')
+    expect(result).toHaveTextContent('Anna Kowalska')
+    expect(primaryButtons()).toEqual([])
+    for (const name of ['Approve', 'Edit offer', 'Reject', 'Regenerate draft']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+    }
+    expect(screen.queryByRole('region', { name: 'Reply draft' })).not.toBeInTheDocument()
+  })
+
+  it('shows the approver of the last decision in Reply', async () => {
+    await show(
+      {
+        ...READY,
+        draft: { ...DELTA_AWAITING, status: 'ready_to_send', submitted_by: null },
+        decisions: [
+          DELTA_SUBMITTED,
+          {
+            ...DELTA_SUBMITTED,
+            action: 'supervisor_approve',
+            status_after: 'ready_to_send',
+            decided_by_name: 'Piotr Nowak',
+          },
+        ],
+      },
+      /Reply/,
+      SUPERVISOR,
+    )
+
+    const result = screen.getByRole('region', { name: 'Reply to the customer' })
+    expect(result).toHaveTextContent('Approved by supervisor')
+    expect(result).toHaveTextContent('Piotr Nowak')
+  })
+
+  it('shows Approval as done without repeating the e-mail', async () => {
+    await show(READY, /Approval/)
+
+    expect(
+      within(screen.getByRole('region', { name: 'Reply draft' })).getByText(
+        'Ready to send (sending is simulated)',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'E-mail preview' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Decision history' })).toBeInTheDocument()
+    expect(primaryButtons()).toEqual([])
   })
 })
 

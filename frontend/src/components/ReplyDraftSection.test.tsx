@@ -29,6 +29,7 @@ import {
   DELTA_SUPERVISOR_REJECTED,
 } from '../test/replyDraftFixtures'
 import { OTHER_SUPERVISOR, SALES, SUPERVISOR } from '../test/userFixtures'
+import PolicySection from './PolicySection'
 import ReplyDraftSection, { DecisionHistory } from './ReplyDraftSection'
 
 const DRAFT_PATH = '/api/inquiries/7/draft'
@@ -98,7 +99,11 @@ function analysis(draft: ReplyDraftView | null, decisions: ReplyDraftDecision[] 
   }
 }
 
-// Holds the draft and the busy state like AnalysisPanel does.
+// The policy stage's current evaluation; the draft's own verdict is what the table shows.
+const ACME_POLICY_VIEW = ACME_POLICY
+
+// Holds the draft and the busy state like AnalysisPanel does; the verdict table is the
+// PolicySection's, placed where the approval step puts it.
 function Harness({
   initial,
   recommendation,
@@ -128,6 +133,18 @@ function Harness({
       user={user}
       draft={current}
       recommendation={recommendation}
+      verdict={
+        <PolicySection
+          inquiryId={7}
+          policy={ACME_POLICY_VIEW}
+          recommendation={recommendation}
+          draft={current}
+          disabled={busy !== null}
+          running={false}
+          onRerun={async () => {}}
+          onUnauthorized={onUnauthorized}
+        />
+      }
       disabled={busy !== null}
       drafting={busy === 'drafting'}
       deciding={busy === 'deciding'}
@@ -174,18 +191,18 @@ function decisionButtons(name = 'Decision'): string[] {
 }
 
 describe('ReplyDraftSection', () => {
-  it('shows the e-mail preview, why this recommendation and the verdict in force', () => {
+  it('shows the e-mail preview, the chosen variant and the verdict in force, without the justification', () => {
     renderSection(ACME_DRAFT)
 
     expect(screen.getByText('Draft')).toBeInTheDocument()
     const preview = screen.getByRole('region', { name: 'E-mail preview' })
     expect(preview).toHaveTextContent('Subject: Re: Zapytanie ofertowe ABC-100')
     expect(preview).toHaveTextContent('Razem: 9 262,50 PLN netto.')
-    expect(screen.getByText('Why this recommendation?')).toBeInTheDocument()
-    expect(screen.getByText(/^Wybrano opcję stock\+ABC-110/)).toBeInTheDocument()
-    expect(
-      within(screen.getByRole('list', { name: 'Cited signals' })).getAllByRole('listitem'),
-    ).toHaveLength(3)
+    // The justification is told once, in the variants step.
+    expect(screen.queryByText('Why this recommendation?')).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Cited signals' })).not.toBeInTheDocument()
+    expect(screen.getByText('Chosen variant')).toBeInTheDocument()
+    expect(screen.getByText('Offer value').closest('dl')).toHaveTextContent('9262.50 PLN')
     expect(screen.getByRole('table', { name: /^Policy verdict in force:/ })).toHaveTextContent(
       'No approval needed',
     )
@@ -607,37 +624,42 @@ describe("ReplyDraftSection: the supervisor's decision", () => {
   it.each([
     ['approve', 'Approve', 'Confirm approval', 'Enter a reason for the approval.', 'ready_to_send'],
     ['reject', 'Reject', 'Confirm rejection', 'Enter a reason for the rejection.', 'rejected'],
-  ] as const)('requires a reason to %s as the supervisor', async (action, open, confirm, message, after) => {
-    const fetchMock = stubApi({
-      [`POST ${SUPERVISOR_DECISION_PATH}`]: [
-        () => json(200, analysis({ ...DELTA_AWAITING, status: after, submitted_by: null })),
-      ],
-    })
-    renderAs(SUPERVISOR, DELTA_AWAITING)
+  ] as const)(
+    'requires a reason to %s as the supervisor',
+    async (action, open, confirm, message, after) => {
+      const fetchMock = stubApi({
+        [`POST ${SUPERVISOR_DECISION_PATH}`]: [
+          () => json(200, analysis({ ...DELTA_AWAITING, status: after, submitted_by: null })),
+        ],
+      })
+      renderAs(SUPERVISOR, DELTA_AWAITING)
 
-    const group = screen.getByRole('group', { name: 'Supervisor decision' })
-    fireEvent.click(within(group).getByRole('button', { name: open }))
-    expect(screen.getByRole('form', { name: `${open} as supervisor` })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: confirm }))
+      const group = screen.getByRole('group', { name: 'Supervisor decision' })
+      fireEvent.click(within(group).getByRole('button', { name: open }))
+      expect(screen.getByRole('form', { name: `${open} as supervisor` })).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: confirm }))
 
-    expect(screen.getByRole('alert')).toHaveTextContent(message)
-    expect(fetchMock).not.toHaveBeenCalled()
+      expect(screen.getByRole('alert')).toHaveTextContent(message)
+      expect(fetchMock).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText('Reason (required)'), {
-      target: { value: ' Decyzja przełożonego ' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: confirm }))
+      fireEvent.change(screen.getByLabelText('Reason (required)'), {
+        target: { value: ' Decyzja przełożonego ' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: confirm }))
 
-    await vi.waitFor(() =>
-      expect(screen.queryByRole('form', { name: `${open} as supervisor` })).not.toBeInTheDocument(),
-    )
-    expect(sentBody(fetchMock, 'POST')).toEqual({
-      updated_at: DELTA_AWAITING.updated_at,
-      action,
-      reason: 'Decyzja przełożonego',
-    })
-    expect(supervisorButtons()).toEqual([])
-  })
+      await vi.waitFor(() =>
+        expect(
+          screen.queryByRole('form', { name: `${open} as supervisor` }),
+        ).not.toBeInTheDocument(),
+      )
+      expect(sentBody(fetchMock, 'POST')).toEqual({
+        updated_at: DELTA_AWAITING.updated_at,
+        action,
+        reason: 'Decyzja przełożonego',
+      })
+      expect(supervisorButtons()).toEqual([])
+    },
+  )
 
   it("shows a refused supervisor's decision at its form", async () => {
     stubApi({
@@ -651,9 +673,7 @@ describe("ReplyDraftSection: the supervisor's decision", () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'OK' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Cannot approve your own submission',
-    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot approve your own submission')
     expect(screen.getByRole('form', { name: 'Approve as supervisor' })).toBeInTheDocument()
   })
 
@@ -680,9 +700,9 @@ describe('DecisionHistory', () => {
       />,
     )
 
-    const items = within(
-      screen.getByRole('region', { name: 'Decision history' }),
-    ).getAllByRole('listitem')
+    const items = within(screen.getByRole('region', { name: 'Decision history' })).getAllByRole(
+      'listitem',
+    )
     expect(items).toHaveLength(3)
     expect(items[0]).toHaveTextContent('Rejectedearlier version')
     expect(items[0]).toHaveTextContent('Anna Kowalska')
@@ -713,9 +733,9 @@ describe('DecisionHistory', () => {
       />,
     )
 
-    const items = within(
-      screen.getByRole('region', { name: 'Decision history' }),
-    ).getAllByRole('listitem')
+    const items = within(screen.getByRole('region', { name: 'Decision history' })).getAllByRole(
+      'listitem',
+    )
     expect(items[0]).toHaveTextContent('Approved')
     expect(items[0]).toHaveTextContent('Awaiting supervisor approval')
     expect(items[0]).toHaveTextContent(

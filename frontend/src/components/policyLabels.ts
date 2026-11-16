@@ -45,3 +45,14 @@ export function thresholdText(rule: RuleResult, t: TFunction): string {
   const text = `${COMPARATOR[rule.code]} ${ruleAmount(rule, rule.threshold)}`
   return rule.code === 'credit' ? t('policy.creditThreshold', { threshold: text }) : text
 }
+
+// True when the policy stage has no current verdict although the recommendation allows one:
+// re-running it is then the way forward.
+export function policyRerunOffered(
+  policy: { stale: boolean } | null,
+  recommendation: { status: string; stale: boolean } | null,
+): boolean {
+  const blocked =
+    recommendation === null || recommendation.status === 'failed' || recommendation.stale
+  return !blocked && (policy === null || policy.stale)
+}

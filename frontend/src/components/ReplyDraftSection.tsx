@@ -1,22 +1,20 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
-  PolicyResult,
   RecommendationOption,
   RecommendationView,
-  ReplyDraftAction,
   ReplyDraftDecision,
   ReplyDraftEdit,
   ReplyDraftOfferLine,
-  ReplyDraftStatus,
   ReplyDraftView,
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
 import { errorMessage, formatDate, formatPercent, formatPln, sourceText } from './format'
-import { OUTCOME_LABEL, RULE_LABEL, ruleAmount, VERDICT_LABEL } from './policyLabels'
+import { ACTION_KEY, STATUS } from './draftLabels'
+import { OUTCOME_LABEL, RULE_LABEL } from './policyLabels'
 
 type Decision = 'approve' | 'reject'
 
@@ -31,6 +29,11 @@ type Props = {
   // The recommendation the draft is built from; tells why there is none and lists the options
   // the offer can be edited to.
   recommendation: RecommendationView | null
+  // The policy verdict in force, placed between the chosen variant and the e-mail.
+  verdict?: ReactNode
+  // True when the draft's action (Regenerate, Approve, the supervisor's Approve) is the step's
+  // primary one; false while another action of the step is.
+  primary?: boolean
   // True while the panel analyzes, saves, re-runs a stage, drafts or saves a decision.
   disabled: boolean
   // True while the panel regenerates the draft.
@@ -50,24 +53,6 @@ type Props = {
   onUnauthorized: () => void
 }
 
-// Every status is shown as text; the tone only adds the colour.
-type Tone = 'ok' | 'warn' | 'error'
-
-const STATUS = {
-  draft: ['draft.status.draft', 'warn'],
-  ready_to_send: ['draft.status.ready_to_send', 'ok'],
-  awaiting_supervisor: ['draft.status.awaiting_supervisor', 'warn'],
-  rejected: ['draft.status.rejected', 'error'],
-} as const satisfies Record<ReplyDraftStatus, [string, Tone]>
-
-const ACTION_KEY = {
-  edit: 'decisionHistory.action.edit',
-  approve: 'decisionHistory.action.approve',
-  reject: 'decisionHistory.action.reject',
-  supervisor_approve: 'decisionHistory.action.supervisor_approve',
-  supervisor_reject: 'decisionHistory.action.supervisor_reject',
-} as const satisfies Record<ReplyDraftAction, string>
-
 // Why there cannot be a (current) draft; null when the recommendation allows one.
 function blockedReason(recommendation: RecommendationView | null, t: TFunction): string | null {
   if (recommendation === null) return t('draft.blocked.noRecommendation')
@@ -78,8 +63,6 @@ function blockedReason(recommendation: RecommendationView | null, t: TFunction):
   return null
 }
 
-// The reply draft of the recommended option: the e-mail preview, why this option, the policy
-// verdict in force and the salesperson's decision.
 // What the supervisor may do with a draft: nothing unless it is current and awaiting the
 // supervisor; only reject a draft they passed to the supervisor themselves (four eyes).
 function supervisorActions(draft: ReplyDraftView | null, user: User): Decision[] {
@@ -88,11 +71,16 @@ function supervisorActions(draft: ReplyDraftView | null, user: User): Decision[]
   return draft.submitted_by !== user.id ? ['approve', 'reject'] : ['reject']
 }
 
+// The decision part of the approval step: the chosen variant, the verdict in force (passed in
+// as `verdict`, so the table stays where the data is), the e-mail preview and the salesperson's
+// or supervisor's decision.
 function ReplyDraftSection({
   inquiryId,
   user,
   draft,
   recommendation,
+  verdict,
+  primary = true,
   disabled,
   drafting,
   deciding,
@@ -130,21 +118,36 @@ function ReplyDraftSection({
   const asSupervisor = supervisorActions(draft, user)
   const supervisorMode =
     mode === 'supervisor-approve' ? 'approve' : mode === 'supervisor-reject' ? 'reject' : null
+  // The e-mail is the result of the reply step once the draft is ready to send.
+  const showEmail = draft !== null && (draft.status !== 'ready_to_send' || draft.stale)
 
   return (
-    <section className="orchestration draft" aria-labelledby={headingId}>
-      <h4 id={headingId} className="analysis__subheading">
-        {t('draft.heading')}
-      </h4>
+    <div className="grid min-w-0 gap-3">
+      <section className="orchestration draft" aria-labelledby={headingId}>
+        <h4 id={headingId} className="analysis__subheading">
+          {t('draft.heading')}
+        </h4>
 
-      {blocked !== null && outdated && <p className="checks__line">{blocked}</p>}
-      {blocked === null && draft === null && (
-        <p className="checks__line">{t('draft.notGenerated')}</p>
-      )}
-      {draft?.stale && <p className="checks__line">{t('draft.stale')}</p>}
+        {blocked !== null && outdated && <p className="checks__line">{blocked}</p>}
+        {blocked === null && draft === null && (
+          <p className="checks__line">{t('draft.notGenerated')}</p>
+        )}
+        {draft?.stale && <p className="checks__line">{t('draft.stale')}</p>}
+        {draft !== null && <DraftSummary draft={draft} />}
+      </section>
+
+      {verdict}
+
+      {draft !== null && showEmail && <DraftEmail draft={draft} />}
+
       {offerRegenerate && (
         <div className="analysis__actions">
-          <Button type="button" variant="outline" onClick={regenerate} disabled={disabled}>
+          <Button
+            type="button"
+            variant={primary ? 'default' : 'outline'}
+            onClick={regenerate}
+            disabled={disabled}
+          >
             {drafting ? t('draft.drafting') : t('draft.regenerate')}
           </Button>
         </div>
@@ -158,13 +161,11 @@ function ReplyDraftSection({
         </div>
       )}
 
-      {draft !== null && <DraftResult draft={draft} />}
-
       {draft !== null && canDecide && mode === null && (
         <div className="analysis__actions" role="group" aria-label={t('draft.decisionGroup')}>
           <Button
             type="button"
-            variant="outline"
+            variant={primary ? 'default' : 'outline'}
             onClick={() => setMode('approve')}
             disabled={disabled}
           >
@@ -226,7 +227,7 @@ function ReplyDraftSection({
           {asSupervisor.includes('approve') && (
             <Button
               type="button"
-              variant="outline"
+              variant={primary ? 'default' : 'outline'}
               onClick={() => setMode('supervisor-approve')}
               disabled={disabled}
             >
@@ -255,11 +256,13 @@ function ReplyDraftSection({
           onUnauthorized={onUnauthorized}
         />
       )}
-    </section>
+    </div>
   )
 }
 
-function DraftResult({ draft }: { draft: ReplyDraftView }) {
+// The status of the draft and the chosen variant in short: value, margin, coverage. Why this
+// variant is recommended is told in the variants step only.
+function DraftSummary({ draft }: { draft: ReplyDraftView }) {
   const { t } = useTranslation()
   const [statusKey, tone] = STATUS[draft.status]
   const offer = draft.offer
@@ -276,15 +279,7 @@ function DraftResult({ draft }: { draft: ReplyDraftView }) {
       </p>
       {draft.text_source === 'fallback' && <p className="draft__fallback">{t('draft.fallback')}</p>}
 
-      <section className="draft__email" aria-label={t('draft.emailPreview')}>
-        <p className="draft__subject">
-          {t('draft.subject')} <span lang="pl">{draft.subject}</span>
-        </p>
-        <pre className="draft__body" lang="pl">
-          {draft.body}
-        </pre>
-      </section>
-
+      <p className="analysis__meta">{t('draft.chosenVariant')}</p>
       <dl className="metrics__list">
         <dt>{t('draft.offerValue')}</dt>
         <dd>{formatPln(offer.value)}</dd>
@@ -298,75 +293,35 @@ function DraftResult({ draft }: { draft: ReplyDraftView }) {
           })}
         </dd>
       </dl>
-
-      {draft.why !== null && (
-        <div className="draft__why">
-          <p className="recommendation__why">{t('draft.why')}</p>
-          <p className="checks__line" lang="pl">
-            {draft.why.justification}
-          </p>
-          {draft.why.signals.length > 0 && (
-            <ul
-              className="recommendation__signal-list"
-              aria-label={t('draft.citedSignals')}
-              lang="pl"
-            >
-              {draft.why.signals.map((label) => (
-                <li key={label}>{label}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      <VerdictInForce policy={draft.policy} edited={offer.edited} />
     </>
   )
 }
 
-function VerdictInForce({ policy, edited }: { policy: PolicyResult | null; edited: boolean }) {
+// A body longer than this is collapsed behind its subject.
+const LONG_EMAIL = 600
+
+// The e-mail as it would be sent: subject and body; a long body is a disclosure.
+export function DraftEmail({ draft }: { draft: ReplyDraftView }) {
   const { t } = useTranslation()
-  const title = edited ? t('draft.verdictTitleEdited') : t('draft.verdictTitle')
-  if (policy === null) {
-    return <p className="checks__line">{t('draft.verdictNone', { title })}</p>
-  }
-  const { key: outcomeKey, tone } = OUTCOME_LABEL[policy.outcome]
+  const body = (
+    <pre className="draft__body" lang="pl">
+      {draft.body}
+    </pre>
+  )
   return (
-    <div className="policy__table-wrap">
-      <table className="policy__table">
-        <caption className="orchestration__stage-title">
-          {t('draft.verdictLabel', { title })}{' '}
-          <span className={`check__status check__status--${tone}`}>{t(outcomeKey)}</span>
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('policy.column.rule')}</th>
-            <th scope="col">{t('policy.column.actual')}</th>
-            <th scope="col">{t('policy.column.threshold')}</th>
-            <th scope="col">{t('policy.column.verdict')}</th>
-            <th scope="col">{t('policy.column.reason')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {policy.rules.map((rule) => {
-            const { key: verdictKey, tone: verdictTone } = VERDICT_LABEL[rule.verdict]
-            return (
-              <tr key={rule.code}>
-                <th scope="row">{t(RULE_LABEL[rule.code])}</th>
-                <td>{ruleAmount(rule, rule.actual)}</td>
-                <td>{ruleAmount(rule, rule.threshold)}</td>
-                <td>
-                  <span className={`check__status check__status--${verdictTone}`}>
-                    {t(verdictKey)}
-                  </span>
-                </td>
-                <td>{rule.reason}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+    <section className="draft__email" aria-label={t('draft.emailPreview')}>
+      <p className="draft__subject">
+        {t('draft.subject')} <span lang="pl">{draft.subject}</span>
+      </p>
+      {draft.body.length > LONG_EMAIL ? (
+        <details>
+          <summary className="cursor-pointer text-sm font-medium">{t('draft.showEmail')}</summary>
+          <div className="mt-2">{body}</div>
+        </details>
+      ) : (
+        body
+      )}
+    </section>
   )
 }
 
@@ -656,69 +611,73 @@ export function DecisionHistory({
   const headingId = `decisions-${inquiryId}-heading`
   return (
     <section className="orchestration draft__history" aria-labelledby={headingId}>
-      <h4 id={headingId} className="analysis__subheading">
-        {t('decisionHistory.heading')}
-      </h4>
-      <ol className="checks__list">
-        {decisions.map((decision, index) => {
-          const [statusKey, tone] = STATUS[decision.status_after]
-          const snapshot = decision.snapshot
-          const outcome = snapshot?.policy_outcome ?? null
-          const failing = snapshot?.failing_rules.map((code) => t(RULE_LABEL[code])) ?? []
-          // Older snapshots lack the rules the verdict could not evaluate.
-          const notEvaluated = (snapshot?.not_evaluated_rules ?? []).map((code) =>
-            t(RULE_LABEL[code]),
-          )
-          const rules = [
-            ...(failing.length > 0
-              ? [t('decisionHistory.failing', { rules: failing.join(', ') })]
-              : []),
-            ...(notEvaluated.length > 0
-              ? [
-                  t('decisionHistory.notEvaluated', {
-                    rules: notEvaluated.join(', '),
-                  }),
-                ]
-              : []),
-          ]
-          return (
-            <li key={`${decision.decided_at}-${index}`} className="check">
-              <p className="check__head">
-                <span className="check__name">
-                  {t(ACTION_KEY[decision.action])}
-                  {!decision.current && (
-                    <span className="draft__earlier">{t('decisionHistory.earlier')}</span>
-                  )}
-                </span>
-                <span className={`check__status check__status--${tone}`}>{t(statusKey)}</span>
-              </p>
-              <dl className="metrics__list">
-                <dt>{t('decisionHistory.by')}</dt>
-                <dd>{decision.decided_by_name ?? t('decisionHistory.unknownUser')}</dd>
-                <dt>{t('decisionHistory.when')}</dt>
-                <dd>{formatDate(decision.decided_at)}</dd>
-                <dt>{t('decisionHistory.reason')}</dt>
-                <dd>{decision.reason ?? '—'}</dd>
-                <dt>{t('decisionHistory.offer')}</dt>
-                <dd>
-                  {snapshot === null
-                    ? t('decisionHistory.unavailable')
-                    : formatPln(snapshot.offer.value)}
-                </dd>
-                <dt>{t('decisionHistory.policy')}</dt>
-                <dd>
-                  {snapshot === null
-                    ? t('decisionHistory.unavailable')
-                    : outcome === null
-                      ? t('decisionHistory.noVerdict')
-                      : t(OUTCOME_LABEL[outcome].key)}
-                  {rules.length > 0 && ` (${rules.join('; ')})`}
-                </dd>
-              </dl>
-            </li>
-          )
-        })}
-      </ol>
+      <details>
+        <summary className="cursor-pointer">
+          <h4 id={headingId} className="analysis__subheading inline">
+            {t('decisionHistory.heading')}
+          </h4>
+        </summary>
+        <ol className="checks__list mt-2">
+          {decisions.map((decision, index) => {
+            const [statusKey, tone] = STATUS[decision.status_after]
+            const snapshot = decision.snapshot
+            const outcome = snapshot?.policy_outcome ?? null
+            const failing = snapshot?.failing_rules.map((code) => t(RULE_LABEL[code])) ?? []
+            // Older snapshots lack the rules the verdict could not evaluate.
+            const notEvaluated = (snapshot?.not_evaluated_rules ?? []).map((code) =>
+              t(RULE_LABEL[code]),
+            )
+            const rules = [
+              ...(failing.length > 0
+                ? [t('decisionHistory.failing', { rules: failing.join(', ') })]
+                : []),
+              ...(notEvaluated.length > 0
+                ? [
+                    t('decisionHistory.notEvaluated', {
+                      rules: notEvaluated.join(', '),
+                    }),
+                  ]
+                : []),
+            ]
+            return (
+              <li key={`${decision.decided_at}-${index}`} className="check">
+                <p className="check__head">
+                  <span className="check__name">
+                    {t(ACTION_KEY[decision.action])}
+                    {!decision.current && (
+                      <span className="draft__earlier">{t('decisionHistory.earlier')}</span>
+                    )}
+                  </span>
+                  <span className={`check__status check__status--${tone}`}>{t(statusKey)}</span>
+                </p>
+                <dl className="metrics__list">
+                  <dt>{t('decisionHistory.by')}</dt>
+                  <dd>{decision.decided_by_name ?? t('decisionHistory.unknownUser')}</dd>
+                  <dt>{t('decisionHistory.when')}</dt>
+                  <dd>{formatDate(decision.decided_at)}</dd>
+                  <dt>{t('decisionHistory.reason')}</dt>
+                  <dd>{decision.reason ?? '—'}</dd>
+                  <dt>{t('decisionHistory.offer')}</dt>
+                  <dd>
+                    {snapshot === null
+                      ? t('decisionHistory.unavailable')
+                      : formatPln(snapshot.offer.value)}
+                  </dd>
+                  <dt>{t('decisionHistory.policy')}</dt>
+                  <dd>
+                    {snapshot === null
+                      ? t('decisionHistory.unavailable')
+                      : outcome === null
+                        ? t('decisionHistory.noVerdict')
+                        : t(OUTCOME_LABEL[outcome].key)}
+                    {rules.length > 0 && ` (${rules.join('; ')})`}
+                  </dd>
+                </dl>
+              </li>
+            )
+          })}
+        </ol>
+      </details>
     </section>
   )
 }

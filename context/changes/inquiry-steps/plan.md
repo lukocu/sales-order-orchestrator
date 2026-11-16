@@ -363,28 +363,28 @@ No data or API change. Users with an open inquiry get the stepper on reload.
 
 #### Automated
 
-- [x] 3.1 Lint, typecheck, tests and build pass
-- [x] 3.2 Data precedes actions and one primary button per state in Zapytanie and Warianty
-- [x] 3.3 AGENTS.md colour scan prints nothing
+- [x] 3.1 Lint, typecheck, tests and build pass — ee2c336
+- [x] 3.2 Data precedes actions and one primary button per state in Zapytanie and Warianty — ee2c336
+- [x] 3.3 AGENTS.md colour scan prints nothing — ee2c336
 
 #### Manual
 
-- [x] 3.4 Standard inquiry shows the standard banner and three not-needed steps
-- [x] 3.5 Needs-input reasons above the action bar; saving re-derives the step
+- [x] 3.4 Standard inquiry shows the standard banner and three not-needed steps — ee2c336
+- [x] 3.5 Needs-input reasons above the action bar; saving re-derives the step — ee2c336
 
 ### Phase 4: Kroki Akceptacja i Odpowiedź
 
 #### Automated
 
-- [ ] 4.1 Lint, typecheck, tests and build pass
-- [ ] 4.2 Justification and policy table render once
-- [ ] 4.3 Decision tests pass
-- [ ] 4.4 No VerdictInForce copy remains
+- [x] 4.1 Lint, typecheck, tests and build pass
+- [x] 4.2 Justification and policy table render once
+- [x] 4.3 Decision tests pass
+- [x] 4.4 No VerdictInForce copy remains
 
 #### Manual
 
-- [ ] 4.5 Sales approve waits for supervisor; supervisor approve reaches Odpowiedź
-- [ ] 4.6 Reject is visibly destructive and requires a reason
+- [x] 4.5 Sales approve waits for supervisor; supervisor approve reaches Odpowiedź
+- [x] 4.6 Reject is visibly destructive and requires a reason
 
 ### Phase 5: Stany, bramka i porządki
 

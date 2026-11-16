@@ -32,8 +32,10 @@ import { inquirySteps, stepBackReason, type StepBackKey, type StepId } from './i
 import InquiryStepper from './InquiryStepper'
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
+import { policyRerunOffered } from './policyLabels'
 import RecommendationSection from './RecommendationSection'
 import ReplyDraftSection, { DecisionHistory } from './ReplyDraftSection'
+import ReplyStep from './ReplyStep'
 import RunInspector from './RunInspector'
 
 type Props = {
@@ -249,14 +251,7 @@ function MailBody({ body }: { body: string }) {
   return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
 }
 
-function AnalysisPanel({
-  inquiryId,
-  body,
-  user,
-  onUnauthorized,
-  onOutcome,
-  onDraftStatus,
-}: Props) {
+function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
@@ -758,12 +753,28 @@ function AnalysisPanel({
         </div>
       </details>
     )
+    // One primary action in the approval step: re-running the policy comes before the draft's.
+    const policyRerun = policyRerunOffered(analysis.policy ?? null, analysis.recommendation ?? null)
     const replyDraft = (
       <ReplyDraftSection
         inquiryId={inquiryId}
         user={user}
         draft={analysis.draft ?? null}
         recommendation={analysis.recommendation ?? null}
+        verdict={
+          <PolicySection
+            inquiryId={inquiryId}
+            policy={analysis.policy ?? null}
+            recommendation={analysis.recommendation ?? null}
+            draft={analysis.draft ?? null}
+            primary={policyRerun}
+            disabled={busy !== null}
+            running={busy === 'evaluating'}
+            onRerun={reevaluatePolicy}
+            onUnauthorized={onUnauthorized}
+          />
+        }
+        primary={!policyRerun}
         disabled={busy !== null}
         drafting={busy === 'drafting'}
         deciding={busy === 'deciding'}
@@ -829,25 +840,16 @@ function AnalysisPanel({
       approval: (
         <>
           {mail}
-          {exception && (
-            <PolicySection
-              inquiryId={inquiryId}
-              policy={analysis.policy ?? null}
-              recommendation={analysis.recommendation ?? null}
-              disabled={busy !== null}
-              running={busy === 'evaluating'}
-              onRerun={reevaluatePolicy}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
           {exception && replyDraft}
           {decisions.length > 0 && <DecisionHistory inquiryId={inquiryId} decisions={decisions} />}
         </>
       ),
       reply: (
         <>
+          {exception && (
+            <ReplyStep inquiryId={inquiryId} draft={analysis.draft ?? null} decisions={decisions} />
+          )}
           {mail}
-          {exception && replyDraft}
         </>
       ),
     } satisfies Record<StepId, ReactNode>
@@ -878,14 +880,7 @@ function AnalysisPanel({
             approval: null,
             reply: null,
           }
-    return (
-      <InquiryStepper
-        steps={steps}
-        viewed={shown}
-        onView={showStep}
-        panels={panels}
-      />
-    )
+    return <InquiryStepper steps={steps} viewed={shown} onView={showStep} panels={panels} />
   }
 
   return (

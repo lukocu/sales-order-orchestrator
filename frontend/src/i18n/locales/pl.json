@@ -310,8 +310,6 @@
     "offerValue": "Wartość oferty",
     "margin": "Marża",
     "coverage": "Pokrycie",
-    "why": "Dlaczego ta rekomendacja?",
-    "citedSignals": "Przywołane sygnały",
     "verdictTitle": "Obowiązujący werdykt polityki",
     "verdictTitleEdited": "Obowiązujący werdykt polityki (oferta edytowana)",
     "verdictLabel": "{{title}}:",
@@ -339,7 +337,9 @@
       "unitPriceInvalid": "Cena jednostkowa musi być liczbą z co najwyżej dwoma miejscami po przecinku.",
       "editReasonRequired": "Podaj uzasadnienie edycji.",
       "saveEdit": "Zapisz edycję"
-    }
+    },
+    "chosenVariant": "Wybrany wariant",
+    "showEmail": "Pokaż całą wiadomość"
   },
   "inspector": {
     "open": "Jak to policzono?",
@@ -582,5 +582,9 @@
     "nextVariants": "Dalej: Warianty",
     "nextApproval": "Dalej: Akceptacja",
     "findings": "Ustalenia"
+  },
+  "reply": {
+    "heading": "Odpowiedź dla klienta",
+    "decision": "Decyzja"
   }
 }

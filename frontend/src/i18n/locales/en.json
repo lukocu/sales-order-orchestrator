@@ -310,8 +310,6 @@
     "offerValue": "Offer value",
     "margin": "Margin",
     "coverage": "Coverage",
-    "why": "Why this recommendation?",
-    "citedSignals": "Cited signals",
     "verdictTitle": "Policy verdict in force",
     "verdictTitleEdited": "Policy verdict in force (edited offer)",
     "verdictLabel": "{{title}}:",
@@ -339,7 +337,9 @@
       "unitPriceInvalid": "Unit price must be a number with at most two decimal places.",
       "editReasonRequired": "Enter a reason for the edit.",
       "saveEdit": "Save edit"
-    }
+    },
+    "chosenVariant": "Chosen variant",
+    "showEmail": "Show the full e-mail"
   },
   "inspector": {
     "open": "How was this calculated?",
@@ -582,5 +582,9 @@
     "nextVariants": "Next: Variants",
     "nextApproval": "Next: Approval",
     "findings": "Findings"
+  },
+  "reply": {
+    "heading": "Reply to the customer",
+    "decision": "Decision"
   }
 }
