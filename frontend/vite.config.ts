@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
@@ -10,7 +11,11 @@ export default defineConfig(({ mode }) => {
   const apiProxyTarget = env.API_PROXY_TARGET || 'http://localhost:8000'
 
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      // `@/*` comes from compilerOptions.paths in tsconfig.json / tsconfig.app.json.
+      tsconfigPaths: true,
+    },
     server: {
       proxy: {
         '/api': { target: apiProxyTarget, changeOrigin: true },
