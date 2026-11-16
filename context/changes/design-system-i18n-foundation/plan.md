@@ -580,12 +580,12 @@ There is no data migration. Rollback is a revert of the change's commits. The le
 
 #### Automated
 
-- [x] 5.1 Lint, typecheck, tests and build pass
-- [x] 5.2 The kitchen sink is excluded from the build
-- [x] 5.3 AGENTS.md and the tech-stack Frontend section exist
+- [x] 5.1 Lint, typecheck, tests and build pass — 2eeb085
+- [x] 5.2 The kitchen sink is excluded from the build — 2eeb085
+- [x] 5.3 AGENTS.md and the tech-stack Frontend section exist — 2eeb085
 
 #### Manual
 
-- [x] 5.4 Kitchen sink shows every 7-state cell or N/A with a reason
-- [x] 5.5 Screenshots saved at desktop and 375 px in both themes
-- [x] 5.6 Field borders and focus rings measure at least 3:1 in both themes
+- [x] 5.4 Kitchen sink shows every 7-state cell or N/A with a reason — 2eeb085
+- [x] 5.5 Screenshots saved at desktop and 375 px in both themes — 2eeb085
+- [x] 5.6 Field borders and focus rings measure at least 3:1 in both themes — 2eeb085
