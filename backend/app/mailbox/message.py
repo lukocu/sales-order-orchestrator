@@ -22,6 +22,8 @@ SENDER_NAME_LIMIT = 200
 SENDER_EMAIL_LIMIT = 320
 SUBJECT_LIMIT = 300
 BODY_LIMIT = 20_000
+# Decoded body text kept before HTML parsing and cleaning; HTML markup needs headroom.
+RAW_BODY_LIMIT = 10 * BODY_LIMIT
 
 NO_SUBJECT = "(no subject)"
 # Keeps a mail subject from looking like an eval inquiry, which the eval cleanup deletes.
@@ -45,7 +47,7 @@ _EXTRA_BLANK_LINES = re.compile(r"\n(?:[ \t]*\n){3,}")
 
 @dataclass(frozen=True)
 class MailCandidate:
-    """Data of a new `mailbox` inquiry; `external_id` is the hex SHA-256 of the message id."""
+    """Data of a new `mailbox` inquiry; `external_id` is a hex SHA-256, see `_external_id`."""
 
     external_id: str
     sender_name: str
@@ -77,20 +79,28 @@ def _convert(raw: bytes, fetched_at: datetime) -> MailCandidate | Skipped:
     if not address or "@" not in address or len(address) > SENDER_EMAIL_LIMIT:
         return Skipped("no_sender")
 
+    subject = _subject(msg)
     return MailCandidate(
-        external_id=_external_id(msg, raw),
+        external_id=_external_id(msg, raw, address, subject),
         sender_name=(" ".join(name.split()) or address)[:SENDER_NAME_LIMIT],
         sender_email=address,
-        subject=_subject(msg),
+        subject=subject,
         body=_body(msg),
         received_at=_received_at(msg, fetched_at),
     )
 
 
-def _external_id(msg: EmailMessage, raw: bytes) -> str:
+def _external_id(msg: EmailMessage, raw: bytes, address: str, subject: str) -> str:
+    """Stable across fetches of the same message.
+
+    The sender sets the Message-ID, so it is combined with the sender address and the subject:
+    another message that reuses the id is not mistaken for a duplicate.
+    """
     message_id = str(msg.get("Message-ID", "")).strip()
-    source = message_id.encode() if message_id else raw
-    return hashlib.sha256(source).hexdigest()
+    if not message_id:
+        return hashlib.sha256(raw).hexdigest()
+    source = "\n".join((message_id, address.lower(), subject))
+    return hashlib.sha256(source.encode()).hexdigest()
 
 
 def _subject(msg: EmailMessage) -> str:
@@ -103,16 +113,18 @@ def _subject(msg: EmailMessage) -> str:
 
 
 def _received_at(msg: EmailMessage, fetched_at: datetime) -> datetime:
-    value = str(msg.get("Date", "")).strip()
-    if not value:
-        return fetched_at
     try:
+        # The header is parsed on access, so an out-of-range year raises here already.
+        value = str(msg.get("Date", "")).strip()
+        if not value:
+            return fetched_at
         received_at = parsedate_to_datetime(value)
-    except TypeError, ValueError:
+    except TypeError, ValueError, OverflowError:
         return fetched_at
     if received_at.tzinfo is None:
         received_at = received_at.replace(tzinfo=UTC)
-    return received_at
+    # A date in the future would pin the message to the top of the inbox.
+    return min(received_at, fetched_at)
 
 
 def _body(msg: EmailMessage) -> str:
@@ -123,6 +135,7 @@ def _body(msg: EmailMessage) -> str:
     content = part.get_content()
     if not isinstance(content, str):
         return ""
+    content = content[:RAW_BODY_LIMIT]
     if part.get_content_type() == "text/html":
         content = _html_to_text(content)
     return _clean(content)

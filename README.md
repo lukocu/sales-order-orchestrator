@@ -191,8 +191,9 @@ docker compose run --rm backend uv run python -m app.mailbox.demo
 
 The last command appends three sample mails: plain text with a signature, an HTML-only
 message and a reply quoting an earlier message (the quote is cut off in the inquiry). It
-refuses (exit code 2) unless `MAILBOX_PROVIDER=imap`, `IMAP_SSL=false` and `IMAP_HOST` is
-`mail`, `localhost` or `127.0.0.1`, so it never writes to a real mailbox. Each run appends
+refuses (exit code 2) unless `MAILBOX_PROVIDER=imap`, `IMAP_SSL=false`, `IMAP_HOST` is
+`mail`, `localhost` or `127.0.0.1`, and `IMAP_USERNAME` and `IMAP_PASSWORD` are set, so it
+never writes to a real mailbox. Each run appends
 new copies, but they have fixed Message-IDs and are stored once. GreenMail listens on host
 port 3143 (`MAIL_IMAP_HOST_PORT` in `.env`) and loses its messages when it stops.
 

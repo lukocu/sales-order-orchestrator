@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.mailbox.client import Mailbox
 from app.mailbox.message import MailCandidate, to_candidate
@@ -78,5 +79,11 @@ def _fetch_lock(engine: Engine) -> Iterator[None]:
         try:
             yield
         finally:
-            connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": MAILBOX_LOCK_KEY})
-            connection.commit()
+            try:
+                connection.execute(
+                    text("SELECT pg_advisory_unlock(:key)"), {"key": MAILBOX_LOCK_KEY}
+                )
+                connection.commit()
+            except SQLAlchemyError:
+                # Closing the session releases its lock; the original error (if any) stays.
+                connection.invalidate()

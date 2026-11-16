@@ -14,9 +14,9 @@ SOURCE_LENGTH = 20
 class Inquiry(SQLModel, table=True):
     """A customer inquiry, shaped like an e-mail so real mailbox messages fit the same table.
 
-    `external_id` is the hex SHA-256 of the message's identifier (its Message-ID, or the raw
-    bytes when it has none); NULL for sample inquiries. `(source, external_id)` is unique, so
-    a message fetched twice is stored once.
+    `external_id` is the hex SHA-256 of the message's identifier (its Message-ID with the sender
+    address and subject, or the raw bytes when it has none); NULL for sample inquiries.
+    `(source, external_id)` is unique, so a message fetched twice is stored once.
     """
 
     __tablename__ = "inquiries"

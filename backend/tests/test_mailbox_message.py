@@ -2,6 +2,9 @@ import hashlib
 from datetime import UTC, datetime, timedelta, timezone
 from email.message import EmailMessage
 
+import pytest
+
+from app.mailbox import message
 from app.mailbox.message import MailCandidate, Skipped, to_candidate
 
 FETCHED_AT = datetime(2026, 11, 14, 12, 0, tzinfo=UTC)
@@ -48,7 +51,9 @@ def test_polish_plain_text_keeps_signature() -> None:
     candidate = _candidate(_plain(body))
 
     assert candidate == MailCandidate(
-        external_id=hashlib.sha256(b"<abc-123@acme.example>").hexdigest(),
+        external_id=hashlib.sha256(
+            b"<abc-123@acme.example>\nzakupy@acme.example\nZapytanie ofertowe"
+        ).hexdigest(),
         sender_name="Marek Nowak",
         sender_email="zakupy@acme.example",
         subject="Zapytanie ofertowe",
@@ -126,6 +131,16 @@ def test_original_message_separator_is_cut() -> None:
     assert _candidate(_plain(body)).body == "Proszę o ofertę.\n\nACME"
 
 
+def test_reused_message_id_from_another_sender_or_subject_is_not_a_duplicate() -> None:
+    first = _candidate(_plain("Pierwsze zapytanie."))
+    same_again = _candidate(_plain("Pierwsze zapytanie."))
+    other_sender = _candidate(_plain("Inne.", sender="Jan <biuro@biuromax.example>"))
+    other_subject = _candidate(_plain("Inne.", subject="Kolejne zapytanie"))
+
+    assert same_again.external_id == first.external_id
+    assert len({first.external_id, other_sender.external_id, other_subject.external_id}) == 3
+
+
 def test_without_message_id_hashes_raw_bytes() -> None:
     raw = _plain("Treść.", message_id=None)
 
@@ -159,6 +174,18 @@ def test_date_without_zone_is_utc() -> None:
 def test_missing_or_invalid_date_is_fetch_time() -> None:
     assert _candidate(_plain("Treść.", date=None)).received_at == FETCHED_AT
     assert _candidate(_plain("Treść.", date="not a date")).received_at == FETCHED_AT
+    # Year out of range: `parsedate_to_datetime` raises OverflowError, not ValueError.
+    overflow = _plain("Treść.", date=None).replace(
+        b"\nMessage-ID:", b"\nDate: Fri, 13 Nov 99999999999 09:30:00 +0000\nMessage-ID:"
+    )
+    assert b"99999999999" in overflow
+    assert _candidate(overflow).received_at == FETCHED_AT
+
+
+def test_date_in_the_future_is_fetch_time() -> None:
+    raw = _plain("Treść.", date="Sat, 13 Nov 2027 09:30:00 +0000")
+
+    assert _candidate(raw).received_at == FETCHED_AT
 
 
 def test_eval_prefixed_subject_gets_mail_prefix() -> None:
@@ -179,6 +206,24 @@ def test_long_subject_is_truncated_to_300() -> None:
 
 def test_long_body_is_limited() -> None:
     assert len(_candidate(_plain("y" * 25_000)).body) == 20_000
+
+
+def test_huge_html_body_is_cut_before_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    parsed_lengths: list[int] = []
+    html_to_text = message._html_to_text
+
+    def recording(html: str) -> str:
+        parsed_lengths.append(len(html))
+        return html_to_text(html)
+
+    monkeypatch.setattr(message, "_html_to_text", recording)
+    msg = _message()
+    msg.set_content("<p>" + "z" * (message.RAW_BODY_LIMIT * 3) + "</p>", subtype="html")
+
+    body = _candidate(msg.as_bytes()).body
+
+    assert parsed_lengths == [message.RAW_BODY_LIMIT]
+    assert len(body) == message.BODY_LIMIT
 
 
 def test_without_text_part_body_is_empty() -> None:

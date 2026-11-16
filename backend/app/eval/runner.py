@@ -330,7 +330,10 @@ def _insert_inquiry(engine: Engine, case: EvalCase) -> int:
 def _eval_inquiry_ids(engine: Engine) -> list[int]:
     with Session(engine) as session:
         ids = session.exec(
-            select(Inquiry.id).where(col(Inquiry.subject).startswith(SUBJECT_PREFIX))
+            # `source` too: inquiries read from the mailbox are never eval inquiries.
+            select(Inquiry.id).where(
+                col(Inquiry.subject).startswith(SUBJECT_PREFIX), col(Inquiry.source) == "sample"
+            )
         ).all()
     return [i for i in ids if i is not None]
 

@@ -1,7 +1,7 @@
 ---
 change_id: test-mailbox-ingest
 title: Test mailbox ingest
-status: implemented
+status: impl_reviewed
 created: 2026-11-14
 updated: 2026-11-16
 archived_at: null

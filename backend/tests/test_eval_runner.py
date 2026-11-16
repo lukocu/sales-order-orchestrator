@@ -248,6 +248,36 @@ def test_leftovers_of_an_interrupted_run_are_deleted(
     _assert_clean(migrated_engine, [leftover_id])
 
 
+def test_cleanup_keeps_a_mailbox_inquiry_with_an_eval_subject(
+    migrated_engine: Engine, sales_user: AuthUser
+) -> None:
+    with Session(migrated_engine) as session:
+        mail = Inquiry(
+            sender_name="Mail",
+            sender_email="zakupy@acme.example",
+            subject=f"{SUBJECT_PREFIX}from the mailbox",
+            body="Read from the mailbox.",
+            received_at=datetime.now(UTC),
+            source="mailbox",
+            external_id="f" * 64,
+        )
+        session.add(mail)
+        session.commit()
+        session.refresh(mail)
+        mail_id = mail.id
+    try:
+        _run(migrated_engine, [], sales_user)
+
+        with Session(migrated_engine) as session:
+            assert session.get(Inquiry, mail_id) is not None
+    finally:
+        with Session(migrated_engine) as session:
+            kept = session.get(Inquiry, mail_id)
+            if kept is not None:
+                session.delete(kept)
+                session.commit()
+
+
 def test_cli_refuses_without_an_llm_provider(
     monkeypatch: pytest.MonkeyPatch, migrated_engine: Engine
 ) -> None:
