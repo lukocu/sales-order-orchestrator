@@ -390,13 +390,13 @@ No data or API change. Users with an open inquiry get the stepper on reload.
 
 #### Automated
 
-- [x] 5.1 Lint, typecheck, tests and build pass
-- [x] 5.2 AGENTS.md colour scan with the extended list prints nothing
-- [x] 5.3 Kitchen sink is not in the production build
+- [x] 5.1 Lint, typecheck, tests and build pass — e2440f4
+- [x] 5.2 AGENTS.md colour scan with the extended list prints nothing — e2440f4
+- [x] 5.3 Kitchen sink is not in the production build — e2440f4
 
 #### Manual
 
-- [x] 5.4 Primary action within 900 px at 1440×900 in every step
-- [x] 5.5 No horizontal scroll at 375 px in every step
-- [x] 5.6 Keyboard-only pass: data before action, focus always visible
-- [x] 5.7 One final screenshot per breakpoint
+- [x] 5.4 Primary action within 900 px at 1440×900 in every step — e2440f4
+- [x] 5.5 No horizontal scroll at 375 px in every step — e2440f4
+- [x] 5.6 Keyboard-only pass: data before action, focus always visible — e2440f4
+- [x] 5.7 One final screenshot per breakpoint — e2440f4
