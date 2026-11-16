@@ -101,3 +101,39 @@ Text needs 4.5:1; non-text UI parts (input border, focus ring) need 3:1. `--bord
 | `--border` (decorative) #3d444d | `--card` #151b23 | 1.76:1 |
 
 Disabled controls (`opacity-50`) are exempt from WCAG contrast and are checked in Phase 5.
+
+## Phase 5 checks (measured 2026-11-16)
+
+Alpha colours are composited over the surface the control sits on (`--card` and `--background`); values are card / background.
+
+### Destructive variant (shadcn-generated `text-white`)
+
+| Pair | Light | Dark |
+|---|---|---|
+| white on `bg-destructive` (light) / `bg-destructive/60` (dark) | 5.36:1 | 6.70:1 / 7.05:1 |
+| `--destructive-foreground` (= `--card`) on `bg-destructive/60` (dark) | — | 2.58:1 / 2.46:1 |
+
+Both pass 4.5:1 with `text-white`, so the generated Button and Badge `destructive` variants stay as they are. Switching them to `text-destructive-foreground` would fail in dark, because of the `/60` background.
+
+### Disabled states
+
+shadcn disables with `opacity-50` on the whole control. WCAG exempts inactive controls; the label text also changes ("Signing in…", "Fetching…").
+
+| Control (text on its own fill, both at 50%) | Light | Dark |
+|---|---|---|
+| Primary button (Sign in, Fetch mail) | 2.16:1 / 2.18:1 | 2.47:1 / 2.39:1 |
+| Outline button (Sign out) | 3.06:1 / 3.11:1 | 3.89:1 / 4.04:1 |
+| Input text (not disabled today) | 3.16:1 / 3.11:1 | 4.58:1 / 4.68:1 |
+
+Readable, but the primary button is the faintest. No change in F-03.
+
+### Focus ring of the shadcn controls
+
+Button, Input and Badge use `outline-none` with a 3px ring, so the base `:focus-visible` outline does not show on them. shadcn generates that ring as `ring-ring/50`; in F-03 Phase 5 it was changed to a solid `focus-visible:ring-ring` in `button.tsx`, `input.tsx` and `badge.tsx`, because the 50% ring fails 3:1.
+
+| Pair | Light | Dark |
+|---|---|---|
+| `ring-ring/50` vs surface (shadcn default, rejected) | 2.16:1 / 2.11:1 | 2.36:1 / 2.39:1 |
+| solid `ring-ring` vs card / background (in use) | 5.19:1 / 4.88:1 | 5.59:1 / 6.11:1 |
+
+Card / background pairs. After a later `npx shadcn add`, re-apply the solid ring if the generated source brings `ring-ring/50` back.
