@@ -808,6 +808,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
               onRerun={rerunRecommender}
               primary={!orchestrationRerun}
               onUnauthorized={onUnauthorized}
+              expectedDeadline={analysis.fields.deadline}
             />
           )}
           {exception && (

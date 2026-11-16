@@ -256,8 +256,6 @@
     "line": "{{quantity}} × {{code}} {{name}} — {{source}}, available {{date}}, {{price}} PLN/pc",
     "lines": "Lines",
     "coverage": "Coverage",
-    "fulfilled": "Fulfilled",
-    "fulfilledOn": "{{date}}, {{deadline}}",
     "value": "Value",
     "cost": "Cost",
     "margin": "Margin",
@@ -265,9 +263,6 @@
     "resultCompleted": "Recommendation: Completed",
     "resultFailed": "Recommendation: Failed — no option chosen",
     "recommended": "Recommended {{date}}",
-    "chosen": "Recommended option",
-    "options": "Options",
-    "otherOptions": "Other options",
     "noOptions": "No option could be built from the orchestration results."
   },
   "optionKind": {
@@ -281,6 +276,29 @@
     "stockOnly": "Stock only (partial delivery)",
     "substitute": "substitute {{code}}",
     "supplier": "supplier {{supplier}}"
+  },
+  "variants": {
+    "caption": "Variant comparison",
+    "attribute": "Attribute",
+    "recommended": "Recommended",
+    "noRisks": "none",
+    "row": {
+      "deadline": "Deadline",
+      "risks": "Risks",
+      "confidence": "Confidence"
+    },
+    "deadline": {
+      "late_one": "{{count}} day after the deadline",
+      "late_few": "{{count}} days after the deadline",
+      "late_many": "{{count}} days after the deadline",
+      "late_other": "{{count}} days after the deadline",
+      "early_one": "{{count}} day before the deadline",
+      "early_few": "{{count}} days before the deadline",
+      "early_many": "{{count}} days before the deadline",
+      "early_other": "{{count}} days before the deadline",
+      "onDay": "on the deadline",
+      "none": "no deadline"
+    }
   },
   "draft": {
     "fallback": "The tailored paragraphs were unavailable; the draft uses the fixed fallback text.",

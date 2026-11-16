@@ -281,24 +281,24 @@ None. Display-only change, no stored data touched (lessons.md JSONB rule does no
 
 #### Automated
 
-- [x] 1.1 Unit tests for variantName cover all line combinations and the fallback
-- [x] 1.2 Frontend tests pass
-- [x] 1.3 Type checking passes
-- [x] 1.4 Lint passes
+- [x] 1.1 Unit tests for variantName cover all line combinations and the fallback — 10521b2
+- [x] 1.2 Frontend tests pass — 10521b2
+- [x] 1.3 Type checking passes — 10521b2
+- [x] 1.4 Lint passes — 10521b2
 
 #### Manual
 
-- [x] 1.5 Kitchen-sink edit-offer selector lists readable names in PL
+- [x] 1.5 Kitchen-sink edit-offer selector lists readable names in PL — 10521b2
 
 ### Phase 2: Comparison table in the Warianty step
 
 #### Automated
 
-- [ ] 2.1 New and rewritten RecommendationSection/VariantComparison tests pass
-- [ ] 2.2 Frontend tests pass
-- [ ] 2.3 Type checking passes
-- [ ] 2.4 Lint passes
-- [ ] 2.5 AGENTS.md colour scan with VariantComparison prints nothing
+- [x] 2.1 New and rewritten RecommendationSection/VariantComparison tests pass
+- [x] 2.2 Frontend tests pass
+- [x] 2.3 Type checking passes
+- [x] 2.4 Lint passes
+- [x] 2.5 AGENTS.md colour scan with VariantComparison prints nothing
 
 #### Manual
 

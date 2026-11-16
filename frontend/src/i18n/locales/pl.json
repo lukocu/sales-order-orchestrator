@@ -256,8 +256,6 @@
     "line": "{{quantity}} × {{code}} {{name}} — {{source}}, dostępne {{date}}, {{price}} PLN/szt.",
     "lines": "Pozycje",
     "coverage": "Pokrycie",
-    "fulfilled": "Realizacja",
-    "fulfilledOn": "{{date}}, {{deadline}}",
     "value": "Wartość",
     "cost": "Koszt",
     "margin": "Marża",
@@ -265,9 +263,6 @@
     "resultCompleted": "Rekomendacja: gotowa",
     "resultFailed": "Rekomendacja: błąd — nie wybrano żadnej opcji",
     "recommended": "Rekomendację wykonano {{date}}",
-    "chosen": "Rekomendowana opcja",
-    "options": "Opcje",
-    "otherOptions": "Pozostałe opcje",
     "noOptions": "Z wyników orkiestracji nie udało się zbudować żadnej opcji."
   },
   "optionKind": {
@@ -281,6 +276,29 @@
     "stockOnly": "Tylko stan (dostawa częściowa)",
     "substitute": "zamiennik {{code}}",
     "supplier": "dostawca {{supplier}}"
+  },
+  "variants": {
+    "caption": "Porównanie wariantów",
+    "attribute": "Cecha",
+    "recommended": "Rekomendowany",
+    "noRisks": "brak",
+    "row": {
+      "deadline": "Termin",
+      "risks": "Ryzyka",
+      "confidence": "Pewność"
+    },
+    "deadline": {
+      "late_one": "{{count}} dzień po terminie",
+      "late_few": "{{count}} dni po terminie",
+      "late_many": "{{count}} dni po terminie",
+      "late_other": "{{count}} dnia po terminie",
+      "early_one": "{{count}} dzień przed terminem",
+      "early_few": "{{count}} dni przed terminem",
+      "early_many": "{{count}} dni przed terminem",
+      "early_other": "{{count}} dnia przed terminem",
+      "onDay": "w dniu terminu",
+      "none": "brak terminu"
+    }
   },
   "draft": {
     "fallback": "Dopasowane akapity były niedostępne; szkic używa stałego tekstu zastępczego.",
