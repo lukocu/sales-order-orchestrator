@@ -77,5 +77,88 @@
     "label": "Język",
     "pl": "Polski",
     "en": "English"
+  },
+  "inspector": {
+    "open": "Jak to policzono?",
+    "title": "Inspektor przebiegu",
+    "description": "Plan i każdy przebieg tego zapytania: kroki, tokeny, koszt i czas.",
+    "close": "Zamknij",
+    "loading": "Wczytywanie analizy…",
+    "noAnalysis": "To zapytanie nie zostało jeszcze przeanalizowane, więc nie ma przebiegów do pokazania.",
+    "notRun": "Jeszcze nie uruchomiono",
+    "noTrace": "Ten przebieg nie został zapisany.",
+    "section": {
+      "parsing": "Parsowanie",
+      "checks": "Weryfikacja",
+      "orchestration": "Orkiestracja",
+      "recommendation": "Rekomendacja",
+      "policy": "Polityka",
+      "draft": "Szkic odpowiedzi"
+    },
+    "extractor": "Parser: {{name}}",
+    "recommender": "Rekomendator: {{name}}",
+    "stepsOf": "Kroki: {{run}}",
+    "column": {
+      "step": "Krok",
+      "kind": "Rodzaj",
+      "model": "Model",
+      "tokensIn": "Tokeny wej.",
+      "tokensOut": "Tokeny wyj.",
+      "cost": "Koszt",
+      "duration": "Czas",
+      "status": "Status"
+    },
+    "kind": {
+      "llm": "LLM",
+      "deterministic": "deterministyczny"
+    },
+    "stepOk": "ok",
+    "stepFailed": "błąd",
+    "stepFailedWith": "błąd ({{error}})",
+    "total": "Razem",
+    "cost": {
+      "notPriced": "bez wyceny",
+      "listPrice": "{{amount}} wg cennika",
+      "incomplete": "{{cost}} (część kroków bez wyceny)"
+    },
+    "grandTotal": {
+      "heading": "Suma wszystkich przebiegów",
+      "tokens": "Tokeny",
+      "tokensValue": "{{input}} wej. / {{output}} wyj.",
+      "cost": "Koszt",
+      "duration": "Czas"
+    },
+    "plan": {
+      "heading": "Plan",
+      "planner": "Planista: {{name}}",
+      "summary": "Podsumowanie planisty: {{summary}}",
+      "stage": "Etap {{stage}}",
+      "parallel": "równolegle",
+      "noTasks": "Plan nie ma zadań.",
+      "agent": "Agent",
+      "dependsOn": "Zależy od",
+      "none": "brak",
+      "reason": "Powód",
+      "status": "Status",
+      "attempts": "Próby",
+      "duration": "Czas",
+      "error": "Błąd",
+      "unknownError": "nieznany",
+      "rejectedChoice": "Odrzucony wybór planisty",
+      "noRejectedTasks": "(brak zadań)"
+    },
+    "taskStatus": {
+      "completed": "ukończone",
+      "failed": "błąd",
+      "skipped": "pominięte"
+    },
+    "errorKind": {
+      "planner_failed": "Błąd planisty",
+      "plan_rejected": "Plan odrzucony",
+      "capability_mismatch": "Brak agenta dla zadania",
+      "recommender_failed": "Błąd rekomendatora",
+      "choice_rejected": "Wybór odrzucony"
+    },
+    "errorCode": "{{kind}}: {{code}}"
   }
 }

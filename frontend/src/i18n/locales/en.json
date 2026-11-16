@@ -77,5 +77,88 @@
     "label": "Language",
     "pl": "Polski",
     "en": "English"
+  },
+  "inspector": {
+    "open": "How was this calculated?",
+    "title": "Run inspector",
+    "description": "The plan and every run of this inquiry: steps, tokens, cost and time.",
+    "close": "Close",
+    "loading": "Loading analysis…",
+    "noAnalysis": "This inquiry has not been analysed yet, so there are no runs to show.",
+    "notRun": "Not run yet",
+    "noTrace": "This run was not recorded.",
+    "section": {
+      "parsing": "Parsing",
+      "checks": "Checks",
+      "orchestration": "Orchestration",
+      "recommendation": "Recommendation",
+      "policy": "Policy",
+      "draft": "Reply draft"
+    },
+    "extractor": "Parser: {{name}}",
+    "recommender": "Recommender: {{name}}",
+    "stepsOf": "Steps: {{run}}",
+    "column": {
+      "step": "Step",
+      "kind": "Kind",
+      "model": "Model",
+      "tokensIn": "Tokens in",
+      "tokensOut": "Tokens out",
+      "cost": "Cost",
+      "duration": "Duration",
+      "status": "Status"
+    },
+    "kind": {
+      "llm": "LLM",
+      "deterministic": "deterministic"
+    },
+    "stepOk": "ok",
+    "stepFailed": "failed",
+    "stepFailedWith": "failed ({{error}})",
+    "total": "Total",
+    "cost": {
+      "notPriced": "not priced",
+      "listPrice": "{{amount}} list price",
+      "incomplete": "{{cost}} (some steps not priced)"
+    },
+    "grandTotal": {
+      "heading": "Grand total",
+      "tokens": "Tokens",
+      "tokensValue": "{{input}} in / {{output}} out",
+      "cost": "Cost",
+      "duration": "Duration"
+    },
+    "plan": {
+      "heading": "Plan",
+      "planner": "Planner: {{name}}",
+      "summary": "Planner summary: {{summary}}",
+      "stage": "Stage {{stage}}",
+      "parallel": "in parallel",
+      "noTasks": "The plan has no tasks.",
+      "agent": "Agent",
+      "dependsOn": "Depends on",
+      "none": "none",
+      "reason": "Reason",
+      "status": "Status",
+      "attempts": "Attempts",
+      "duration": "Duration",
+      "error": "Error",
+      "unknownError": "unknown",
+      "rejectedChoice": "Rejected planner choice",
+      "noRejectedTasks": "(no tasks)"
+    },
+    "taskStatus": {
+      "completed": "completed",
+      "failed": "failed",
+      "skipped": "skipped"
+    },
+    "errorKind": {
+      "planner_failed": "Planner failed",
+      "plan_rejected": "Plan rejected",
+      "capability_mismatch": "Capability mismatch",
+      "recommender_failed": "Recommender failed",
+      "choice_rejected": "Choice rejected"
+    },
+    "errorCode": "{{kind}}: {{code}}"
   }
 }

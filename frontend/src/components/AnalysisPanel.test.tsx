@@ -1,3 +1,4 @@
+import { createMemoryHistory, RouterContextProvider } from '@tanstack/react-router'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields, RunSummary } from '../api/analysis'
@@ -12,7 +13,9 @@ import {
   DELTA_AWAITING,
   DELTA_SUBMITTED,
 } from '../test/replyDraftFixtures'
+import { renderWithRouter } from '../test/renderWithRouter'
 import { SALES, SUPERVISOR } from '../test/userFixtures'
+import { createAppRouter } from '../router'
 import AnalysisPanel from './AnalysisPanel'
 
 type Handler = () => Response | Promise<Response>
@@ -205,14 +208,19 @@ function renderPanel(
   onOutcome = vi.fn(),
   { user = SALES, onDraftStatus = vi.fn() }: { user?: User; onDraftStatus?: () => void } = {},
 ) {
+  // The panel links to the run inspector, so it needs a router (not loaded: no route
+  // matches, the inspector stays closed).
+  const router = createAppRouter(createMemoryHistory({ initialEntries: ['/inquiries/7'] }))
   render(
-    <AnalysisPanel
-      inquiryId={7}
-      user={user}
-      onUnauthorized={onUnauthorized}
-      onOutcome={onOutcome}
-      onDraftStatus={onDraftStatus}
-    />,
+    <RouterContextProvider router={router}>
+      <AnalysisPanel
+        inquiryId={7}
+        user={user}
+        onUnauthorized={onUnauthorized}
+        onOutcome={onOutcome}
+        onDraftStatus={onDraftStatus}
+      />
+    </RouterContextProvider>,
   )
   return onUnauthorized
 }
@@ -801,5 +809,99 @@ describe('AnalysisPanel', () => {
     const onUnauthorized = renderPanel()
 
     await vi.waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+})
+
+describe('AnalysisPanel run inspector (routed)', () => {
+  const INQUIRY = {
+    id: 7,
+    sender_name: 'ACME Sp. z o.o.',
+    sender_email: 'zakupy@acme.example.com',
+    subject: 'Zapytanie ofertowe ABC-100',
+    received_at: '2026-11-09T10:00:00Z',
+    source: 'sample',
+    outcome: null,
+    draft_status: null,
+  }
+
+  // The whole app at `path`, signed in, with inquiry 7 and its analysis.
+  function stubApp(analysisReply: Handler) {
+    stubApi({
+      'GET /api/auth/me': () => json(200, SALES),
+      'GET /api/inquiries': () => json(200, [INQUIRY]),
+      'GET /api/inquiries/7': () => json(200, { ...INQUIRY, body: 'Prosimy o 80 szt. ABC-100.' }),
+      [`GET ${PATH}`]: analysisReply,
+    })
+  }
+
+  it('opens the inspector from the link and changes the address', async () => {
+    stubApp(() => json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
+
+    const router = await renderWithRouter('/inquiries/7')
+    fireEvent.click(await screen.findByRole('link', { name: 'How was this calculated?' }))
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7/run'))
+    expect(within(inspector).getByRole('table', { name: 'Steps: Parsing' })).toBeInTheDocument()
+    expect(within(inspector).getByRole('region', { name: 'Plan' })).toBeInTheDocument()
+  })
+
+  it('opens the inspector at its own address once the analysis has loaded', async () => {
+    let answer: (response: Response) => void = () => {}
+    stubApp(() => new Promise<Response>((resolve) => (answer = resolve)))
+
+    await renderWithRouter('/inquiries/7/run')
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    expect(within(inspector).getByText('Loading analysis…')).toBeInTheDocument()
+    answer(json(200, analysis()))
+    expect(
+      await within(inspector).findByRole('table', { name: 'Steps: Parsing' }),
+    ).toBeInTheDocument()
+  })
+
+  it('says when the inquiry has no analysis', async () => {
+    stubApp(() => json(200, null))
+
+    await renderWithRouter('/inquiries/7/run')
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    expect(
+      await within(inspector).findByText(
+        'This inquiry has not been analysed yet, so there are no runs to show.',
+      ),
+    ).toBeInTheDocument()
+    expect(within(inspector).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('returns to the inquiry with focus on the link after Esc', async () => {
+    stubApp(() => json(200, analysis()))
+
+    const router = await renderWithRouter('/inquiries/7/run')
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    await within(inspector).findByRole('table', { name: 'Steps: Parsing' })
+    fireEvent.keyDown(inspector, { key: 'Escape' })
+
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Run inspector' })).not.toBeInTheDocument(),
+    )
+    await vi.waitFor(() =>
+      expect(screen.getByRole('link', { name: 'How was this calculated?' })).toHaveFocus(),
+    )
+  })
+
+  it('returns to the inquiry with focus on the link after the close button', async () => {
+    stubApp(() => json(200, analysis()))
+
+    const router = await renderWithRouter('/inquiries/7')
+    fireEvent.click(await screen.findByRole('link', { name: 'How was this calculated?' }))
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }))
+
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+    await vi.waitFor(() =>
+      expect(screen.getByRole('link', { name: 'How was this calculated?' })).toHaveFocus(),
+    )
   })
 })

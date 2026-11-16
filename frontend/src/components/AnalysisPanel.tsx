@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link, useMatch, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   analyzeInquiry,
   decideAsSupervisor,
@@ -25,6 +27,7 @@ import { ApiError, UnauthorizedError } from '../api/client'
 import ChecksSection from './ChecksSection'
 import { formatDate } from './format'
 import { DecisionHistory } from './ReplyDraftSection'
+import RunInspector from './RunInspector'
 import RunMetrics from './RunMetrics'
 
 type Props = {
@@ -233,6 +236,12 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
 }
 
 function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
+  // this panel holds, so it never refetches.
+  const inspecting = useMatch({ from: '/inbox/inquiries/$inquiryId/run', shouldThrow: false })
+  const inspectorLink = useRef<HTMLAnchorElement>(null)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -622,9 +631,21 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
 
   return (
     <section className="analysis" aria-labelledby={id('heading')}>
-      <h3 id={id('heading')} className="analysis__heading">
-        Analysis
-      </h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 id={id('heading')} className="analysis__heading">
+          Analysis
+        </h3>
+        {analysis !== null && (
+          <Link
+            ref={inspectorLink}
+            to="/inquiries/$inquiryId/run"
+            params={{ inquiryId: String(inquiryId) }}
+            className="text-sm text-primary underline underline-offset-4"
+          >
+            {t('inspector.open')}
+          </Link>
+        )}
+      </div>
 
       {load.kind === 'loading' && <p className="muted">Loading analysis…</p>}
       {load.kind === 'error' && (
@@ -658,6 +679,16 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       )}
 
       {analysis !== null && draft !== null && renderResult(analysis, draft)}
+
+      <RunInspector
+        analysis={analysis}
+        loading={load.kind === 'loading'}
+        open={inspecting !== undefined}
+        onClose={() =>
+          void navigate({ to: '/inquiries/$inquiryId', params: { inquiryId: String(inquiryId) } })
+        }
+        returnFocusTo={inspectorLink}
+      />
     </section>
   )
 }

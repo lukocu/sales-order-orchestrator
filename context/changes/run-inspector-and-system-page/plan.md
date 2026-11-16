@@ -545,30 +545,30 @@ No data or backend migration. Rollback is a revert of the phase commits. Old boo
 
 #### Automated
 
-- [x] 2.1 Lint, typecheck, tests and build pass
-- [x] 2.2 No reference to the old footer or its CSS remains
-- [x] 2.3 AGENTS.md colour scan with SystemPage prints nothing
+- [x] 2.1 Lint, typecheck, tests and build pass — 76f48ff
+- [x] 2.2 No reference to the old footer or its CSS remains — 76f48ff
+- [x] 2.3 AGENTS.md colour scan with SystemPage prints nothing — 76f48ff
 
 #### Manual
 
-- [x] 2.4 /system readable in PL/EN, light/dark, 1440 and 375 px, Refresh by keyboard
-- [x] 2.5 Sign-in screen and inbox show no system status or migration number
+- [x] 2.4 /system readable in PL/EN, light/dark, 1440 and 375 px, Refresh by keyboard — 76f48ff
+- [x] 2.5 Sign-in screen and inbox show no system status or migration number — 76f48ff
 
 ### Phase 3: Run inspector
 
 #### Automated
 
-- [ ] 3.1 Lint, typecheck, tests and build pass
-- [ ] 3.2 Inspector unit and routed tests pass
-- [ ] 3.3 Generated ui files carry no 50% focus ring and no literal colours
-- [ ] 3.4 Every inspector key exists in both locales
-- [ ] 3.5 AGENTS.md colour scan with RunInspector prints nothing
+- [x] 3.1 Lint, typecheck, tests and build pass
+- [x] 3.2 Inspector unit and routed tests pass
+- [x] 3.3 Generated ui files carry no 50% focus ring and no literal colours
+- [x] 3.4 Every inspector key exists in both locales
+- [x] 3.5 AGENTS.md colour scan with RunInspector prints nothing
 
 #### Manual
 
-- [ ] 3.6 Inspector shows plan by stage, every run's steps and the grand total, PL/EN, light/dark
-- [ ] 3.7 Sheet traps focus, Esc closes, focus returns, reload on /run reopens
-- [ ] 3.8 At 375 px the Sheet fills the width with no page scroll
+- [x] 3.6 Inspector shows plan by stage, every run's steps and the grand total, PL/EN, light/dark
+- [x] 3.7 Sheet traps focus, Esc closes, focus returns, reload on /run reopens
+- [x] 3.8 At 375 px the Sheet fills the width with no page scroll
 
 ### Phase 4: Clean business layer
 

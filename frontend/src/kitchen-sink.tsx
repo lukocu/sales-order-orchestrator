@@ -7,8 +7,9 @@ import { createMemoryHistory, RouterContextProvider, RouterProvider } from '@tan
 import { useTranslation } from 'react-i18next'
 import './index.css'
 import './i18n'
+import type { Analysis, OrchestrationView, RunSummary } from './api/analysis'
 import type { User } from './api/auth'
-import type { InquirySummary } from './api/inquiries'
+import type { InquiryDetail, InquirySummary } from './api/inquiries'
 import AppNav from './components/AppNav'
 import AppShell from './components/AppShell'
 import Inbox from './components/Inbox'
@@ -22,6 +23,16 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { createAppRouter } from './router'
 import { SessionContext, type Session } from './session'
+import {
+  ACME_ORCHESTRATION,
+  COMPATIBILITY_TASK,
+  HISTORY_TASK,
+  orchestrationRun,
+  SUPPLIER_TASK,
+} from './test/orchestrationFixtures'
+import { ACME_POLICY } from './test/policyFixtures'
+import { ACME_RECOMMENDATION } from './test/recommendationFixtures'
+import { ACME_DRAFT } from './test/replyDraftFixtures'
 
 // --- Static data --------------------------------------------------------------------
 
@@ -50,6 +61,75 @@ const INQUIRIES = [
 ]
 const NONE_AWAITING = INQUIRIES.filter((item) => item.draft_status !== 'awaiting_supervisor')
 
+function detail(summary: InquirySummary): InquiryDetail {
+  return { ...summary, body: 'Dzień dobry, prosimy o ofertę na 80 szt. ABC-100 do piątku.' }
+}
+
+// --- Run inspector data (the test fixtures of the seed inquiries) ---------------------
+
+const PARSE_RUN: RunSummary = {
+  id: 3,
+  status: 'completed',
+  started_at: '2026-11-10T09:00:00Z',
+  duration_ms: 1520.4,
+  steps: [
+    {
+      id: 10, name: 'parse', kind: 'llm', status: 'ok', error_type: null, provider: 'groq',
+      model: 'openai/gpt-oss-120b', input_tokens: 1200, output_tokens: 300, cache_read_tokens: 0,
+      cache_write_tokens: 0, cost_usd: '0.0003600000', price_status: 'priced',
+      price_source: 'genai-prices 0.2.1', started_at: '2026-11-10T09:00:00Z', duration_ms: 1500.2,
+    },
+    {
+      id: 11, name: 'resolve-deadline', kind: 'deterministic', status: 'ok', error_type: null,
+      provider: null, model: null, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0,
+      cache_write_tokens: 0, cost_usd: null, price_status: 'not_applicable', price_source: null,
+      started_at: '2026-11-10T09:00:01Z', duration_ms: 0.4,
+    },
+  ],
+  totals: {
+    input_tokens: 1200, output_tokens: 300, cache_read_tokens: 0, cost_usd: '0.0003600000',
+    cost_complete: true, steps_duration_ms: 1500.6, duration_ms: 1520.4,
+  },
+}
+
+function analysisOf(inquiryId: number, overrides: Partial<Analysis> = {}): Analysis {
+  const fields = {
+    customer: 'ACME Sp. z o.o.', product_code: 'ABC-100', quantity: 80, deadline: '2026-11-06',
+    deadline_text: 'do piątku', substitute_allowed: true, price_kind: 'best_price' as const,
+    price_value: null, price_text: 'najlepsza cena',
+  }
+  return {
+    inquiry_id: inquiryId, extractor: 'groq', reference_date: '2026-11-02', fields,
+    model_fields: fields, uncertain: {}, corrected_fields: [],
+    analyzed_at: '2026-11-10T09:00:01Z', analyzed_by_name: 'Anna Nowak', corrected_at: null,
+    corrected_by_name: null, run: PARSE_RUN, checks: null, orchestration: ACME_ORCHESTRATION,
+    recommendation: ACME_RECOMMENDATION, policy: ACME_POLICY, draft: ACME_DRAFT, decisions: [],
+    ...overrides,
+  }
+}
+
+// A partial orchestration: the supplier agent failed twice, the rest of the plan ran.
+const FAILED_ORCHESTRATION: OrchestrationView = {
+  ...ACME_ORCHESTRATION,
+  status: 'partial',
+  tasks: [
+    COMPATIBILITY_TASK,
+    {
+      ...SUPPLIER_TASK,
+      status: 'failed',
+      steps: ['agent:supplier-availability', 'agent:supplier-availability'],
+      error_type: 'TimeoutError',
+      result: null,
+    },
+    HISTORY_TASK,
+  ],
+  run: orchestrationRun([
+    ['agent:substitute-compatibility', 1.5],
+    ['agent:supplier-availability', 2],
+    ['agent:customer-history', 3],
+  ]),
+}
+
 // --- fetch stub -----------------------------------------------------------------------
 // Every request gets a reply from `scope` when one is set, else from DEFAULTS. A scope is set
 // only while a scenario's own code runs synchronously: around its components' mount effects
@@ -66,6 +146,18 @@ const DEFAULTS: Replies = {
   'POST /api/auth/login': { status: 200, body: SUPERVISOR },
   'POST /api/auth/logout': { status: 204 },
   'POST /api/mailbox/fetch': { status: 200, body: { fetched: 3, created: 2, duplicates: 1, skipped: 0 } },
+  // The inquiry view behind the run inspector cells, one inquiry per state. Fetched after the
+  // session resolves, so they cannot come from a cell's scope.
+  ...Object.fromEntries(
+    INQUIRIES.map((item): [string, Reply] => [`GET /api/inquiries/${item.id}`, { status: 200, body: detail(item) }]),
+  ),
+  'GET /api/inquiries/1/analysis': { status: 200, body: analysisOf(1) },
+  'GET /api/inquiries/2/analysis': 'pending',
+  'GET /api/inquiries/3/analysis': { status: 200, body: null },
+  'GET /api/inquiries/4/analysis': {
+    status: 200,
+    body: analysisOf(4, { orchestration: FAILED_ORCHESTRATION, recommendation: null, policy: null, draft: null }),
+  },
 }
 let scope: Replies | null = null
 
@@ -152,6 +244,39 @@ function RoutedApp({ replies, path = '/' }: { replies: Replies; path?: string })
 }
 
 const SESSION: Session = { user: SUPERVISOR, onUnauthorized: () => {} }
+
+// The whole app at inquiry `inquiryId`. The run inspector is a modal Sheet over the page, so
+// the cell opens it only on request: the button (or the "How was this calculated?" link)
+// moves the cell's own router to /inquiries/$id/run; Esc or Close returns.
+function InspectorCell({ inquiryId }: { inquiryId: number }) {
+  const [router] = useState(() => memoryRouter(`/inquiries/${inquiryId}`))
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    let live = true
+    router.load().then(
+      () => live && setReady(true),
+      (error: unknown) => console.error(error),
+    )
+    return () => {
+      live = false
+    }
+  }, [router])
+  if (!ready) return null
+  const open = () =>
+    void router.navigate({ to: '/inquiries/$inquiryId/run', params: { inquiryId: String(inquiryId) } })
+  return (
+    <>
+      <div className="border-b bg-card px-3 py-2">
+        <Button type="button" size="sm" variant="outline" onClick={open}>
+          Open run inspector
+        </Button>
+      </div>
+      <Stub replies={SIGNED_IN}>
+        <RouterProvider router={router} />
+      </Stub>
+    </>
+  )
+}
 
 // A view outside App (Inbox, AppNav): the signed-in session and a router for its links.
 function Routed({ children }: { children: ReactNode }) {
@@ -328,6 +453,9 @@ function KitchenSink() {
           <Cell label="System page (/system): ok, with Refresh">
             <SystemPage />
           </Cell>
+          <Cell label="Run inspector: every run, the plan by stage and the grand total (inquiry 1)" wide shell>
+            <InspectorCell inquiryId={1} />
+          </Cell>
         </Section>
 
         <Section state="hover" caption="Forced hover look (static classes matching each hover: rule). Hover the real controls in “default” to compare.">
@@ -445,6 +573,9 @@ function KitchenSink() {
               <SystemPage />
             </Stub>
           </Cell>
+          <Cell label="Run inspector: a failed agent task with its error type (inquiry 4)" wide shell>
+            <InspectorCell inquiryId={4} />
+          </Cell>
           <NotApplicable items={[['Language switch', 'bundled resources, nothing to fail']]} />
         </Section>
 
@@ -465,6 +596,9 @@ function KitchenSink() {
               </Driven>
             </Stub>
           </Cell>
+          <Cell label="Run inspector: the inquiry has no analysis (inquiry 3)" wide shell>
+            <InspectorCell inquiryId={3} />
+          </Cell>
           <NotApplicable items={[['Login, header', 'always have content']]} />
         </Section>
 
@@ -483,6 +617,9 @@ function KitchenSink() {
             <Stub replies={HEALTH_PENDING}>
               <SystemPage />
             </Stub>
+          </Cell>
+          <Cell label="Run inspector: the analysis is loading (inquiry 2)" wide shell>
+            <InspectorCell inquiryId={2} />
           </Cell>
           <NotApplicable
             items={[
