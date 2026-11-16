@@ -1,8 +1,10 @@
 ---
 project: "Intelligent Sales Order Orchestration System"
-version: 1
+version: 2
 status: draft
 created: 2026-11-09
+amended: 2026-11-16
+amendment_source: context/audits/ux/2026-11-16-prism-analysis-flow.md
 context_type: greenfield
 product_type: web-app
 target_scale:
@@ -29,7 +31,11 @@ Insight: standardowe zapytania nie potrzebują modelu językowego. Deterministyc
 
 ### Secondary persona
 
-Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. niska marża, rabat ponad limit, duża wartość zamówienia).
+Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. niska marża, rabat ponad limit, duża wartość zamówienia). Sięga po system, gdy coś czeka na jego decyzję; nie przechodzi całego procesu zapytania.
+
+### Operator (perspektywa techniczna)
+
+Autor systemu albo osoba oceniająca go technicznie (np. rekruter na stanowisko AI Engineer). Interesuje go, jak system doszedł do wyniku: plan orchestratora, agenci, kolejność i równoległość kroków, tokeny, koszt, czas, stan systemu. To nie jest osobna rola z kontem — to perspektywa dostępna na żądanie dla zalogowanego użytkownika (zob. FR-015). Handlowiec i przełożony nie muszą jej oglądać, żeby wykonać swoją pracę.
 
 ## Success Criteria
 
@@ -40,6 +46,7 @@ Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. nis
 ### Secondary
 
 - Porównanie z bazą: ten sam zestaw zapytań przechodzi przez stały workflow i przez orchestrator, z porównaniem trafności, kosztu i czasu.
+- Handlowiec dochodzi do decyzji bez przedzierania się przez diagnostykę: na ekranie 1440×900 główna akcja bieżącego kroku jest widoczna bez przewijania (punkt wyjścia z audytu 2026-11-16: przycisk decyzji 8 051 px od góry, strona 10 031 px), a w przepływie handlowca nie ma tokenów, kosztów, czasów kroków ani identyfikatorów technicznych.
 
 ### Guardrails
 
@@ -52,13 +59,26 @@ Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. nis
 
 - **Given** zalogowany handlowiec i zapytanie, w którym zamówiona ilość przekracza stan, a klient dopuszcza zamiennik
 - **When** klika „Analyze request”
-- **Then** widzi sparsowane dane, wykryty wyjątek, plan orchestratora, rekomendację z uzasadnieniem i pewnością, werdykt polityki oraz szkic odpowiedzi; po Approve status to READY TO SEND
+- **Then** przechodzi przez kroki procesu, a w każdym widzi najpierw dane potrzebne do decyzji, potem jedną główną akcję:
+  1. **Zapytanie** — treść maila obok sparsowanych pól (niepewne oznaczone) i wykryty wyjątek opisany językiem biznesu („brakuje 30 szt.”);
+  2. **Warianty** — rekomendowany wariant i alternatywy porównane obok siebie (pokrycie, termin, wartość, marża, ryzyka) z uzasadnieniem i pewnością;
+  3. **Akceptacja** — werdykt polityki z regułami, które przeszły i nie przeszły;
+  4. **Odpowiedź** — szkic do klienta; po „Approve” status to READY TO SEND i handlowiec dostaje potwierdzenie.
+- **And** plan orchestratora, agenci, tokeny, koszt i czas nie są częścią tych kroków; handlowiec może je otworzyć na żądanie („Jak to policzono?”, zob. US-03).
 
 ### US-02: Przełożony rozstrzyga rekomendację odrzuconą przez politykę
 
 - **Given** rekomendacja, która nie spełnia reguły polityki (np. marża poniżej progu)
 - **When** handlowiec chce ją zatwierdzić
-- **Then** rekomendacja czeka na przełożonego, który ją zatwierdza lub odrzuca, a obaj widzą, która reguła nie przeszła
+- **Then** akcja nazywa się „Send to supervisor” (a nie „Approve”), handlowiec widzi potwierdzenie, że zapytanie czeka na przełożonego, a status widać w nagłówku zapytania i na liście
+- **And** przełożony widzi zapytanie w kolejce „Do akceptacji” (z licznikiem w nawigacji); po otwarciu widzi na górze reguły, które nie przeszły, rekomendowany wariant i akcje Zatwierdź / Odrzuć z komentarzem — bez przewijania przez cały proces
+- **And** obaj widzą, która reguła nie przeszła, a decyzja przełożonego wraca do handlowca jako widoczna zmiana statusu
+
+### US-03: Operator sprawdza, jak system doszedł do wyniku
+
+- **Given** przeanalizowane zapytanie z wyjątkiem
+- **When** zalogowany użytkownik otwiera „Inspektor przebiegu” z widoku zapytania
+- **Then** widzi plan orchestratora (etapy, zależności, równoległość), wynik każdego agenta oraz tokeny, koszt i czas każdego kroku i łącznie, bez opuszczania zapytania; stan systemu (API, baza, migracja) jest na osobnej stronie systemowej
 
 ## Functional Requirements
 
@@ -80,7 +100,7 @@ Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. nis
 
 ### Orkiestracja
 
-- FR-005: Handlowiec can zobaczyć plan orchestratora, który zależy od typu wyjątku i danych zapytania. Priority: must-have
+- FR-005: Użytkownik can zobaczyć plan orchestratora, który zależy od typu wyjątku i danych zapytania; plan jest częścią warstwy technicznej (inspektor przebiegu, FR-015), nie kroków handlowca. Priority: must-have
   > Socrates: Counter-argument considered: "plan przy 3 stałych sprawdzeniach jest pozorny." Resolution: plan musi zależeć od typu wyjątku (np. bez zgody na zamiennik nie ma sprawdzenia zamiennika).
 - FR-006: Orchestrator can delegować sprawdzenia do wyspecjalizowanych agentów (zgodność zamiennika, dostępność, historia klienta), uruchamiając równolegle tylko sprawdzenia niezależne. Priority: must-have
   > Socrates: Counter-argument considered: "sprawdzenia są zależne — dostępność zamiennika wymaga najpierw znalezienia zamiennika." Resolution: plan uwzględnia zależności; równolegle tylko to, co niezależne.
@@ -103,6 +123,19 @@ Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. nis
 - FR-011: Handlowiec can zatwierdzić, edytować lub odrzucić szkic; zatwierdzenie ustawia status READY TO SEND, wysyłka jest symulowana; zmiana ceny, ilości lub produktu w edycji ponownie uruchamia politykę. Priority: must-have
   > Socrates: Counter-argument considered: "edycja może obejść politykę (np. ręczne obniżenie ceny)." Resolution: zmiana ceny, ilości lub produktu ponownie uruchamia politykę.
 
+### Interfejs i architektura informacji
+
+Źródło: audyt UX + WCAG z 2026-11-16 (`context/audits/ux/2026-11-16-prism-analysis-flow.md`). Wymagania funkcjonalne M-1 zostają bez zmian; ta sekcja zmienia, **gdzie i w jakiej kolejności** użytkownik je widzi.
+
+- FR-015: Interfejs ma dwie warstwy. **Biznesowa** (domyślna): zapytanie, klient, warianty, polityka, odpowiedź, statusy. **Techniczna** (na żądanie): plan orchestratora, agenci, tokeny, koszt i czas kroków (inspektor przebiegu otwierany z widoku zapytania) oraz stan systemu i migracje (osobna strona systemowa, tylko po zalogowaniu). W warstwie biznesowej nie pojawiają się identyfikatory techniczne (nazwy agentów, `deterministic`, nazwy dostawcy modelu, numery migracji, surowe identyfikatory wariantów). Priority: must-have
+  > Socrates: Counter-argument considered: "ukrycie metryk osłabia główny atut projektu (orkiestracja i koszt widoczne dla oceniającego)." Resolution: metryki nie znikają, tylko zmieniają miejsce — inspektor przebiegu jest jedno kliknięcie od zapytania, a strona systemowa ma własny adres.
+- FR-016: Proces zapytania jest podzielony na kroki: Zapytanie → Warianty → Akceptacja → Odpowiedź. Każdy krok pokazuje najpierw dane potrzebne do decyzji, potem jedną wyróżnioną główną akcję; akcje destrukcyjne (Reject, Re-analyze kasujące poprawki) są wizualnie odróżnione. Każda informacja jest pokazana raz (uzasadnienie i tabela polityki nie są duplikowane w szkicu). Priority: must-have
+  > Socrates: Counter-argument considered: "proces nie jest liniowy — polityka może skierować do przełożonego, przełożony odrzuca, Re-analyze kasuje poprawki, edycja szkicu ponownie uruchamia politykę." Resolution: kroki pokazują postęp, a nie wymuszają kolejności; status zapytania decyduje, który krok jest aktywny, a powrót do wcześniejszego kroku (po odrzuceniu, edycji, ponownej analizie) jest jawny i unieważnia widoczne dalej wyniki.
+- FR-017: Handlowiec can porównać warianty realizacji obok siebie (pokrycie, termin względem oczekiwanego, wartość, marża, ryzyka, pewność) pod czytelnymi nazwami („Stan + zamiennik ABC-110”), z wyróżnionym wariantem rekomendowanym. Priority: must-have
+- FR-018: Użytkownik zawsze widzi status zapytania: na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji. Etykieta akcji mówi, co się stanie („Approve” vs „Send to supervisor”, gdy polityka wymaga akceptacji). Priority: must-have
+- FR-019: Przełożony can otworzyć kolejkę „Do akceptacji” (z licznikiem w nawigacji), w której widok zapytania zaczyna się od reguł, które nie przeszły, rekomendowanego wariantu i akcji Zatwierdź / Odrzuć z komentarzem. Priority: must-have
+- FR-020: Skrzynka, zapytanie (z aktywnym krokiem), kolejka przełożonego, inspektor przebiegu i strona systemowa mają własne adresy URL, które można odświeżyć i wysłać innej osobie; wejście bez sesji prowadzi do logowania i wraca pod ten sam adres. Priority: should-have
+
 ### Ewaluacja
 
 - FR-012: Autor can puścić ten sam zestaw testowych zapytań przez stały workflow i przez orchestrator i porównać trafność, koszt i czas; każde testowe zapytanie ma zapisaną oczekiwaną decyzję. Priority: nice-to-have
@@ -110,7 +143,10 @@ Przełożony handlowca, wyłącznie w roli osoby akceptującej wyjątki (np. nis
 
 ## Non-Functional Requirements
 
-- Dla każdego przetworzonego zapytania operator widzi zużyte tokeny, koszt i czas każdego kroku oraz łącznie.
+- Dla każdego przetworzonego zapytania operator widzi zużyte tokeny, koszt i czas każdego kroku oraz łącznie — w inspektorze przebiegu (FR-015), nie w przepływie handlowca.
+- Główny przepływ (skrzynka, kroki zapytania, kolejka przełożonego) spełnia WCAG 2.2 AA w zakresie: kontrast tekstu ≥ 4.5:1 i granic pól/kontrolek ≥ 3:1 w obu motywach, widoczny fokus klawiatury na każdej kontrolce, komunikaty statusu ogłaszane czytnikom ekranu, kolejność czytania zgodna z kolejnością decyzji. Audyt 2026-11-16: granice pól 1.76:1 (ciemny) i 1.43:1 (jasny), brak własnego stylu fokusu.
+- Interfejs działa na desktopie i przy jednej szerokości mobilnej (375 px) bez poziomego przewijania strony; tabele na wąskim ekranie nie ukrywają kolumn bez sygnału.
+- Wygląd opiera się na jednym systemie projektowym w repozytorium: semantyczne tokeny (kolory, odstępy, promienie, typografia) i współdzielone komponenty; widoki nie zawierają literałów kolorów ani jednorazowych wartości.
 
 ## Business Logic
 
@@ -126,8 +162,9 @@ Użytkownik spotyka regułę po kliknięciu „Analyze request” dla zapytania 
 
 - Dostęp przez logowanie; każdy użytkownik ma konto i jedną rolę.
 - **Handlowiec**: widzi zapytania i rekomendacje, przygotowuje i wysyła oferty.
-- **Przełożony**: wszystko, co handlowiec, plus zatwierdza lub odrzuca wyjątki skierowane przez policy engine do akceptacji człowieka.
-- Niezalogowany użytkownik nie ma dostępu do żadnych danych.
+- **Przełożony**: wszystko, co handlowiec, plus zatwierdza lub odrzuca wyjątki skierowane przez policy engine do akceptacji człowieka; ma kolejkę „Do akceptacji” (FR-019).
+- **Warstwa techniczna** (inspektor przebiegu, strona systemowa) jest dostępna dla każdego zalogowanego użytkownika na żądanie; nie jest osobną rolą.
+- Niezalogowany użytkownik nie ma dostępu do żadnych danych — także do stanu systemu i numeru migracji w interfejsie (publiczny `/api/health` dla platformy wdrożeniowej zostaje).
 
 ## Non-Goals
 
@@ -135,6 +172,8 @@ Użytkownik spotyka regułę po kliknięciu „Analyze request” dla zapytania 
 - Brak wysyłki prawdziwych maili — wysyłka jest symulowana; skrzynka e-mail służy tylko do odczytu.
 - Brak autonomicznej wysyłki — system nigdy sam nie wysyła oferty, nawet gdy polityka przechodzi.
 - Dane testowe nie odwzorowują realnych niespójności (np. nieaktualnych stanów) — świadome ograniczenie MVP (z rundy Sokratesa przy FR-003).
+- Brak własnego brandingu, landing page'a i pełnej biblioteki komponentów — system projektowy obejmuje tylko tokeny i komponenty używane przez główny przepływ.
+- Brak wielojęzyczności interfejsu — jeden język UI (zob. Open Question 5).
 
 ## Open Questions
 
@@ -142,3 +181,5 @@ Użytkownik spotyka regułę po kliknięciu „Analyze request” dla zapytania 
 2. **Problem nie jest zwalidowany.** Koszt dziś nie jest zmierzony (brak danych o czasie przygotowania oferty i częstotliwości wyjątków); Mom Test zaplanowany, niewykonany. — Owner: autor. Block: no (projekt świadomie hipotetyczny).
 3. **Priorytet zapytań przy większej skali.** Notatka skali: przy dużej liczbie wyjątków kolejność ich obsługi staje się częścią reguły. Poza zakresem MVP (skala: kilka osób) — czy zapisać to jako kierunek v2? — Owner: autor. Block: no.
 4. **Typy wyjątków w MVP.** Notatki opisują scenariusz braku pełnej ilości oraz scenariusz odrzucenia przez politykę; nie określają, czy pozostałe typy (konflikt cena–termin, nietypowy rabat, niejasne wymagania) są obsługiwane w MVP. — Owner: autor. By: przed planowaniem.
+5. **Język interfejsu.** Dziś UI jest po angielsku, a treść zapytań, uzasadnienia, reguły i szkic odpowiedzi po polsku; persona to polski handlowiec, a odbiorca portfolio może być anglojęzyczny. Jeden język UI: polski czy angielski? — Owner: autor. By: przed planowaniem widoku zapytania (M-2).
+6. **Uprawnienia przełożonego na zapytaniu czekającym na decyzję.** Dziś przełożony widzi też „Save corrections” i „Re-analyze” na cudzym zapytaniu w statusie „czeka na przełożonego”. Czy przełożony ma tylko decydować (Zatwierdź / Odrzuć), czy także poprawiać? — Owner: autor. By: przed planowaniem kolejki przełożonego (M-2).
