@@ -9,7 +9,7 @@ main_goal: quality
 top_blocker: decisions
 milestone_id: exception-flow-mvp
 milestone_seq: 1
-milestone_status: open # open | done
+milestone_status: done # open | done
 ---
 
 # Roadmap: Intelligent Sales Order Orchestration System
@@ -20,7 +20,7 @@ milestone_status: open # open | done
 
 ## Milestone
 
-**M-1: MVP przepływu wyjątku** — Status: open
+**M-1: MVP przepływu wyjątku** — Status: done
 
 - **Intent:** Udowodnić, że zapytanie z wyjątkiem przechodzi cały przepływ (zrozumienie → workflow → wykrycie wyjątku → plan i delegowanie → rekomendacja → werdykt polityki → szkic → decyzja człowieka) na danych firmowych, a zapytanie standardowe kończy się bez agentów.
 - **Source materials:** `context/foundation/prd.md` (v1)
@@ -63,7 +63,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | A      | Przepływ zapytania           | `F-01` → `S-01` → `S-02` → `S-03` → `S-04` → `S-05` → `S-06` → `S-07`   | Główna ścieżka US-01; gwiazda przewodnia S-05 leży na niej.                           |
 | B      | Śledzenie kosztów i ewaluacja | `F-02` → `S-10`                                                         | Cel „jakość”: śledzenie wchodzi przed pierwszym krokiem LLM; dołącza do A przy S-02 i S-06. |
 | C      | Akceptacja przełożonego      | `S-08`                                                                  | Dołącza do A przy S-06; może iść równolegle z S-07.                                   |
-| D      | Prawdziwa skrzynka           | `S-09`                                                                  | Dołącza do A przy S-01; zablokowane do rozstrzygnięcia Open Question 1.              |
+| D      | Prawdziwa skrzynka           | `S-09`                                                                  | Dołącza do A przy S-01; dostarczone jako ostatni krok MVP (Open Question 1).          |
 
 ## Baseline
 
@@ -214,7 +214,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-02, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-10
 - **Blockers:** —
 - **Unknowns:**
-  - Czy FR-013 jest ostatnim krokiem MVP, czy wchodzi od początku? (Open Roadmap Question 1) — Owner: autor. Block: yes.
+  - Czy FR-013 jest ostatnim krokiem MVP, czy wchodzi od początku? (Open Roadmap Question 1) — Owner: autor. Block: no — rozstrzygnięte: ostatni krok MVP.
 - **Risk:** Zasada autora („najpierw pionowy wycinek, zanim pojawi się prawdziwa poczta”) stoi w napięciu z must-have; ustawione jako niezależny tor, by rozstrzygnięcie nie zmieniało głównej ścieżki.
 - **Status:** done
 
@@ -235,22 +235,22 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 | Roadmap ID | Change ID                          | Suggested issue title                                         | Ready for `/10x-plan` | Notes                                  |
 | ---------- | ---------------------------------- | ------------------------------------------------------------- | --------------------- | -------------------------------------- |
-| F-01       | walking-skeleton-deploy            | Szkielet aplikacji (FastAPI + React + Postgres) z auto-deployem | yes                   | Run `/10x-plan walking-skeleton-deploy` |
-| F-02       | step-cost-tracing                  | Śledzenie tokenów, kosztu i czasu każdego kroku               | no                    | Czeka na F-01                          |
-| S-01       | login-and-inbox                    | Logowanie kontem testowym i skrzynka zapytań                  | no                    | Czeka na F-01                          |
-| S-02       | parse-inquiry                      | Analiza zapytania do ustrukturyzowanych pól z korektą         | no                    | Czeka na S-01, F-02                    |
-| S-03       | deterministic-checks-and-exception | Sprawdzenia bez agentów i wykrycie wyjątku                    | no                    | Czeka na S-02                          |
-| S-04       | orchestrator-plan-and-delegation   | Plan orchestratora i równoległe delegowanie do agentów        | no                    | Czeka na S-03                          |
-| S-05       | recommendation-with-confidence     | Rekomendacja z uzasadnieniem i pewnością                      | no                    | Gwiazda przewodnia; czeka na S-04      |
-| S-06       | policy-verdict                     | Werdykt polityki dla każdej reguły                            | no                    | Czeka na S-05                          |
-| S-07       | draft-and-human-decision           | Szkic odpowiedzi i Approve / Edit / Reject                    | no                    | Czeka na S-06                          |
-| S-08       | supervisor-approval                | Akceptacja przełożonego dla wyjątków polityki                 | no                    | Czeka na S-06                          |
-| S-09       | test-mailbox-ingest                | Odczyt testowej skrzynki e-mail                               | no                    | Zablokowane: Open Question 1           |
-| S-10       | workflow-vs-orchestrator-eval      | Porównanie workflow vs orchestrator (trafność, koszt, czas)   | no                    | Czeka na S-06, F-02                    |
+| F-01       | walking-skeleton-deploy            | Szkielet aplikacji (FastAPI + React + Postgres) z auto-deployem | no                    | Done                                   |
+| F-02       | step-cost-tracing                  | Śledzenie tokenów, kosztu i czasu każdego kroku               | no                    | Done                                   |
+| S-01       | login-and-inbox                    | Logowanie kontem testowym i skrzynka zapytań                  | no                    | Done                                   |
+| S-02       | parse-inquiry                      | Analiza zapytania do ustrukturyzowanych pól z korektą         | no                    | Done                                   |
+| S-03       | deterministic-checks-and-exception | Sprawdzenia bez agentów i wykrycie wyjątku                    | no                    | Done                                   |
+| S-04       | orchestrator-plan-and-delegation   | Plan orchestratora i równoległe delegowanie do agentów        | no                    | Done                                   |
+| S-05       | recommendation-with-confidence     | Rekomendacja z uzasadnieniem i pewnością                      | no                    | Done (gwiazda przewodnia)              |
+| S-06       | policy-verdict                     | Werdykt polityki dla każdej reguły                            | no                    | Done                                   |
+| S-07       | draft-and-human-decision           | Szkic odpowiedzi i Approve / Edit / Reject                    | no                    | Done                                   |
+| S-08       | supervisor-approval                | Akceptacja przełożonego dla wyjątków polityki                 | no                    | Done                                   |
+| S-09       | test-mailbox-ingest                | Odczyt testowej skrzynki e-mail                               | no                    | Done                                   |
+| S-10       | workflow-vs-orchestrator-eval      | Porównanie workflow vs orchestrator (trafność, koszt, czas)   | no                    | Done                                   |
 
 ## Open Roadmap Questions
 
-1. **Kolejność dostarczania odczytu prawdziwej skrzynki (FR-013) wobec zasady „najpierw pionowy wycinek, zanim pojawi się prawdziwa poczta”.** Notatki zawierają obie rzeczy: FR-013 jako must-have oraz zasadę autora, by prawdziwą pocztę dodać po pionowym wycinku. Czy FR-013 jest ostatnim krokiem MVP, czy wchodzi od początku? — Owner: autor. Block: S-09.
+1. **Kolejność dostarczania odczytu prawdziwej skrzynki (FR-013) wobec zasady „najpierw pionowy wycinek, zanim pojawi się prawdziwa poczta”.** Notatki zawierają obie rzeczy: FR-013 jako must-have oraz zasadę autora, by prawdziwą pocztę dodać po pionowym wycinku. Czy FR-013 jest ostatnim krokiem MVP, czy wchodzi od początku? — Owner: autor. Block: S-09. **Rozstrzygnięte:** ostatni krok MVP — S-09 dostarczone po pionowym wycinku (2026-11-16).
 2. **Problem nie jest zwalidowany.** Koszt dziś nie jest zmierzony (brak danych o czasie przygotowania oferty i częstotliwości wyjątków); Mom Test zaplanowany, niewykonany. — Owner: autor. Block: none (projekt świadomie hipotetyczny).
 3. **Priorytet zapytań przy większej skali.** Notatka skali: przy dużej liczbie wyjątków kolejność ich obsługi staje się częścią reguły. Poza zakresem MVP (skala: kilka osób) — czy zapisać to jako kierunek v2? — Owner: autor. Block: none.
 4. **Typy wyjątków w MVP.** Notatki opisują scenariusz braku pełnej ilości oraz scenariusz odrzucenia przez politykę; nie określają, czy pozostałe typy (konflikt cena–termin, nietypowy rabat, niejasne wymagania) są obsługiwane w MVP. — Owner: autor. Block: zakres S-03, S-04 (nie kolejność); rozstrzygnąć przed `/10x-plan` dla S-03.
@@ -265,6 +265,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Rejestracja i reset hasła** — Why parked: Sokrates przy FR-001; tylko gotowe konta testowe.
 
 ## Milestone History
+
+- **M-1: MVP przepływu wyjątku** (`exception-flow-mvp`) — closed 2026-11-16. Zapytanie z wyjątkiem przechodzi cały przepływ od odczytu skrzynki do decyzji człowieka, zapytanie standardowe kończy się bez agentów, a ewaluacja porównuje workflow z orchestratorem.
 
 ## Done
 
