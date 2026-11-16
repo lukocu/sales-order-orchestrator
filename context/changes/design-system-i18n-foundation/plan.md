@@ -531,25 +531,25 @@ There is no data migration. Rollback is a revert of the change's commits. The le
 
 #### Automated
 
-- [x] 1.1 Lint, typecheck, tests and build pass
-- [x] 1.2 No baseUrl in either tsconfig
-- [x] 1.3 An @/ import resolves in tests
+- [x] 1.1 Lint, typecheck, tests and build pass — 62e06b6
+- [x] 1.2 No baseUrl in either tsconfig — 62e06b6
+- [x] 1.3 An @/ import resolves in tests — 62e06b6
 
 #### Manual
 
-- [x] 1.4 Login, inbox and an analysed inquiry match the before screenshots
+- [x] 1.4 Login, inbox and an analysed inquiry match the before screenshots — 62e06b6
 
 ### Phase 2: Token values and components
 
 #### Automated
 
-- [ ] 2.1 Lint, typecheck, tests and build pass
-- [ ] 2.2 Raw colours appear only in the token blocks
-- [ ] 2.3 The five component files exist under src/components/ui
+- [x] 2.1 Lint, typecheck, tests and build pass
+- [x] 2.2 Raw colours appear only in the token blocks
+- [x] 2.3 The five component files exist under src/components/ui
 
 #### Manual
 
-- [ ] 2.4 Dark-mode token values switch and the inquiry view still matches
+- [x] 2.4 Dark-mode token values switch and the inquiry view still matches
 
 ### Phase 3: i18n foundation
 
