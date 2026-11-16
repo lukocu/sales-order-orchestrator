@@ -12,11 +12,6 @@ export type User = {
   role: Role
 }
 
-export const ROLE_LABEL: Record<Role, string> = {
-  salesperson: 'Salesperson',
-  supervisor: 'Supervisor',
-}
-
 function isUser(value: unknown): value is User {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>

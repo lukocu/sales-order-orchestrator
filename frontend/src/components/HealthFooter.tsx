@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { fetchHealth, type HealthResult } from '../api/health'
 
 type State = { kind: 'loading' } | HealthResult
 
-const STATUS_LABEL: Record<State['kind'], string> = {
-  loading: 'Checking…',
-  ok: 'All systems operational',
-  degraded: 'Degraded',
-  error: 'Unavailable',
-}
-
 function HealthFooter() {
+  const { t } = useTranslation()
   const [state, setState] = useState<State>({ kind: 'loading' })
 
   useEffect(() => {
@@ -23,17 +18,17 @@ function HealthFooter() {
 
   return (
     <footer className={`status status--${state.kind}`} aria-live="polite">
-      <h2>System status</h2>
-      <p className="status__summary">{STATUS_LABEL[state.kind]}</p>
+      <h2>{t('health.heading')}</h2>
+      <p className="status__summary">{t(`health.${state.kind}`)}</p>
       {state.kind === 'error' && <p className="status__detail">{state.message}</p>}
       {(state.kind === 'ok' || state.kind === 'degraded') && (
         <dl className="status__list">
-          <dt>API</dt>
-          <dd>ok</dd>
-          <dt>Database</dt>
+          <dt>{t('health.api')}</dt>
+          <dd>{t('health.apiOk')}</dd>
+          <dt>{t('health.database')}</dt>
           <dd>{state.health.database}</dd>
-          <dt>Migration</dt>
-          <dd>{state.health.migration ?? 'unknown'}</dd>
+          <dt>{t('health.migration')}</dt>
+          <dd>{state.health.migration ?? t('health.unknown')}</dd>
         </dl>
       )}
     </footer>

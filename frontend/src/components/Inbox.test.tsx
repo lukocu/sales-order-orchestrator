@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields } from '../api/analysis'
 import type { User } from '../api/auth'
@@ -8,6 +8,7 @@ import { DELTA_POLICY } from '../test/policyFixtures'
 import { DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
 import { DELTA_AWAITING, DELTA_SUBMITTED } from '../test/replyDraftFixtures'
 import { SALES, SUPERVISOR } from '../test/userFixtures'
+import i18n from '@/i18n'
 import Inbox from './Inbox'
 
 type Handler = () => Response | Promise<Response>
@@ -169,9 +170,9 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
 }
 
 function renderInbox(user: User) {
-  const onSignedOut = vi.fn()
-  render(<Inbox user={user} onSignedOut={onSignedOut} />)
-  return onSignedOut
+  const onUnauthorized = vi.fn()
+  render(<Inbox user={user} onUnauthorized={onUnauthorized} />)
+  return onUnauthorized
 }
 
 function listedSubjects(): string[] {
@@ -179,7 +180,7 @@ function listedSubjects(): string[] {
   if (list === null) return []
   return within(list)
     .getAllByRole('listitem')
-    .map((item) => item.querySelector('.inquiry__subject')?.textContent ?? '')
+    .map((item) => item.querySelector('[data-field="subject"]')?.textContent ?? '')
 }
 
 function fetchButton(): HTMLElement {
@@ -197,9 +198,9 @@ describe('Inbox', () => {
     renderInbox(SALES)
 
     const delta = await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
-    expect(within(delta).getByText('Awaiting supervisor')).toHaveClass(
-      'badge',
-      'badge--awaiting_supervisor',
+    expect(within(delta).getByText('Awaiting supervisor')).toHaveAttribute(
+      'data-variant',
+      'warning',
     )
     expect(within(delta).getByText('Exception')).toBeInTheDocument()
     const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
@@ -304,7 +305,7 @@ describe('Inbox', () => {
     fireEvent.click(fetchButton())
 
     const mailed = await screen.findByRole('button', { name: /Zapytanie z poczty/ })
-    expect(within(mailed).getByText('E-mail')).toHaveClass('badge', 'badge--mailbox')
+    expect(within(mailed).getByText('E-mail')).toHaveAttribute('data-variant', 'outline')
     const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
     expect(within(acme).queryByText('E-mail')).not.toBeInTheDocument()
     expect(screen.getByText('1 new, 3 already in inbox, 1 skipped')).toBeInTheDocument()
@@ -330,6 +331,24 @@ describe('Inbox', () => {
     expect(await screen.findByText('No new mail')).toBeInTheDocument()
   })
 
+  it('translates the fetch summary again after a language switch', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'POST /api/mailbox/fetch': () =>
+        json(200, { fetched: 3, created: 0, duplicates: 3, skipped: 0 }),
+    })
+
+    renderInbox(SALES)
+    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    fireEvent.click(fetchButton())
+    await screen.findByText('No new mail')
+
+    await act(() => i18n.changeLanguage('pl'))
+
+    expect(screen.getByText('Brak nowej poczty')).toBeInTheDocument()
+    expect(screen.queryByText('No new mail')).not.toBeInTheDocument()
+  })
+
   it('says when the mailbox is not configured', async () => {
     stubApi({
       'GET /api/inquiries': () => json(200, SUMMARIES),
@@ -340,7 +359,7 @@ describe('Inbox', () => {
     await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
 
-    expect(await screen.findByText('Mailbox not configured')).toHaveClass('error')
+    expect(await screen.findByText('Mailbox not configured')).toHaveClass('text-destructive')
     expect(listedSubjects()).toHaveLength(3)
   })
 

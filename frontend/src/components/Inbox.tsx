@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import type { Outcome, ReplyDraftStatus } from '../api/analysis'
-import { ApiError, logout, ROLE_LABEL, UnauthorizedError, type User } from '../api/auth'
+import { ApiError, UnauthorizedError, type User } from '../api/auth'
 import {
   fetchInquiries,
   fetchInquiry,
@@ -8,68 +10,73 @@ import {
   type InquirySummary,
 } from '../api/inquiries'
 import { fetchMail, type FetchResult } from '../api/mailbox'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import AnalysisPanel from './AnalysisPanel'
 import { formatDate } from './format'
 
 type Props = {
   user: User
-  // Called after Sign out and whenever the API answers 401 (session gone).
-  onSignedOut: () => void
+  // Called whenever the API answers 401 (session gone).
+  onUnauthorized: () => void
 }
 
+// State keeps raw results and server text; `t()` runs at render time, so a language
+// switch re-translates messages already on screen. A null message means "no server text".
 type ListState =
   | { kind: 'loading' }
   | { kind: 'ok'; inquiries: InquirySummary[] }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string | null }
 
 type DetailState =
   | { id: number; kind: 'ok'; inquiry: InquiryDetail }
-  | { id: number; kind: 'error'; message: string }
+  | { id: number; kind: 'error'; message: string | null }
 
-type FetchStatus = { kind: 'ok' | 'error'; message: string }
+type FetchStatus = { kind: 'ok'; result: FetchResult } | { kind: 'error'; error: unknown }
 
-// Text and colour: the badge never relies on colour alone.
-const OUTCOME_LABEL: Record<Outcome, string> = {
-  standard: 'Standard',
-  exception: 'Exception',
-  needs_input: 'Needs input',
-}
+// Text and colour: the badge never relies on colour alone. Outline marks an outcome.
+const OUTCOME_VARIANT = {
+  standard: 'success-outline',
+  exception: 'destructive-outline',
+  needs_input: 'warning-outline',
+} as const satisfies Record<Outcome, string>
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
+function errorText(error: unknown): string | null {
+  return error instanceof Error ? error.message : null
 }
 
 // "2 new, 3 already in inbox, 1 skipped"; `fetched` is the sum and adds nothing.
-function fetchSummary({ created, duplicates, skipped }: FetchResult): string {
+function fetchSummary({ created, duplicates, skipped }: FetchResult, t: TFunction): string {
   const parts: string[] = []
-  if (created === 0) parts.push('No new mail')
+  if (created === 0) parts.push(t('inbox.fetchNoNew'))
   else {
-    parts.push(`${created} new`)
-    if (duplicates > 0) parts.push(`${duplicates} already in inbox`)
+    parts.push(t('inbox.fetchNew', { count: created }))
+    if (duplicates > 0) parts.push(t('inbox.fetchDuplicates', { count: duplicates }))
   }
-  if (skipped > 0) parts.push(`${skipped} skipped`)
+  if (skipped > 0) parts.push(t('inbox.fetchSkipped', { count: skipped }))
   return parts.join(', ')
 }
 
 // The server's detail names the mailbox failure ("Mailbox not configured", "Mailbox
 // login failed"); only the cases a retry can fix get a hint.
-function fetchErrorMessage(error: unknown): string {
+function fetchErrorMessage(error: unknown, t: TFunction): string {
   if (error instanceof ApiError) {
-    if (error.status === 409) return 'A fetch is already in progress'
+    if (error.status === 409) return t('inbox.fetchInProgress')
     if (error.status === 502 && error.message === 'Mailbox unavailable') {
-      return 'Mailbox unavailable, try again'
+      return t('inbox.mailboxUnavailable')
     }
   }
-  return errorMessage(error)
+  return errorText(error) ?? t('inbox.genericError')
 }
 
-function Inbox({ user, onSignedOut }: Props) {
+function Inbox({ user, onUnauthorized }: Props) {
+  const { t } = useTranslation()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [listAttempt, setListAttempt] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
-  const [signingOut, setSigningOut] = useState(false)
-  const [signOutError, setSignOutError] = useState<string | null>(null)
   const [awaitingOnly, setAwaitingOnly] = useState(false)
   const [fetching, setFetching] = useState(false)
   const [fetchStatus, setFetchStatus] = useState<FetchStatus | null>(null)
@@ -80,12 +87,12 @@ function Inbox({ user, onSignedOut }: Props) {
       (inquiries) => setList({ kind: 'ok', inquiries }),
       (error: unknown) => {
         if (controller.signal.aborted) return
-        if (error instanceof UnauthorizedError) onSignedOut()
-        else setList({ kind: 'error', message: errorMessage(error) })
+        if (error instanceof UnauthorizedError) onUnauthorized()
+        else setList({ kind: 'error', message: errorText(error) })
       },
     )
     return () => controller.abort()
-  }, [listAttempt, onSignedOut])
+  }, [listAttempt, onUnauthorized])
 
   useEffect(() => {
     if (selectedId === null) return
@@ -94,12 +101,12 @@ function Inbox({ user, onSignedOut }: Props) {
       (inquiry) => setDetail({ id: selectedId, kind: 'ok', inquiry }),
       (error: unknown) => {
         if (controller.signal.aborted) return
-        if (error instanceof UnauthorizedError) onSignedOut()
-        else setDetail({ id: selectedId, kind: 'error', message: errorMessage(error) })
+        if (error instanceof UnauthorizedError) onUnauthorized()
+        else setDetail({ id: selectedId, kind: 'error', message: errorText(error) })
       },
     )
     return () => controller.abort()
-  }, [selectedId, onSignedOut])
+  }, [selectedId, onUnauthorized])
 
   // The panel reports the outcome after an analysis, a correction or a re-run of the
   // checks; the list item is updated in place, without fetching the list again.
@@ -150,33 +157,17 @@ function Inbox({ user, onSignedOut }: Props) {
     setFetchStatus(null)
     try {
       const result = await fetchMail()
-      setFetchStatus({ kind: 'ok', message: fetchSummary(result) })
+      setFetchStatus({ kind: 'ok', result })
       setListAttempt((n) => n + 1)
     } catch (error) {
       if (error instanceof UnauthorizedError) {
-        onSignedOut()
+        onUnauthorized()
         return
       }
-      setFetchStatus({ kind: 'error', message: fetchErrorMessage(error) })
+      setFetchStatus({ kind: 'error', error })
     } finally {
       setFetching(false)
     }
-  }
-
-  async function handleSignOut() {
-    setSigningOut(true)
-    setSignOutError(null)
-    try {
-      await logout()
-    } catch (error) {
-      // A 401 means the session is already gone, which is what Sign out wants.
-      if (!(error instanceof UnauthorizedError)) {
-        setSignOutError(errorMessage(error))
-        setSigningOut(false)
-        return
-      }
-    }
-    onSignedOut()
   }
 
   // The detail fetched for an earlier selection is stale until the new one arrives.
@@ -189,137 +180,153 @@ function Inbox({ user, onSignedOut }: Props) {
   const shown = list.kind !== 'ok' ? [] : awaitingOnly ? awaiting : list.inquiries
 
   return (
-    <section className="inbox">
-      <header className="inbox__header">
-        <div>
-          <p className="inbox__user">{user.display_name}</p>
-          <p className="inbox__role">{ROLE_LABEL[user.role]}</p>
-        </div>
-        <button type="button" onClick={handleSignOut} disabled={signingOut}>
-          Sign out
-        </button>
-      </header>
-      {signOutError && (
-        <p className="error" role="alert">
-          {signOutError}
-        </p>
-      )}
-
-      <div className="inbox__body">
-        <section className="card inbox__list" aria-labelledby="inbox-heading">
-          <div className="inbox__list-header">
-            <h2 id="inbox-heading">Inbox</h2>
-            <button type="button" onClick={handleFetchMail} disabled={fetching}>
-              {fetching ? 'Fetching…' : 'Fetch mail'}
-            </button>
+    <div className="grid items-start gap-4 md:grid-cols-5">
+      <Card
+        role="region"
+        aria-labelledby="inbox-heading"
+        className="min-w-0 gap-0 rounded-lg py-5 shadow-none md:col-span-2"
+      >
+        <CardContent className="grid gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <h2 id="inbox-heading" className="text-lg font-semibold">
+              {t('inbox.heading')}
+            </h2>
+            <Button type="button" onClick={handleFetchMail} disabled={fetching}>
+              {fetching ? t('inbox.fetching') : t('inbox.fetchMail')}
+            </Button>
           </div>
-          <div className="inbox__fetch-status" aria-live="polite">
+          <div className="empty:hidden" aria-live="polite">
             {fetchStatus !== null && (
-              <p className={fetchStatus.kind === 'error' ? 'error' : 'muted'}>
-                {fetchStatus.message}
+              <p
+                className={
+                  fetchStatus.kind === 'error' ? 'text-destructive' : 'text-muted-foreground'
+                }
+              >
+                {fetchStatus.kind === 'ok'
+                  ? fetchSummary(fetchStatus.result, t)
+                  : fetchErrorMessage(fetchStatus.error, t)}
               </p>
             )}
           </div>
-          {list.kind === 'loading' && <p className="muted">Loading inquiries…</p>}
+          {list.kind === 'loading' && (
+            <p className="text-muted-foreground">{t('inbox.loading')}</p>
+          )}
           {list.kind === 'error' && (
-            <div role="alert">
-              <p className="error">{list.message}</p>
-              <button type="button" onClick={retryList}>
-                Retry
-              </button>
+            <div role="alert" className="grid justify-items-start gap-2">
+              <p className="text-destructive">{list.message ?? t('inbox.genericError')}</p>
+              <Button type="button" variant="outline" onClick={retryList}>
+                {t('inbox.retry')}
+              </Button>
             </div>
           )}
           {list.kind === 'ok' && list.inquiries.length > 0 && (
-            <button
+            <Button
               type="button"
-              className="inbox__filter"
+              variant={awaitingOnly ? 'default' : 'outline'}
+              size="sm"
+              className="justify-self-start"
               aria-pressed={awaitingOnly}
               onClick={() => setAwaitingOnly((on) => !on)}
             >
-              Awaiting supervisor only ({awaiting.length})
-            </button>
+              {t('inbox.awaitingOnly', { count: awaiting.length })}
+            </Button>
           )}
           {list.kind === 'ok' && list.inquiries.length === 0 && (
-            <p className="muted">No inquiries yet.</p>
+            <p className="text-muted-foreground">{t('inbox.empty')}</p>
           )}
           {list.kind === 'ok' && list.inquiries.length > 0 && shown.length === 0 && (
-            <p className="muted">No inquiries awaiting a supervisor.</p>
+            <p className="text-muted-foreground">{t('inbox.emptyAwaiting')}</p>
           )}
           {shown.length > 0 && (
-            <ul className="inquiries">
-              {shown.map((inquiry) => (
-                <li key={inquiry.id}>
-                  <button
-                    type="button"
-                    className="inquiry"
-                    aria-current={inquiry.id === selectedId ? 'true' : undefined}
-                    onClick={() => setSelectedId(inquiry.id)}
-                  >
-                    <span className="inquiry__sender">{inquiry.sender_name}</span>
-                    <span className="inquiry__subject">{inquiry.subject}</span>
-                    <span className="inquiry__footer">
-                      <time className="inquiry__date" dateTime={inquiry.received_at}>
-                        {formatDate(inquiry.received_at)}
-                      </time>
-                      <span className="inquiry__badges">
-                        {inquiry.source === 'mailbox' && (
-                          <span className="badge badge--mailbox">E-mail</span>
-                        )}
-                        {inquiry.draft_status === 'awaiting_supervisor' && (
-                          <span className="badge badge--awaiting_supervisor">
-                            Awaiting supervisor
-                          </span>
-                        )}
-                        {inquiry.outcome !== null && (
-                          <span className={`badge badge--${inquiry.outcome}`}>
-                            {OUTCOME_LABEL[inquiry.outcome]}
-                          </span>
-                        )}
+            <ul className="grid gap-2">
+              {shown.map((inquiry) => {
+                const selected = inquiry.id === selectedId
+                return (
+                  <li key={inquiry.id}>
+                    <button
+                      type="button"
+                      className={cn(
+                        'grid w-full gap-0.5 rounded-md border bg-card px-4 py-2 text-left transition-colors hover:bg-muted',
+                        selected && 'border-primary bg-muted',
+                      )}
+                      aria-current={selected ? 'true' : undefined}
+                      onClick={() => setSelectedId(inquiry.id)}
+                    >
+                      <span className="font-semibold wrap-anywhere">{inquiry.sender_name}</span>
+                      <span className="wrap-anywhere" data-field="subject">
+                        {inquiry.subject}
                       </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
+                      <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                        <time
+                          className="text-sm text-muted-foreground"
+                          dateTime={inquiry.received_at}
+                        >
+                          {formatDate(inquiry.received_at)}
+                        </time>
+                        <span className="flex flex-wrap gap-1">
+                          {inquiry.source === 'mailbox' && (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              {t('inbox.badgeMailbox')}
+                            </Badge>
+                          )}
+                          {inquiry.draft_status === 'awaiting_supervisor' && (
+                            <Badge variant="warning">{t('inbox.badgeAwaiting')}</Badge>
+                          )}
+                          {inquiry.outcome !== null && (
+                            <Badge variant={OUTCOME_VARIANT[inquiry.outcome]}>
+                              {t(`outcome.${inquiry.outcome}`)}
+                            </Badge>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
-        </section>
+        </CardContent>
+      </Card>
 
-        <section className="card inbox__detail" aria-live="polite" aria-label="Inquiry">
-          {selectedId === null && <p className="muted">Select an inquiry to read it.</p>}
-          {selectedId !== null && currentDetail === null && (
-            <p className="muted">Loading inquiry…</p>
-          )}
-          {currentDetail?.kind === 'error' && (
-            <p className="error" role="alert">
-              {currentDetail.message}
+      <section
+        className="card inbox__detail md:col-span-3"
+        aria-live="polite"
+        aria-label={t('inbox.detailLabel')}
+      >
+        {selectedId === null && <p className="muted">{t('inbox.selectPrompt')}</p>}
+        {selectedId !== null && currentDetail === null && (
+          <p className="muted">{t('inbox.loadingDetail')}</p>
+        )}
+        {currentDetail?.kind === 'error' && (
+          <p className="error" role="alert">
+            {currentDetail.message ?? t('inbox.genericError')}
+          </p>
+        )}
+        {currentDetail?.kind === 'ok' && (
+          <article>
+            <h3 className="detail__subject">{currentDetail.inquiry.subject}</h3>
+            <p className="detail__meta">
+              {currentDetail.inquiry.sender_name} &lt;{currentDetail.inquiry.sender_email}&gt;
+              {' · '}
+              <time dateTime={currentDetail.inquiry.received_at}>
+                {formatDate(currentDetail.inquiry.received_at)}
+              </time>
             </p>
-          )}
-          {currentDetail?.kind === 'ok' && (
-            <article>
-              <h3 className="detail__subject">{currentDetail.inquiry.subject}</h3>
-              <p className="detail__meta">
-                {currentDetail.inquiry.sender_name} &lt;{currentDetail.inquiry.sender_email}&gt;
-                {' · '}
-                <time dateTime={currentDetail.inquiry.received_at}>
-                  {formatDate(currentDetail.inquiry.received_at)}
-                </time>
-              </p>
-              <div className="detail__body">{currentDetail.inquiry.body}</div>
-            </article>
-          )}
-          {currentDetail?.kind === 'ok' && (
-            <AnalysisPanel
-              key={currentDetail.inquiry.id}
-              inquiryId={currentDetail.inquiry.id}
-              user={user}
-              onUnauthorized={onSignedOut}
-              onOutcome={handleOutcome}
-              onDraftStatus={handleDraftStatus}
-            />
-          )}
-        </section>
-      </div>
-    </section>
+            <div className="detail__body">{currentDetail.inquiry.body}</div>
+          </article>
+        )}
+        {currentDetail?.kind === 'ok' && (
+          <AnalysisPanel
+            key={currentDetail.inquiry.id}
+            inquiryId={currentDetail.inquiry.id}
+            user={user}
+            onUnauthorized={onUnauthorized}
+            onOutcome={handleOutcome}
+            onDraftStatus={handleDraftStatus}
+          />
+        )}
+      </section>
+    </div>
   )
 }
 

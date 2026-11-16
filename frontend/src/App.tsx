@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchMe, UnauthorizedError, type User } from './api/auth'
+import { useTranslation } from 'react-i18next'
+import { fetchMe, logout, UnauthorizedError, type User } from './api/auth'
+import AppShell from './components/AppShell'
 import HealthFooter from './components/HealthFooter'
 import Inbox from './components/Inbox'
 import LoginForm from './components/LoginForm'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 type State =
   | { kind: 'loading' }
   | { kind: 'anonymous' }
   | { kind: 'authenticated'; user: User }
-  | { kind: 'error'; message: string }
+  // `message` is null when the failure carried no text.
+  | { kind: 'error'; message: string | null }
 
 function App() {
+  const { t } = useTranslation()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  const [signingOut, setSigningOut] = useState(false)
+  // Server text, or null for the translated fallback (translated at render time).
+  const [signOutError, setSignOutError] = useState<{ message: string | null } | null>(null)
 
   // No router: the session (GET /api/auth/me) picks the view.
   useEffect(() => {
@@ -24,7 +33,7 @@ function App() {
         setState(
           error instanceof UnauthorizedError
             ? { kind: 'anonymous' }
-            : { kind: 'error', message: error instanceof Error ? error.message : 'Unknown error' },
+            : { kind: 'error', message: error instanceof Error ? error.message : null },
         )
       },
     )
@@ -34,7 +43,28 @@ function App() {
   const handleSignedIn = useCallback((user: User) => {
     setState({ kind: 'authenticated', user })
   }, [])
-  const handleSignedOut = useCallback(() => setState({ kind: 'anonymous' }), [])
+  // After Sign out and whenever the API answers 401 (session gone).
+  const handleSignedOut = useCallback(() => {
+    setSigningOut(false)
+    setSignOutError(null)
+    setState({ kind: 'anonymous' })
+  }, [])
+
+  async function handleSignOut() {
+    setSigningOut(true)
+    setSignOutError(null)
+    try {
+      await logout()
+    } catch (error) {
+      // A 401 means the session is already gone, which is what Sign out wants.
+      if (!(error instanceof UnauthorizedError)) {
+        setSignOutError({ message: error instanceof Error ? error.message : null })
+        setSigningOut(false)
+        return
+      }
+    }
+    handleSignedOut()
+  }
 
   function retry() {
     setState({ kind: 'loading' })
@@ -42,23 +72,35 @@ function App() {
   }
 
   return (
-    <main className={state.kind === 'authenticated' ? 'page page--wide' : 'page'}>
-      <h1>Sales Order Orchestrator</h1>
-      {state.kind === 'loading' && <p className="muted">Loading…</p>}
+    <AppShell
+      user={state.kind === 'authenticated' ? state.user : null}
+      onSignOut={handleSignOut}
+      signingOut={signingOut}
+    >
+      {state.kind === 'loading' && <p className="text-muted-foreground">{t('app.loading')}</p>}
       {state.kind === 'error' && (
-        <section className="card" role="alert">
-          <p className="error">Could not check your session: {state.message}</p>
-          <button type="button" onClick={retry}>
-            Retry
-          </button>
-        </section>
+        <Card role="alert" className="gap-0 rounded-lg py-5 shadow-none">
+          <CardContent className="grid justify-items-start gap-3">
+            <p className="text-destructive">
+              {t('app.sessionError', { message: state.message ?? t('app.unknownError') })}
+            </p>
+            <Button type="button" variant="outline" onClick={retry}>
+              {t('app.retry')}
+            </Button>
+          </CardContent>
+        </Card>
       )}
       {state.kind === 'anonymous' && <LoginForm onSignedIn={handleSignedIn} />}
-      {state.kind === 'authenticated' && (
-        <Inbox user={state.user} onSignedOut={handleSignedOut} />
+      {state.kind === 'authenticated' && signOutError && (
+        <p className="text-destructive" role="alert">
+          {signOutError.message ?? t('inbox.genericError')}
+        </p>
       )}
-      <HealthFooter />
-    </main>
+      {state.kind === 'authenticated' && (
+        <Inbox user={state.user} onUnauthorized={handleSignedOut} />
+      )}
+      {state.kind === 'authenticated' && <HealthFooter />}
+    </AppShell>
   )
 }
 

@@ -1,0 +1,67 @@
+{
+  "app": {
+    "title": "Sales Order Orchestrator",
+    "loading": "Loading…",
+    "sessionError": "Could not check your session: {{message}}",
+    "unknownError": "Unknown error",
+    "retry": "Retry"
+  },
+  "login": {
+    "title": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "invalidCredentials": "Invalid username or password",
+    "failed": "Sign in failed"
+  },
+  "inbox": {
+    "signOut": "Sign out",
+    "heading": "Inbox",
+    "fetchMail": "Fetch mail",
+    "fetching": "Fetching…",
+    "loading": "Loading inquiries…",
+    "retry": "Retry",
+    "awaitingOnly": "Awaiting supervisor only ({{count}})",
+    "empty": "No inquiries yet.",
+    "emptyAwaiting": "No inquiries awaiting a supervisor.",
+    "badgeMailbox": "E-mail",
+    "badgeAwaiting": "Awaiting supervisor",
+    "detailLabel": "Inquiry",
+    "selectPrompt": "Select an inquiry to read it.",
+    "loadingDetail": "Loading inquiry…",
+    "genericError": "Something went wrong",
+    "fetchNoNew": "No new mail",
+    "fetchNew": "{{count}} new",
+    "fetchDuplicates": "{{count}} already in inbox",
+    "fetchSkipped": "{{count}} skipped",
+    "fetchInProgress": "A fetch is already in progress",
+    "mailboxUnavailable": "Mailbox unavailable, try again"
+  },
+  "role": {
+    "salesperson": "Salesperson",
+    "supervisor": "Supervisor"
+  },
+  "outcome": {
+    "standard": "Standard",
+    "exception": "Exception",
+    "needs_input": "Needs input"
+  },
+  "health": {
+    "heading": "System status",
+    "loading": "Checking…",
+    "ok": "All systems operational",
+    "degraded": "Degraded",
+    "error": "Unavailable",
+    "api": "API",
+    "apiOk": "ok",
+    "database": "Database",
+    "migration": "Migration",
+    "unknown": "unknown"
+  },
+  "language": {
+    "label": "Language",
+    "pl": "Polski",
+    "en": "English"
+  }
+}

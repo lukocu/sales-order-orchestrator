@@ -1,0 +1,775 @@
+/* Colour values live in index.css (:root tokens + legacy aliases --text, --muted, --bg, --ok, --warn, --error). */
+:root {
+  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+}
+
+.card {
+  min-width: 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.detail__subject {
+  margin: 0;
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.detail__meta {
+  margin: 0.25rem 0 1rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.detail__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.status--ok {
+  border-left-color: var(--ok);
+}
+
+.status--degraded {
+  border-left-color: var(--warn);
+}
+
+.status--error {
+  border-left-color: var(--error);
+}
+
+.status h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.status__summary {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.status__detail {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+.status__list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1.5rem;
+  margin: 1rem 0 0;
+}
+
+.status__list dt {
+  color: var(--muted);
+}
+
+.status__list dd {
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* Analysis */
+
+.analysis {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.analysis__heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.analysis__subheading {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.analysis__banner {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.analysis__meta,
+.analysis__notice {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.analysis__problem {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.analysis__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.analysis__confirm {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+}
+
+.analysis__confirm p {
+  margin: 0;
+}
+
+.analysis__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.analysis__form input:not([type='checkbox']),
+.analysis__form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field--uncertain {
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--warn);
+}
+
+.field__label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+
+.field__label label {
+  font-weight: 600;
+}
+
+.field__edited {
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.field__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field__row > input,
+.field__row > select {
+  flex: 1 1 10rem;
+  width: auto;
+}
+
+.field__phrase {
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.field__uncertain {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.field__reason {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--warn);
+  overflow-wrap: anywhere;
+}
+
+.field__check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.metrics__steps {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metrics__step {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.metrics__step--total {
+  border-color: var(--muted);
+}
+
+.metrics__name {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.metrics__list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.125rem 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.metrics__list dt {
+  color: var(--muted);
+}
+
+.metrics__list dd {
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+/* Checks */
+
+.checks {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.checks .analysis__subheading {
+  margin: 0;
+}
+
+.checks__stale {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+}
+
+.checks__stale p {
+  margin: 0;
+}
+
+.checks__banner {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.checks__banner--standard {
+  border-left-color: var(--ok);
+}
+
+.checks__banner--exception {
+  border-left-color: var(--error);
+}
+
+.checks__banner--needs-input {
+  border-left-color: var(--warn);
+}
+
+.checks__outcome {
+  margin: 0;
+  font-weight: 600;
+}
+
+.checks__line {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.checks__reasons {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.checks__uncertain {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--warn);
+  font-size: 0.875rem;
+  color: var(--warn);
+  overflow-wrap: anywhere;
+}
+
+.checks__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.check__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 0.25rem;
+}
+
+.check__name {
+  font-weight: 600;
+}
+
+.check__status {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.check__status--ok {
+  color: var(--ok);
+}
+
+.check__status--warn {
+  color: var(--warn);
+}
+
+.check__status--error {
+  color: var(--error);
+}
+
+.check__status--muted {
+  color: var(--muted);
+}
+
+/* Orchestration */
+
+.orchestration {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.orchestration .analysis__subheading {
+  margin: 0;
+}
+
+.orchestration__banner--ok {
+  border-left-color: var(--ok);
+}
+
+.orchestration__banner--warn {
+  border-left-color: var(--warn);
+}
+
+.orchestration__banner--error {
+  border-left-color: var(--error);
+}
+
+.orchestration__consent {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.orchestration__error {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--error);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.orchestration__stage {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.orchestration__stage-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.orchestration__result {
+  display: block;
+}
+
+/* Recommendation */
+
+.recommendation__chosen {
+  display: grid;
+  gap: 0.5rem;
+  border-color: var(--ok);
+  border-width: 2px;
+}
+
+.recommendation__band {
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.recommendation__band--high {
+  color: var(--ok);
+}
+
+.recommendation__band--medium {
+  color: var(--warn);
+}
+
+.recommendation__band--low {
+  color: var(--error);
+}
+
+.recommendation__why {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+}
+
+.recommendation__signals {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.recommendation__signal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.recommendation__signal-list--positive > li > span[aria-hidden] {
+  color: var(--ok);
+}
+
+.recommendation__signal-list--risk > li > span[aria-hidden] {
+  color: var(--warn);
+}
+
+.recommendation__signal-list--info > li > span[aria-hidden] {
+  color: var(--muted);
+}
+
+.recommendation__cited {
+  font-weight: 600;
+}
+
+.recommendation__cited-tag {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Policy */
+
+.policy__example {
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.policy__table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.policy__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.policy__table caption {
+  margin-bottom: 0.25rem;
+  text-align: left;
+}
+
+.policy__table th,
+.policy__table td {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.policy__table thead th {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Reply draft */
+
+.draft__status {
+  font-weight: 600;
+}
+
+.draft__fallback {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--warn);
+  font-size: 0.875rem;
+}
+
+.draft__email {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.draft__subject {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.draft__body {
+  margin: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.draft__why {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.draft__form {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.draft__form > label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.draft__form select,
+.draft__form textarea,
+.draft__lines input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+}
+
+.draft__lines input {
+  min-width: 5rem;
+}
+
+.draft__list-price {
+  display: block;
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.draft__earlier {
+  margin-left: 0.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/*
+  Every selector below is wrapped in :where(), so it has zero specificity: any rule
+  above wins over it, and it only replaces what Tailwind Preflight (`base` layer)
+  reset to the browser default.
+*/
+
+/* Preflight compatibility for the inquiry view — delete in S-11/S-12 */
+
+:where(.inbox__detail) :where(h1, h2, h3, h4, h5, h6) {
+  font-weight: bold;
+}
+
+:where(.inbox__detail) :where(h1) {
+  margin-block: 0.67em;
+  font-size: 2em;
+}
+
+:where(.inbox__detail) :where(h2) {
+  margin-block: 0.83em;
+  font-size: 1.5em;
+}
+
+:where(.inbox__detail) :where(h3) {
+  margin-block: 1em;
+  font-size: 1.17em;
+}
+
+:where(.inbox__detail) :where(h4) {
+  margin-block: 1.33em;
+  font-size: 1em;
+}
+
+:where(.inbox__detail) :where(h5) {
+  margin-block: 1.67em;
+  font-size: 0.83em;
+}
+
+:where(.inbox__detail) :where(h6) {
+  margin-block: 2.33em;
+  font-size: 0.67em;
+}
+
+:where(.inbox__detail) :where(ul, ol) {
+  margin-block: 1em;
+  padding-inline-start: 40px;
+}
+
+:where(.inbox__detail) :where(ul) {
+  list-style: disc;
+}
+
+:where(.inbox__detail) :where(ol) {
+  list-style: decimal;
+}
+
+:where(.inbox__detail) :where(ul, ol) :where(ul, ol) {
+  margin-block: 0;
+}
+
+:where(.inbox__detail) :where(ul, ol) :where(ul) {
+  list-style-type: circle;
+}
+
+:where(.inbox__detail) :where(dl) {
+  margin-block: 1em;
+}
+
+:where(.inbox__detail) :where(dd) {
+  margin-inline-start: 40px;
+}
+
+:where(.inbox__detail) :where(pre) {
+  margin-block: 1em;
+}
+
+/* The old global `button` look, still used by the buttons of the inquiry view. */
+:where(.inbox__detail) :where(button) {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  cursor: pointer;
+}
+
+:where(.inbox__detail) :where(button:disabled) {
+  cursor: default;
+  opacity: 0.6;
+}
+
+:where(.inbox__detail) :where(input[type='checkbox']) {
+  margin: 3px 3px 3px 4px;
+}
+
+:where(.inbox__detail) :where(textarea) {
+  resize: auto;
+}
