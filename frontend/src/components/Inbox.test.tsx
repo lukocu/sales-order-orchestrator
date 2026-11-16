@@ -169,9 +169,9 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
 }
 
 function renderInbox(user: User) {
-  const onSignedOut = vi.fn()
-  render(<Inbox user={user} onSignedOut={onSignedOut} />)
-  return onSignedOut
+  const onUnauthorized = vi.fn()
+  render(<Inbox user={user} onUnauthorized={onUnauthorized} />)
+  return onUnauthorized
 }
 
 function listedSubjects(): string[] {
@@ -179,7 +179,7 @@ function listedSubjects(): string[] {
   if (list === null) return []
   return within(list)
     .getAllByRole('listitem')
-    .map((item) => item.querySelector('.inquiry__subject')?.textContent ?? '')
+    .map((item) => item.querySelector('[data-field="subject"]')?.textContent ?? '')
 }
 
 function fetchButton(): HTMLElement {
@@ -197,9 +197,9 @@ describe('Inbox', () => {
     renderInbox(SALES)
 
     const delta = await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
-    expect(within(delta).getByText('Awaiting supervisor')).toHaveClass(
-      'badge',
-      'badge--awaiting_supervisor',
+    expect(within(delta).getByText('Awaiting supervisor')).toHaveAttribute(
+      'data-variant',
+      'warning',
     )
     expect(within(delta).getByText('Exception')).toBeInTheDocument()
     const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
@@ -304,7 +304,7 @@ describe('Inbox', () => {
     fireEvent.click(fetchButton())
 
     const mailed = await screen.findByRole('button', { name: /Zapytanie z poczty/ })
-    expect(within(mailed).getByText('E-mail')).toHaveClass('badge', 'badge--mailbox')
+    expect(within(mailed).getByText('E-mail')).toHaveAttribute('data-variant', 'outline')
     const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
     expect(within(acme).queryByText('E-mail')).not.toBeInTheDocument()
     expect(screen.getByText('1 new, 3 already in inbox, 1 skipped')).toBeInTheDocument()
@@ -340,7 +340,7 @@ describe('Inbox', () => {
     await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
 
-    expect(await screen.findByText('Mailbox not configured')).toHaveClass('error')
+    expect(await screen.findByText('Mailbox not configured')).toHaveClass('text-destructive')
     expect(listedSubjects()).toHaveLength(3)
   })
 

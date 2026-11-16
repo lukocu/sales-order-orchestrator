@@ -1,11 +1,18 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { login, UnauthorizedError, type User } from '../api/auth'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 type Props = {
   onSignedIn: (user: User) => void
 }
 
 function LoginForm({ onSignedIn }: Props) {
+  const { t } = useTranslation()
+  const id = useId()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -21,50 +28,58 @@ function LoginForm({ onSignedIn }: Props) {
     } catch (err) {
       setError(
         err instanceof UnauthorizedError
-          ? 'Invalid username or password'
+          ? t('login.invalidCredentials')
           : err instanceof Error
             ? err.message
-            : 'Sign in failed',
+            : t('login.failed'),
       )
       setSubmitting(false)
     }
   }
 
   return (
-    <section className="card login">
-      <h2>Sign in</h2>
-      <form className="login__form" onSubmit={handleSubmit}>
-        <label>
-          Username
-          <input
-            name="username"
-            autoComplete="username"
-            required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </label>
-        <label>
-          Password
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-    </section>
+    <Card className="gap-4 rounded-lg py-5 shadow-none">
+      <CardHeader>
+        <CardTitle className="text-lg">
+          <h2>{t('login.title')}</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <div className="grid gap-2">
+            <Label htmlFor={`${id}-username`}>{t('login.username')}</Label>
+            <Input
+              id={`${id}-username`}
+              name="username"
+              autoComplete="username"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor={`${id}-password`}>{t('login.password')}</Label>
+            <Input
+              id={`${id}-password`}
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          )}
+          <Button type="submit" className="justify-self-start" disabled={submitting}>
+            {submitting ? t('login.submitting') : t('login.submit')}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -555,26 +555,26 @@ There is no data migration. Rollback is a revert of the change's commits. The le
 
 #### Automated
 
-- [x] 3.1 Lint, typecheck, tests and build pass
-- [x] 3.2 The key-parity test passes
-- [x] 3.3 The language-switch test passes
+- [x] 3.1 Lint, typecheck, tests and build pass — 2517263
+- [x] 3.2 The key-parity test passes — 2517263
+- [x] 3.3 The language-switch test passes — 2517263
 
 ### Phase 4: App shell (the one view)
 
 #### Automated
 
-- [ ] 4.1 Lint, typecheck, tests and build pass
-- [ ] 4.2 The shell views have no hardcoded colour or arbitrary value
-- [ ] 4.3 ROLE_LABEL is gone
-- [ ] 4.4 The test asserting HealthFooter is absent for anonymous visitors passes
+- [x] 4.1 Lint, typecheck, tests and build pass
+- [x] 4.2 The shell views have no hardcoded colour or arbitrary value
+- [x] 4.3 ROLE_LABEL is gone
+- [x] 4.4 The test asserting HealthFooter is absent for anonymous visitors passes
 
 #### Manual
 
-- [ ] 4.5 App opens in Polish, switch persists and html lang follows
-- [ ] 4.6 Sign in, fetch, filter, select and sign out all work
-- [ ] 4.7 Roles show the right translated label
-- [ ] 4.8 Header fits at 375 px without horizontal scroll
-- [ ] 4.9 Inquiry view still matches its Phase 1 screenshots
+- [x] 4.5 App opens in Polish, switch persists and html lang follows
+- [x] 4.6 Sign in, fetch, filter, select and sign out all work
+- [x] 4.7 Roles show the right translated label
+- [x] 4.8 Header fits at 375 px without horizontal scroll
+- [x] 4.9 Inquiry view still matches its Phase 1 screenshots
 
 ### Phase 5: States, visual gate and guardrails
 

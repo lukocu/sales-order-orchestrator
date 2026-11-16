@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
+import i18n from './i18n'
 import type { Analysis, ChecksView } from './api/analysis'
 import type { User } from './api/auth'
 import type { InquiryDetail } from './api/inquiries'
@@ -215,6 +216,20 @@ describe('App', () => {
     )
   })
 
+  it('shows the Sign out error under the header and stays signed in', async () => {
+    stubApi({
+      ...SIGNED_IN_INBOX,
+      'POST /api/auth/logout': () => json(500, { detail: 'Logout failed' }),
+    })
+
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Logout failed')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled()
+    expect(screen.getByText('Anna Nowak')).toBeInTheDocument()
+  })
+
   it('returns to the sign-in form when the inbox answers 401', async () => {
     stubApi({ ...SIGNED_IN_INBOX, 'GET /api/inquiries': UNAUTHORIZED })
 
@@ -242,7 +257,7 @@ describe('App', () => {
     const newer = await screen.findByRole('button', { name: /Zapytanie o papier A4/ })
     const older = screen.getByRole('button', { name: /Tonery do drukarek/ })
     expect(within(newer).getByText('Exception')).toBeInTheDocument()
-    expect(older.querySelector('.badge')).toBeNull()
+    expect(older.querySelector('[data-slot="badge"]')).toBeNull()
 
     fireEvent.click(older)
     fireEvent.click(await screen.findByRole('button', { name: 'Analyze request' }))
@@ -273,12 +288,32 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
-  it('shows the health footer in both views', async () => {
+  it('shows the health footer when signed in', async () => {
     stubApi(SIGNED_IN_INBOX)
 
     render(<App />)
 
     expect(await screen.findByText('All systems operational')).toBeInTheDocument()
     expect(screen.getByText('0003_users_inquiries')).toBeInTheDocument()
+  })
+
+  it('hides the health footer on the sign-in screen', async () => {
+    const fetchMock = stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'System status' })).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/health', expect.anything())
+  })
+
+  it('opens in Polish when Polish is chosen', async () => {
+    await i18n.changeLanguage('pl')
+    stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
+
+    render(<App />)
+
+    expect(await screen.findByRole('button', { name: 'Zaloguj się' })).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('pl')
   })
 })
