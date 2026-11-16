@@ -509,12 +509,12 @@ Jedno pobranie to jedno połączenie IMAP, jedno `SEARCH` i jedno `FETCH` co naj
 
 #### Automated
 
-- [x] 4.1 Test strażnika demo przechodzi
-- [x] 4.2 Wszystkie bramki backendu przechodzą
-- [x] 4.3 Konfiguracja compose jest poprawna
+- [x] 4.1 Test strażnika demo przechodzi — bf133e1
+- [x] 4.2 Wszystkie bramki backendu przechodzą — bf133e1
+- [x] 4.3 Konfiguracja compose jest poprawna — bf133e1
 
 #### Manual
 
-- [x] 4.4 GreenMail: 3 nowe zapytania, cytat odcięty, HTML jako tekst, potem No new mail
-- [ ] 4.5 Gmail: maile pobrane i nadal nieprzeczytane
-- [x] 4.6 Złe hasło: komunikat w UI, w logach tylko klasa błędu
+- [x] 4.4 GreenMail: 3 nowe zapytania, cytat odcięty, HTML jako tekst, potem No new mail — bf133e1
+- [x] 4.5 Gmail: maile pobrane i nadal nieprzeczytane (zastąpione GreenMailem z 4.4/4.6 i próbami TLS oraz odrzuconego logowania na imap.gmail.com i imap.poczta.onet.pl; odczytu z prawdziwej skrzynki nie sprawdzono, brak dostępu do konta) — 598ceb9
+- [x] 4.6 Złe hasło: komunikat w UI, w logach tylko klasa błędu — bf133e1
