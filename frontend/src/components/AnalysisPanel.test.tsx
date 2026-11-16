@@ -1072,6 +1072,161 @@ describe('AnalysisPanel steps', () => {
   })
 })
 
+// The names of the default-variant buttons in the step panel on show.
+function primaryButtons(): string[] {
+  return Array.from(
+    screen
+      .getByRole('tabpanel')
+      .querySelectorAll<HTMLButtonElement>('button[data-variant="default"]'),
+  ).map((button) => button.textContent ?? '')
+}
+
+function follows(first: Element, second: Element): boolean {
+  return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+}
+
+describe('AnalysisPanel primary actions', () => {
+  const NEEDS_INPUT: ChecksView = {
+    ...EXCEPTION,
+    outcome: 'needs_input',
+    reasons: ['customer_missing'],
+  }
+  const STALE: ChecksView = { ...EXCEPTION, stale: true }
+  const WITH_EXCEPTION: Partial<Analysis> = { checks: EXCEPTION }
+  const ORCHESTRATED: Partial<Analysis> = { checks: EXCEPTION, orchestration: ACME_ORCHESTRATION }
+  const RECOMMENDED: Partial<Analysis> = { ...ORCHESTRATED, recommendation: ACME_RECOMMENDATION }
+
+  async function show(overrides: Partial<Analysis> | null, step: RegExp) {
+    stubApi({ [`GET ${PATH}`]: () => json(200, overrides === null ? null : analysis(overrides)) })
+    renderPanel()
+    await screen.findByRole('tabpanel')
+    await openStep(step)
+    await screen.findByRole('tab', { name: step, selected: true })
+  }
+
+  it.each<[string, Partial<Analysis> | null, string[]]>([
+    ['not analysed', null, ['Analyze request']],
+    ['checks missing', {}, ['Re-run checks']],
+    ['checks stale', { checks: STALE }, ['Re-run checks']],
+    ['an exception with current checks', WITH_EXCEPTION, ['Next: Variants']],
+    ['a standard inquiry', { checks: STANDARD }, []],
+    ['needs input', { checks: NEEDS_INPUT }, []],
+  ])('has the right primary action in Inquiry for %s', async (_name, overrides, expected) => {
+    await show(overrides, /Inquiry/)
+
+    expect(primaryButtons()).toEqual(expected)
+  })
+
+  it('makes Save corrections primary once a field is edited', async () => {
+    await show(WITH_EXCEPTION, /Inquiry/)
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '90' } })
+
+    expect(primaryButtons()).toEqual(['Save corrections'])
+  })
+
+  it('makes Save corrections primary once an uncertain field is marked reviewed', async () => {
+    await show({ checks: STALE, uncertain: { customer: 'Model: unclear' } }, /Inquiry/)
+    expect(primaryButtons()).toEqual(['Re-run checks'])
+    fireEvent.click(screen.getByLabelText('Looks right'))
+
+    expect(primaryButtons()).toEqual(['Save corrections'])
+  })
+
+  it('makes Save corrections primary for needs input after an edit', async () => {
+    await show({ checks: NEEDS_INPUT }, /Inquiry/)
+    fireEvent.change(screen.getByLabelText('Customer'), { target: { value: 'ACME' } })
+
+    expect(primaryButtons()).toEqual(['Save corrections'])
+  })
+
+  it('makes Re-analyze anyway destructive, not primary', async () => {
+    await show({ checks: STANDARD, corrected_at: '2026-11-10T09:05:00Z' }, /Inquiry/)
+    fireEvent.click(screen.getByRole('button', { name: 'Re-analyze' }))
+
+    expect(screen.getByRole('button', { name: 'Re-analyze anyway' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    )
+    expect(primaryButtons()).toEqual([])
+  })
+
+  it('moves to Variants from the primary Next button', async () => {
+    await show(WITH_EXCEPTION, /Inquiry/)
+    fireEvent.click(screen.getByRole('button', { name: 'Next: Variants' }))
+
+    expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Recommendation' })).toBeInTheDocument()
+  })
+
+  it('shows the fields, then the checks, then the action bar', async () => {
+    await show(WITH_EXCEPTION, /Inquiry/)
+
+    const checks = screen.getByRole('region', { name: 'Checks' })
+    const actions = screen.getByRole('group', { name: 'Actions' })
+    expect(checks).toContainElement(screen.getByText(/^Exception: insufficient stock/))
+    expect(follows(screen.getByLabelText('Customer'), checks)).toBe(true)
+    expect(follows(checks, actions)).toBe(true)
+  })
+
+  it.each<[string, Partial<Analysis>, string[]]>([
+    ['no orchestration', WITH_EXCEPTION, ['Re-run orchestrator']],
+    [
+      'a failed orchestration',
+      { checks: EXCEPTION, orchestration: { ...ACME_ORCHESTRATION, status: 'failed', tasks: [] } },
+      ['Re-run orchestrator'],
+    ],
+    [
+      'a partial orchestration',
+      { checks: EXCEPTION, orchestration: { ...ACME_ORCHESTRATION, status: 'partial' } },
+      ['Re-run orchestrator'],
+    ],
+    [
+      'a stale orchestration',
+      { checks: EXCEPTION, orchestration: { ...ACME_ORCHESTRATION, stale: true } },
+      ['Re-run orchestrator'],
+    ],
+    ['no recommendation', ORCHESTRATED, ['Re-run recommendation']],
+    [
+      'a failed recommendation',
+      { ...ORCHESTRATED, recommendation: { ...ACME_RECOMMENDATION, status: 'failed' } },
+      ['Re-run recommendation'],
+    ],
+    [
+      'a stale recommendation',
+      { ...ORCHESTRATED, recommendation: { ...ACME_RECOMMENDATION, stale: true } },
+      ['Re-run recommendation'],
+    ],
+    ['a current recommendation', RECOMMENDED, ['Next: Approval']],
+  ])('has the right primary action in Variants for %s', async (_name, overrides, expected) => {
+    await show(overrides, /Variants/)
+
+    expect(primaryButtons()).toEqual(expected)
+  })
+
+  it('moves to Approval from the primary Next button', async () => {
+    await show(RECOMMENDED, /Variants/)
+    fireEvent.click(screen.getByRole('button', { name: 'Next: Approval' }))
+
+    expect(await screen.findByRole('tab', { name: /Approval/, selected: true })).toBeInTheDocument()
+  })
+
+  it('shows the recommendation before the findings, collapsed once the orchestration is complete', async () => {
+    await show(RECOMMENDED, /Variants/)
+
+    const findings = screen.getByText('Findings').closest('details')!
+    expect(findings).not.toHaveAttribute('open')
+    expect(follows(screen.getByRole('region', { name: 'Recommendation' }), findings)).toBe(true)
+    expect(within(findings).getByText('Additional checks: completed')).toBeInTheDocument()
+    expect(follows(findings, screen.getByRole('group', { name: 'Actions' }))).toBe(true)
+  })
+
+  it('opens the findings when the orchestrator needs a re-run', async () => {
+    await show(WITH_EXCEPTION, /Variants/)
+
+    expect(screen.getByText('Findings').closest('details')).toHaveAttribute('open')
+  })
+})
+
 describe('AnalysisPanel run inspector (routed)', () => {
   const INQUIRY = {
     id: 7,

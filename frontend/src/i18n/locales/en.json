@@ -577,6 +577,10 @@
       "outdated": "the results are out of date"
     },
     "showMail": "Show e-mail",
-    "mail": "E-mail"
+    "mail": "E-mail",
+    "actions": "Actions",
+    "nextVariants": "Next: Variants",
+    "nextApproval": "Next: Approval",
+    "findings": "Findings"
   }
 }

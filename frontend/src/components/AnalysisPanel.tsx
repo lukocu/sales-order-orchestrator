@@ -509,11 +509,24 @@ function AnalysisPanel({
     )
   }
 
+  function showStep(step: StepId) {
+    setViewed(step)
+    setStepMessage(null)
+  }
+
   const id = (name: string) => `analysis-${inquiryId}-${name}`
 
   // The corrections form and the check results: the inquiry step.
   function renderFormAndChecks(analysis: Analysis, draft: Draft) {
     const fieldProps = { analysis, reviewed, onReviewed: setFieldReviewed }
+    // One primary action: saving first, then the stale checks, then moving on to Variants;
+    // a standard inquiry has none.
+    const unsaved = dirty || reviewed.length > 0
+    const checks = analysis.checks
+    const checksCurrent = checks !== null && !checks.stale
+    const checksPrimary = !unsaved && !checksCurrent
+    const nextToVariants = checksCurrent && checks.outcome === 'exception'
+    const nextPrimary = !unsaved && nextToVariants
     return (
       <>
         <p className="analysis__meta">
@@ -541,6 +554,7 @@ function AnalysisPanel({
         </p>
 
         <form
+          id={id('form')}
           className="analysis__form"
           noValidate
           onSubmit={(event) => {
@@ -657,21 +671,43 @@ function AnalysisPanel({
               <span className="field__phrase">“{analysis.fields.price_text}”</span>
             )}
           </Field>
+        </form>
 
+        <ChecksSection
+          inquiryId={inquiryId}
+          analysis={analysis}
+          disabled={busy !== null}
+          running={busy === 'checking'}
+          onRerun={rerun}
+          primary={checksPrimary}
+          onUnauthorized={onUnauthorized}
+        />
+
+        <div role="group" aria-label={t('steps.actions')} className="grid gap-2">
           {formError && (
             <p className="error" role="alert">
               {formError}
             </p>
           )}
-
           <div className="analysis__actions">
             <Button
               type="submit"
-              variant="outline"
-              disabled={busy !== null || !(dirty || reviewed.length > 0)}
+              form={id('form')}
+              variant={unsaved ? 'default' : 'outline'}
+              disabled={busy !== null || !unsaved}
             >
               {busy === 'saving' ? t('common.saving') : t('analysis.save')}
             </Button>
+            {nextToVariants && (
+              <Button
+                type="button"
+                variant={nextPrimary ? 'default' : 'outline'}
+                onClick={() => showStep('variants')}
+                disabled={busy !== null}
+              >
+                {t('steps.nextVariants')}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -685,7 +721,12 @@ function AnalysisPanel({
             <div className="analysis__confirm">
               <p>{t('analysis.correctionsLost')}</p>
               <div className="analysis__actions">
-                <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={runAnalysis}
+                  disabled={busy !== null}
+                >
                   {t('analysis.reanalyzeAnyway')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
@@ -694,22 +735,17 @@ function AnalysisPanel({
               </div>
             </div>
           )}
-        </form>
-
-        <ChecksSection
-          inquiryId={inquiryId}
-          analysis={analysis}
-          disabled={busy !== null}
-          running={busy === 'checking'}
-          onRerun={rerun}
-          onUnauthorized={onUnauthorized}
-        />
+        </div>
       </>
     )
   }
 
   function renderPanels(analysis: Analysis, draft: Draft, steps: ReturnType<typeof inquirySteps>) {
     const exception = analysis.checks !== null && analysis.checks.outcome === 'exception'
+    // The orchestrator's re-run is offered (and primary) until it has a current, complete result.
+    const orchestration = analysis.orchestration
+    const orchestrationRerun =
+      orchestration === null || orchestration.stale || orchestration.status !== 'completed'
     const decisions = analysis.decisions ?? []
     // Outside the exception: decisions stay visible after a correction removes it.
     const historyInInquiry =
@@ -752,16 +788,6 @@ function AnalysisPanel({
         <>
           {mail}
           {exception && (
-            <OrchestrationSection
-              inquiryId={inquiryId}
-              orchestration={analysis.orchestration}
-              disabled={busy !== null}
-              running={busy === 'orchestrating'}
-              onRerun={rerunOrchestrator}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
-          {exception && (
             <RecommendationSection
               inquiryId={inquiryId}
               recommendation={analysis.recommendation ?? null}
@@ -769,8 +795,34 @@ function AnalysisPanel({
               disabled={busy !== null}
               running={busy === 'recommending'}
               onRerun={rerunRecommender}
+              primary={!orchestrationRerun}
               onUnauthorized={onUnauthorized}
             />
+          )}
+          {exception && (
+            <details open={orchestrationRerun} className="rounded-md border bg-card px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium">
+                {t('steps.findings')}
+              </summary>
+              <div className="mt-2">
+                <OrchestrationSection
+                  inquiryId={inquiryId}
+                  orchestration={analysis.orchestration}
+                  disabled={busy !== null}
+                  running={busy === 'orchestrating'}
+                  onRerun={rerunOrchestrator}
+                  primary={orchestrationRerun}
+                  onUnauthorized={onUnauthorized}
+                />
+              </div>
+            </details>
+          )}
+          {exception && !orchestrationRerun && steps.states.variants === 'done' && (
+            <div role="group" aria-label={t('steps.actions')} className="analysis__actions">
+              <Button type="button" onClick={() => showStep('approval')} disabled={busy !== null}>
+                {t('steps.nextApproval')}
+              </Button>
+            </div>
           )}
         </>
       ),
@@ -830,10 +882,7 @@ function AnalysisPanel({
       <InquiryStepper
         steps={steps}
         viewed={shown}
-        onView={(step) => {
-          setViewed(step)
-          setStepMessage(null)
-        }}
+        onView={showStep}
         panels={panels}
       />
     )

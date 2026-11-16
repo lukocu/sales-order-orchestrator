@@ -349,28 +349,28 @@ No data or API change. Users with an open inquiry get the stepper on reload.
 
 #### Automated
 
-- [x] 2.1 Lint, typecheck, tests and build pass
-- [x] 2.2 Step derivation tests pass
-- [x] 2.3 Panel tests cover active step, locked steps, done-step click, step-back message
-- [x] 2.4 ChecksSection no longer imports the exception sections
+- [x] 2.1 Lint, typecheck, tests and build pass — 171b92a
+- [x] 2.2 Step derivation tests pass — 171b92a
+- [x] 2.3 Panel tests cover active step, locked steps, done-step click, step-back message — 171b92a
+- [x] 2.4 ChecksSection no longer imports the exception sections — 171b92a
 
 #### Manual
 
-- [x] 2.5 Arrow-key navigation skips disabled steps with visible focus
-- [x] 2.6 Rejecting a draft returns to Akceptacja with a role=status message
+- [x] 2.5 Arrow-key navigation skips disabled steps with visible focus — 171b92a
+- [x] 2.6 Rejecting a draft returns to Akceptacja with a role=status message — 171b92a
 
 ### Phase 3: Kroki Zapytanie i Warianty
 
 #### Automated
 
-- [ ] 3.1 Lint, typecheck, tests and build pass
-- [ ] 3.2 Data precedes actions and one primary button per state in Zapytanie and Warianty
-- [ ] 3.3 AGENTS.md colour scan prints nothing
+- [x] 3.1 Lint, typecheck, tests and build pass
+- [x] 3.2 Data precedes actions and one primary button per state in Zapytanie and Warianty
+- [x] 3.3 AGENTS.md colour scan prints nothing
 
 #### Manual
 
-- [ ] 3.4 Standard inquiry shows the standard banner and three not-needed steps
-- [ ] 3.5 Needs-input reasons above the action bar; saving re-derives the step
+- [x] 3.4 Standard inquiry shows the standard banner and three not-needed steps
+- [x] 3.5 Needs-input reasons above the action bar; saving re-derives the step
 
 ### Phase 4: Kroki Akceptacja i Odpowiedź
 

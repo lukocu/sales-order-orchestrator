@@ -25,6 +25,8 @@ type Props = {
   running: boolean
   // Re-runs the checks and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
+  // True when re-running the checks is the step's primary action (outline otherwise).
+  primary?: boolean
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -268,6 +270,7 @@ function ChecksSection({
   disabled,
   running,
   onRerun,
+  primary = false,
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
@@ -295,7 +298,12 @@ function ChecksSection({
         <div className="checks__stale">
           <p>{checks === null ? t('checks.noResult') : t('checks.stale')}</p>
           <div className="analysis__actions">
-            <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
+            <Button
+              type="button"
+              variant={primary ? 'default' : 'outline'}
+              onClick={rerun}
+              disabled={disabled}
+            >
               {running ? t('checks.running') : t('checks.rerun')}
             </Button>
           </div>

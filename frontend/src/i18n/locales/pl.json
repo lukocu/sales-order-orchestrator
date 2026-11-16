@@ -577,6 +577,10 @@
       "outdated": "wyniki są nieaktualne"
     },
     "showMail": "Pokaż mail",
-    "mail": "Mail"
+    "mail": "Mail",
+    "actions": "Akcje",
+    "nextVariants": "Dalej: Warianty",
+    "nextApproval": "Dalej: Akceptacja",
+    "findings": "Ustalenia"
   }
 }

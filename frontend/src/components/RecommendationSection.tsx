@@ -34,6 +34,8 @@ type Props = {
   running: boolean
   // Re-runs the recommendation and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
+  // True when re-running the recommendation is the step's primary action (outline otherwise).
+  primary?: boolean
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -175,6 +177,7 @@ function RecommendationSection({
   disabled,
   running,
   onRerun,
+  primary = false,
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
@@ -211,7 +214,12 @@ function RecommendationSection({
       {recommendation?.stale && <p className="checks__line">{t('recommendation.stale')}</p>}
       {offerRerun && (
         <div className="analysis__actions">
-          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
+          <Button
+            type="button"
+            variant={primary ? 'default' : 'outline'}
+            onClick={rerun}
+            disabled={disabled}
+          >
             {running ? t('recommendation.running') : t('recommendation.rerun')}
           </Button>
         </div>

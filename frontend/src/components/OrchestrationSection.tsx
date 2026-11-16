@@ -26,6 +26,8 @@ type Props = {
   running: boolean
   // Re-runs the orchestrator and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
+  // True when re-running the orchestrator is the step's primary action (outline otherwise).
+  primary?: boolean
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -155,6 +157,7 @@ function OrchestrationSection({
   disabled,
   running,
   onRerun,
+  primary = false,
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
@@ -184,7 +187,12 @@ function OrchestrationSection({
       {orchestration?.stale && <p className="checks__line">{t('orchestration.stale')}</p>}
       {offerRerun && (
         <div className="analysis__actions">
-          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
+          <Button
+            type="button"
+            variant={primary ? 'default' : 'outline'}
+            onClick={rerun}
+            disabled={disabled}
+          >
             {running ? t('orchestration.running') : t('orchestration.rerun')}
           </Button>
         </div>
