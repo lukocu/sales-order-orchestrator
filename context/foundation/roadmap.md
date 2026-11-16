@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-14
+updated: 2026-11-16
 prd_version: 1
 main_goal: quality
 top_blocker: decisions
@@ -51,7 +51,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | done        |
 | S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | done |
 | S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | done |
-| S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | in-progress |
+| S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | done |
 | S-10 | workflow-vs-orchestrator-eval      | autor porównuje stały workflow i orchestrator na zestawie testowym                    | S-06, F-02, labelled test inquiry set | FR-012 | done |
 
 ## Streams
@@ -216,7 +216,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy FR-013 jest ostatnim krokiem MVP, czy wchodzi od początku? (Open Roadmap Question 1) — Owner: autor. Block: yes.
 - **Risk:** Zasada autora („najpierw pionowy wycinek, zanim pojawi się prawdziwa poczta”) stoi w napięciu z must-have; ustawione jako niezależny tor, by rozstrzygnięcie nie zmieniało głównej ścieżki.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-10: Porównanie stałego workflow z orchestratorem
 
@@ -279,3 +279,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-07: handlowiec widzi szkic odpowiedzi z liczbami z wyliczonych danych i sekcją „Why this recommendation?”, zatwierdza go (status READY TO SEND, wysyłka symulowana), edytuje (zmiana ceny, ilości lub produktu ponownie uruchamia politykę) lub odrzuca; decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-12 → `context/archive/2026-11-12-draft-and-human-decision/`. Lesson: —.
 - **S-08: przełożony widzi rekomendacje odrzucone przez politykę wraz z regułą, która nie przeszła, i zatwierdza lub odrzuca je; handlowiec widzi wynik, a decyzja zapisuje kto, kiedy i dlaczego.** — Archived 2026-11-13 → `context/archive/2026-11-12-supervisor-approval/`. Lesson: —.
 - **S-10: autor puszcza ten sam zestaw testowych zapytań z zapisanymi oczekiwanymi decyzjami przez stały workflow i przez orchestrator i widzi porównanie trafności, kosztu i czasu.** — Archived 2026-11-14 → `context/archive/2026-11-13-workflow-vs-orchestrator-eval/`. Lesson: —.
+- **S-09: handlowiec widzi w skrzynce zapytania odczytane z dedykowanej testowej skrzynki e-mail (tylko odczyt).** — Archived 2026-11-16 → `context/archive/2026-11-14-test-mailbox-ingest/`. Lesson: —.
