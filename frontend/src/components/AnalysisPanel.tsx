@@ -28,7 +28,6 @@ import ChecksSection from './ChecksSection'
 import { formatDate } from './format'
 import { DecisionHistory } from './ReplyDraftSection'
 import RunInspector from './RunInspector'
-import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
@@ -176,7 +175,7 @@ function formatPrice(kind: PriceKind, value: string | null): string {
   return PRICE_KIND_LABEL[kind]
 }
 
-// How the model's value of a field reads next to the "edited" mark.
+// How the original (parsed) value of a field reads next to the "edited" mark.
 function modelValue(field: FieldName, fields: ParsedFields): string {
   switch (field) {
     case 'customer':
@@ -205,6 +204,7 @@ type FieldProps = {
 }
 
 function Field({ name, label, inputId, analysis, reviewed, onReviewed, children }: FieldProps) {
+  const { t } = useTranslation()
   const reason = analysis.uncertain[name]
   const edited = analysis.corrected_fields.includes(name)
   return (
@@ -213,7 +213,9 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
         <label htmlFor={inputId}>{label}</label>
         {edited && (
           <span className="field__edited">
-            edited · model: {modelValue(name, analysis.model_fields)}
+            {t('analysisFields.editedOriginally', {
+              value: modelValue(name, analysis.model_fields),
+            })}
           </span>
         )}
       </div>
@@ -463,9 +465,6 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     const fieldProps = { analysis, reviewed, onReviewed: setFieldReviewed }
     return (
       <>
-        {analysis.extractor === 'fake' && (
-          <p className="analysis__banner">Rule-based demo parser (no LLM)</p>
-        )}
         <p className="analysis__meta">
           Analyzed {formatDate(analysis.analyzed_at)}
           {analysis.analyzed_by_name && ` by ${analysis.analyzed_by_name}`}
@@ -596,8 +595,6 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
             </div>
           )}
         </form>
-
-        <RunMetrics run={analysis.run} />
 
         <ChecksSection
           inquiryId={inquiryId}

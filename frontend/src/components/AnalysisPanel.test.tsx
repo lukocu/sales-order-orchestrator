@@ -290,7 +290,8 @@ describe('AnalysisPanel', () => {
       reviewed: ['customer'],
       analyzed_at: '2026-11-10T09:00:01.123456Z',
     })
-    expect(screen.getByText('edited · model: 80')).toBeInTheDocument()
+    expect(screen.getByText('edited · originally: 80')).toBeInTheDocument()
+    expect(screen.queryByText(/model/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Quantity')).toHaveValue('90')
   })
 
@@ -411,51 +412,24 @@ describe('AnalysisPanel', () => {
     expect(await screen.findByLabelText('Customer')).toHaveValue('ACME Sp. z o.o.')
   })
 
-  it('shows step metrics with list cost and unpriced steps', async () => {
-    const unpricedStep = {
-      ...LLM_RUN.steps[0],
-      id: 12,
-      name: 'parse-retry',
-      model: 'gpt-oss-120b',
-      cost_usd: null,
-      price_status: 'unpriced' as const,
+  it('keeps run metrics, model names and the parser out of the analysis', async () => {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis({ extractor: 'fake' })) })
+
+    renderPanel()
+
+    expect(await screen.findByLabelText('Customer')).toHaveValue('ACME Sp. z o.o.')
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
+    for (const text of [
+      / in \/ \d+ out/,
+      /list price/,
+      /deterministic/,
+      /gpt-oss/,
+      /Rule-based demo parser/,
+      /Metrics unavailable/,
+    ]) {
+      expect(screen.queryByText(text)).not.toBeInTheDocument()
     }
-    stubApi({
-      [`GET ${PATH}`]: () =>
-        json(
-          200,
-          analysis({
-            run: {
-              ...LLM_RUN,
-              steps: [...LLM_RUN.steps, unpricedStep],
-              totals: { ...LLM_RUN.totals, cost_complete: false },
-            },
-          }),
-        ),
-    })
-
-    renderPanel()
-
-    const metrics = await screen.findByRole('region', { name: 'Metrics' })
-    const [parse, resolve, retry, total] = within(metrics).getAllByRole('listitem')
-    expect(parse).toHaveTextContent('openai/gpt-oss-120b')
-    expect(parse).toHaveTextContent('1200 in / 300 out')
-    expect(parse).toHaveTextContent('$0.00036 list price')
-    expect(parse).toHaveTextContent('1500 ms')
-    expect(resolve).toHaveTextContent('deterministic')
-    expect(resolve).toHaveTextContent('—')
-    expect(retry).toHaveTextContent('not priced')
-    expect(total).toHaveTextContent('$0.00036 list price (some steps not priced)')
-    expect(screen.queryByText('Rule-based demo parser (no LLM)')).not.toBeInTheDocument()
-  })
-
-  it('marks the rule-based parser and a missing run', async () => {
-    stubApi({ [`GET ${PATH}`]: () => json(200, analysis({ extractor: 'fake', run: null })) })
-
-    renderPanel()
-
-    expect(await screen.findByText('Rule-based demo parser (no LLM)')).toBeInTheDocument()
-    expect(screen.getByText('Metrics unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'How was this calculated?' })).toBeInTheDocument()
   })
 
   it('shows the checks below the analysis and reports the outcome after a correction', async () => {
@@ -483,12 +457,10 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
 
     expect(
-      await screen.findByText('Standard inquiry — completed without agents'),
+      await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
     expect(onOutcome).toHaveBeenLastCalledWith(7, 'standard')
-    // Two runs on one panel: the analysis and the checks have their own metrics.
-    expect(screen.getByRole('region', { name: 'Metrics' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Checks metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
   })
 
   it('re-runs stale checks without discarding unsaved edits', async () => {
@@ -562,10 +534,10 @@ describe('AnalysisPanel', () => {
     )
     answer(json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled()
     expect(screen.getByLabelText('Customer')).toHaveValue('ACME SA')
-    expect(screen.getByRole('region', { name: 'Orchestration metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
   })
 
   it('shows a failed orchestrator re-run with retry', async () => {
@@ -584,7 +556,7 @@ describe('AnalysisPanel', () => {
     expect(alert).toHaveTextContent('Re-running the orchestrator failed: Database unavailable')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -685,7 +657,7 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
 
     expect(
-      await screen.findByText('Standard inquiry — completed without agents'),
+      await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Reply draft' })).not.toBeInTheDocument()
     const history = screen.getByRole('region', { name: 'Decision history' })

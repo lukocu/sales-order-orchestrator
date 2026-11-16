@@ -1,11 +1,10 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type {
   ConfidenceBand,
   OptionKind,
   OptionLine,
   OrchestrationView,
-  RecommendationError,
-  RecommendationErrorKind,
   RecommendationOption,
   RecommendationView,
   Signal,
@@ -13,7 +12,6 @@ import type {
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
 import { formatDate, formatPercent, formatPln } from './format'
-import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
@@ -43,11 +41,6 @@ const BAND: Record<ConfidenceBand, string> = {
   HIGH: 'high',
   MEDIUM: 'medium',
   LOW: 'low',
-}
-
-const ERROR_KIND: Record<RecommendationErrorKind, string> = {
-  recommender_failed: 'Recommender failed',
-  choice_rejected: 'Choice rejected',
 }
 
 // Signal lists in this order; labels come from the backend, in Polish.
@@ -133,17 +126,16 @@ type OptionCardProps = {
 }
 
 function OptionCard({ option, cited = [], justification }: OptionCardProps) {
+  const { t } = useTranslation()
   return (
     <>
       <p className="check__head">
         <span className="check__name">{KIND[option.kind]}</span>
         <span className={`recommendation__band recommendation__band--${BAND[option.band]}`}>
-          {option.band} confidence
+          {t(`recommendation.band.${option.band}`)}
         </span>
       </p>
       <dl className="metrics__list">
-        <dt>Option</dt>
-        <dd>{option.id}</dd>
         <dt>Lines</dt>
         <dd>
           {option.lines.map((line) => (
@@ -178,18 +170,8 @@ function OptionCard({ option, cited = [], justification }: OptionCardProps) {
   )
 }
 
-function ErrorBox({ error }: { error: RecommendationError }) {
-  return (
-    <div className="orchestration__error">
-      <p className="checks__outcome">
-        {ERROR_KIND[error.kind]}: {error.code}
-      </p>
-      <p className="checks__line">{error.message}</p>
-    </div>
-  )
-}
-
-// The options of fulfilling the exception, the recommended one and why, and the run's cost.
+// The options of fulfilling the exception and the recommended one and why; the recommender and
+// the run's cost are in the run inspector.
 function RecommendationSection({
   inquiryId,
   recommendation,
@@ -257,6 +239,7 @@ function RecommendationSection({
 }
 
 function RecommendationResult({ recommendation }: { recommendation: RecommendationView }) {
+  const { t } = useTranslation()
   const choice = recommendation.choice
   const chosen =
     recommendation.status === 'completed' && choice !== null
@@ -275,13 +258,10 @@ function RecommendationResult({ recommendation }: { recommendation: Recommendati
           Recommendation: {completed ? 'Completed' : 'Failed — no option chosen'}
         </p>
       </div>
-      <p className="analysis__meta">
-        Recommended {formatDate(recommendation.recommended_at)} · recommender{' '}
-        {recommendation.recommender}
-      </p>
+      <p className="analysis__meta">Recommended {formatDate(recommendation.recommended_at)}</p>
 
       {recommendation.error !== null && (
-        <ErrorBox error={recommendation.error} />
+        <p className="orchestration__error checks__line">{t('recommendation.failed')}</p>
       )}
 
       {chosen !== null && choice !== null && (
@@ -310,8 +290,6 @@ function RecommendationResult({ recommendation }: { recommendation: Recommendati
       {recommendation.options.length === 0 && (
         <p className="checks__line">No option could be built from the orchestration results.</p>
       )}
-
-      <RunMetrics run={recommendation.run} label="Recommendation metrics" />
     </>
   )
 }

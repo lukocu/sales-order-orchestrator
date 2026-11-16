@@ -1,21 +1,18 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import type {
   AgentResult,
+  Capability,
   HistorySignal,
-  OrchestrationError,
-  OrchestrationErrorKind,
   OrchestrationStatus,
   OrchestrationView,
-  PlannerChoice,
-  RunSummary,
   SubstituteConsent,
   SupplierDelivery,
   TaskOutcome,
-  TaskStatus,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
-import { formatDate, formatMs } from './format'
-import RunMetrics from './RunMetrics'
+import { formatDate } from './format'
 
 type Props = {
   inquiryId: number
@@ -34,28 +31,25 @@ type Props = {
 // Every status is shown as text; the tone only adds the colour.
 type Tone = 'ok' | 'warn' | 'error' | 'muted'
 
-const STATUS: Record<OrchestrationStatus, [string, Tone]> = {
-  completed: ['Completed', 'ok'],
-  partial: ['Partial — some checks failed', 'warn'],
-  failed: ['Failed', 'error'],
+const STATUS_TONE: Record<OrchestrationStatus, Tone> = {
+  completed: 'ok',
+  partial: 'warn',
+  failed: 'error',
 }
 
-const TASK_STATUS: Record<TaskStatus, [string, Tone]> = {
-  completed: ['Completed', 'ok'],
-  failed: ['Failed', 'error'],
-  skipped: ['Skipped', 'muted'],
-}
+// A readable name for each check the orchestrator can run; an unknown one reads as a
+// generic "additional check".
+const CAPABILITY_KEY = {
+  'substitute-compatibility': 'orchestration.capability.substituteCompatibility',
+  'substitute-availability': 'orchestration.capability.substituteAvailability',
+  'supplier-availability': 'orchestration.capability.supplierAvailability',
+  'customer-history': 'orchestration.capability.customerHistory',
+} as const satisfies Record<Capability, string>
 
 const CONSENT: Record<SubstituteConsent, string> = {
   confirmed: 'Substitute consent: confirmed',
   refused: 'Substitute consent: refused',
   unconfirmed: 'Substitute consent: not confirmed',
-}
-
-const ERROR_KIND: Record<OrchestrationErrorKind, string> = {
-  planner_failed: 'Planner failed',
-  plan_rejected: 'Plan rejected',
-  capability_mismatch: 'Capability mismatch',
 }
 
 const SIGNAL: Record<HistorySignal, string> = {
@@ -117,107 +111,43 @@ function resultLines(result: AgentResult): string[] {
   }
 }
 
-// Sum of the durations of the task's steps (one per attempt) in the orchestration run.
-function taskDuration(task: TaskOutcome, run: RunSummary | null): string {
-  if (run === null || task.steps.length === 0) return '—'
-  const steps = run.steps.filter((step) => task.steps.includes(step.name))
-  if (steps.length === 0) return '—'
-  return formatMs(steps.reduce((sum, step) => sum + step.duration_ms, 0))
-}
-
-function stageTitle(stage: number, tasks: TaskOutcome[]): string {
-  const after = [...new Set(tasks.flatMap((task) => task.depends_on))]
-  const notes: string[] = []
-  if (tasks.length > 1) notes.push('in parallel')
-  if (after.length > 0) notes.push(`after: ${after.join(', ')}`)
-  return notes.length === 0 ? `Stage ${stage}` : `Stage ${stage} — ${notes.join(', ')}`
-}
-
-function stagesOf(tasks: TaskOutcome[]): [number, TaskOutcome[]][] {
-  const stages = new Map<number, TaskOutcome[]>()
-  for (const task of tasks) stages.set(task.stage, [...(stages.get(task.stage) ?? []), task])
-  return [...stages.entries()].sort(([a], [b]) => a - b)
-}
-
-function TaskItem({ task, run }: { task: TaskOutcome; run: RunSummary | null }) {
-  const [status, tone] = TASK_STATUS[task.status]
+function TaskItem({ task }: { task: TaskOutcome }) {
+  const { t } = useTranslation()
+  const completed = task.status === 'completed'
   return (
     <li className="check">
       <p className="check__head">
         <span className="check__name">
-          {task.capability} → {task.agent}
+          {Object.hasOwn(CAPABILITY_KEY, task.capability)
+            ? t(CAPABILITY_KEY[task.capability])
+            : t('orchestration.capability.other')}
         </span>
-        <span className={`check__status check__status--${tone}`}>{status}</span>
+        <span className={`check__status check__status--${completed ? 'ok' : 'muted'}`}>
+          {completed ? t('orchestration.task.completed') : t('orchestration.task.unavailable')}
+        </span>
       </p>
-      <dl className="metrics__list">
-        <dt>Reason</dt>
-        <dd>{task.reason}</dd>
-        <dt>Attempts</dt>
-        <dd>{task.steps.length}</dd>
-        <dt>Duration</dt>
-        <dd>{taskDuration(task, run)}</dd>
-        {task.result !== null && (
-          <>
-            <dt>Result</dt>
-            <dd>
-              {resultLines(task.result).map((line) => (
-                <span key={line} className="orchestration__result">
-                  {line}
-                </span>
-              ))}
-            </dd>
-          </>
-        )}
-        {task.status === 'failed' && (
-          <>
-            <dt>Error</dt>
-            <dd>{task.error_type ?? 'unknown'}</dd>
-          </>
-        )}
-        {task.status === 'skipped' && (
-          <>
-            <dt>Skipped</dt>
-            <dd>a prerequisite failed</dd>
-          </>
-        )}
-      </dl>
+      {task.status === 'failed' && <p className="checks__line">{t('orchestration.task.failed')}</p>}
+      {task.status === 'skipped' && (
+        <p className="checks__line">{t('orchestration.task.skipped')}</p>
+      )}
+      {task.result !== null && (
+        <dl className="metrics__list">
+          <dt>Result</dt>
+          <dd>
+            {resultLines(task.result).map((line) => (
+              <span key={line} className="orchestration__result">
+                {line}
+              </span>
+            ))}
+          </dd>
+        </dl>
+      )}
     </li>
   )
 }
 
-function rejectedChoice(choice: PlannerChoice): string[] {
-  return choice.tasks.map((task) => `${task.capability} — ${task.reason}`)
-}
-
-function ErrorBox({ error, choice }: { error: OrchestrationError; choice: PlannerChoice | null }) {
-  return (
-    <div className="orchestration__error">
-      <p className="checks__outcome">
-        {ERROR_KIND[error.kind]}: {error.code}
-      </p>
-      <p className="checks__line">{error.message}</p>
-      {error.kind === 'plan_rejected' && choice !== null && (
-        <>
-          <p className="checks__line">Rejected planner choice:</p>
-          <ul className="checks__reasons" aria-label="Rejected planner choice">
-            {rejectedChoice(choice).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-            {choice.tasks.length === 0 && <li>(no tasks)</li>}
-          </ul>
-        </>
-      )}
-    </div>
-  )
-}
-
-function wallLine(run: RunSummary): string {
-  const wall = run.duration_ms ?? run.totals.duration_ms
-  const sum = formatMs(run.totals.steps_duration_ms)
-  return `Wall time ${wall === null ? '—' : formatMs(wall)} · sum of steps ${sum}`
-}
-
-// What the orchestrator planned, which agent checked what, the outcome and the cost.
+// What the additional checks of an exception found; how they were planned and what they cost
+// is in the run inspector.
 function OrchestrationSection({
   inquiryId,
   orchestration,
@@ -270,52 +200,57 @@ function OrchestrationSection({
         </div>
       )}
 
-      {orchestration !== null && <OrchestrationResult orchestration={orchestration} />}
+      {orchestration !== null && (
+        <OrchestrationResult inquiryId={inquiryId} orchestration={orchestration} />
+      )}
     </section>
   )
 }
 
-function OrchestrationResult({ orchestration }: { orchestration: OrchestrationView }) {
-  const [status, tone] = STATUS[orchestration.status]
-  const run = orchestration.run
+function OrchestrationResult({
+  inquiryId,
+  orchestration,
+}: {
+  inquiryId: number
+  orchestration: OrchestrationView
+}) {
+  const { t } = useTranslation()
+  const tone = STATUS_TONE[orchestration.status]
   return (
     <>
       <div className={`checks__banner orchestration__banner--${tone}`}>
-        <p className="checks__outcome">Orchestration: {status}</p>
+        <p className="checks__outcome">{t(`orchestration.status.${orchestration.status}`)}</p>
         <p className="checks__line">{CONSENT[orchestration.consent]}</p>
         {orchestration.consent === 'unconfirmed' && (
           <p className="orchestration__consent">
             Customer consent to a substitute not confirmed
           </p>
         )}
-        {orchestration.planner_choice !== null && (
-          <p className="checks__line">Planner: {orchestration.planner_choice.summary}</p>
-        )}
       </div>
-      <p className="analysis__meta">
-        Orchestrated {formatDate(orchestration.orchestrated_at)} · planner {orchestration.planner}
-      </p>
+      <p className="analysis__meta">Orchestrated {formatDate(orchestration.orchestrated_at)}</p>
 
       {orchestration.error !== null && (
-        <ErrorBox error={orchestration.error} choice={orchestration.planner_choice} />
+        <div className="orchestration__error">
+          <p className="checks__line">{t('orchestration.failed')}</p>
+          <Link
+            to="/inquiries/$inquiryId/run"
+            params={{ inquiryId: String(inquiryId) }}
+            className="checks__line text-primary underline underline-offset-4"
+          >
+            {t('orchestration.details')}
+          </Link>
+        </div>
       )}
 
-      {stagesOf(orchestration.tasks).map(([stage, tasks]) => {
-        const title = stageTitle(stage, tasks)
-        return (
-          <div key={stage} className="orchestration__stage">
-            <p className="orchestration__stage-title">{title}</p>
-            <ul className="checks__list" aria-label={title}>
-              {tasks.map((task) => (
-                <TaskItem key={task.capability} task={task} run={run} />
-              ))}
-            </ul>
-          </div>
-        )
-      })}
-
-      <RunMetrics run={run} label="Orchestration metrics" />
-      {run !== null && <p className="analysis__meta">{wallLine(run)}</p>}
+      {orchestration.tasks.length > 0 && (
+        <ul className="checks__list" aria-label={t('orchestration.findings')}>
+          {[...orchestration.tasks]
+            .sort((a, b) => a.stage - b.stage)
+            .map((task) => (
+              <TaskItem key={task.capability} task={task} />
+            ))}
+        </ul>
+      )}
     </>
   )
 }

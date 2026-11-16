@@ -558,32 +558,32 @@ No data or backend migration. Rollback is a revert of the phase commits. Old boo
 
 #### Automated
 
-- [x] 3.1 Lint, typecheck, tests and build pass
-- [x] 3.2 Inspector unit and routed tests pass
-- [x] 3.3 Generated ui files carry no 50% focus ring and no literal colours
-- [x] 3.4 Every inspector key exists in both locales
-- [x] 3.5 AGENTS.md colour scan with RunInspector prints nothing
+- [x] 3.1 Lint, typecheck, tests and build pass — 69c07c9
+- [x] 3.2 Inspector unit and routed tests pass — 69c07c9
+- [x] 3.3 Generated ui files carry no 50% focus ring and no literal colours — 69c07c9
+- [x] 3.4 Every inspector key exists in both locales — 69c07c9
+- [x] 3.5 AGENTS.md colour scan with RunInspector prints nothing — 69c07c9
 
 #### Manual
 
-- [x] 3.6 Inspector shows plan by stage, every run's steps and the grand total, PL/EN, light/dark
-- [x] 3.7 Sheet traps focus, Esc closes, focus returns, reload on /run reopens
-- [x] 3.8 At 375 px the Sheet fills the width with no page scroll
+- [x] 3.6 Inspector shows plan by stage, every run's steps and the grand total, PL/EN, light/dark — 69c07c9
+- [x] 3.7 Sheet traps focus, Esc closes, focus returns, reload on /run reopens — 69c07c9
+- [x] 3.8 At 375 px the Sheet fills the width with no page scroll — 69c07c9
 
 ### Phase 4: Clean business layer
 
 #### Automated
 
-- [ ] 4.1 Lint, typecheck, tests and build pass
-- [ ] 4.2 No metrics component or dead metrics CSS remains
-- [ ] 4.3 Sections no longer render agent, planner or recommender fields
-- [ ] 4.4 Section negative assertions pass
+- [x] 4.1 Lint, typecheck, tests and build pass
+- [x] 4.2 No metrics component or dead metrics CSS remains
+- [x] 4.3 Sections no longer render agent, planner or recommender fields
+- [x] 4.4 Section negative assertions pass
 
 #### Manual
 
-- [ ] 4.5 Inquiry page shows no diagnostics while the inspector shows all of them
-- [ ] 4.6 Page height at 1440 px recorded against the audit's 10 031 px
-- [ ] 4.7 Edit form option select is understandable without ids
+- [x] 4.5 Inquiry page shows no diagnostics while the inspector shows all of them
+- [x] 4.6 Page height at 1440 px recorded against the audit's 10 031 px
+- [x] 4.7 Edit form option select is understandable without ids
 
 ### Phase 5: Remove the compatibility block
 

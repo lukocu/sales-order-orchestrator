@@ -1,3 +1,4 @@
+import { createMemoryHistory, RouterContextProvider } from '@tanstack/react-router'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -16,6 +17,7 @@ import {
   OMEGA_ORCHESTRATION,
   orchestrationRun,
 } from '../test/orchestrationFixtures'
+import { createAppRouter } from '../router'
 import OrchestrationSection from './OrchestrationSection'
 
 const ORCHESTRATION_PATH = '/api/inquiries/7/orchestration'
@@ -102,20 +104,46 @@ function Harness({
 }
 
 function renderSection(initial: OrchestrationView | null, onUnauthorized = vi.fn()) {
-  render(<Harness initial={initial} onUnauthorized={onUnauthorized} />)
+  // A failed orchestration links to the run inspector, so the section needs a router (not
+  // loaded: the link only has to render).
+  const router = createAppRouter(createMemoryHistory({ initialEntries: ['/inquiries/7'] }))
+  render(
+    <RouterContextProvider router={router}>
+      <Harness initial={initial} onUnauthorized={onUnauthorized} />
+    </RouterContextProvider>,
+  )
   return onUnauthorized
 }
 
-function stage(title: string): HTMLElement {
-  return screen.getByRole('list', { name: title })
+function findings(): HTMLElement {
+  return screen.getByRole('list', { name: 'Findings of the additional checks' })
 }
 
-function task(capability: string): HTMLElement {
-  const item = screen
+// A finding by the readable name of its check.
+function task(label: string): HTMLElement {
+  const item = within(findings())
     .getAllByRole('listitem')
-    .find((li) => li.querySelector('.check__name')?.textContent?.startsWith(`${capability} →`))
-  if (item === undefined) throw new Error(`No task ${capability}`)
+    .find((li) => li.querySelector('.check__name')?.textContent === label)
+  if (item === undefined) throw new Error(`No task ${label}`)
   return item
+}
+
+// Nothing of how the checks were planned, run or priced reaches the business layer.
+function expectNoTechnicalText() {
+  for (const text of [
+    /planner/i,
+    /Stage \d/,
+    /→/,
+    /-agent\b/,
+    /Attempts/,
+    /Wall time/,
+    / in \/ \d+ out/,
+    /deterministic/,
+    /look for compatible substitutes/,
+  ]) {
+    expect(screen.queryByText(text)).not.toBeInTheDocument()
+  }
+  expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
 }
 
 const PARTIAL: OrchestrationView = {
@@ -149,53 +177,43 @@ function failed(error: OrchestrationError): OrchestrationView {
 }
 
 describe('OrchestrationSection', () => {
-  it('shows the ACME plan in two stages with every agent result and the run metrics', () => {
+  it('shows the ACME findings under readable check names, without the plan or metrics', () => {
     renderSection(ACME_ORCHESTRATION)
 
-    expect(screen.getByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(screen.getByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.getByText('Substitute consent: confirmed')).toBeInTheDocument()
-    expect(screen.getByText(/^Planner: Shortage of 30 pcs of ABC-100/)).toBeInTheDocument()
-    expect(within(stage('Stage 1 — in parallel')).getAllByRole('listitem')).toHaveLength(3)
-    expect(
-      within(stage('Stage 2 — after: substitute-compatibility')).getAllByRole('listitem'),
-    ).toHaveLength(1)
+    expect(within(findings()).getAllByRole('listitem')).toHaveLength(4)
 
-    const compatibility = task('substitute-compatibility')
-    expect(compatibility).toHaveTextContent('substitute-compatibility → catalog-agent')
+    const compatibility = task('Compatible substitutes')
     expect(compatibility).toHaveTextContent('Completed')
-    expect(compatibility).toHaveTextContent('look for compatible substitutes')
-    expect(compatibility).toHaveTextContent('Attempts1')
-    expect(compatibility).toHaveTextContent('Duration1.5 ms')
     expect(compatibility).toHaveTextContent(
       'ABC-110 Czujnik ciśnienia ABC-110 — full compatibility',
     )
-    expect(task('substitute-availability')).toHaveTextContent(
-      'ABC-110: 40 in stock, covers the shortage',
-    )
-    expect(task('supplier-availability')).toHaveTextContent(
+    expect(task('Substitute stock')).toHaveTextContent('ABC-110: 40 in stock, covers the shortage')
+    expect(task('Supplier deliveries')).toHaveTextContent(
       'Sensor Parts: 200 pcs on 2026-11-09 (7 days), misses the deadline, covers the shortage',
     )
-    expect(task('customer-history')).toHaveTextContent(
+    expect(task('Customer history')).toHaveTextContent(
       '3 orders, substitutes accepted 2 of 2 offered — accepted substitutes before',
     )
 
-    expect(screen.getByRole('region', { name: 'Orchestration metrics' })).toBeInTheDocument()
-    expect(screen.getByText('Wall time 12 ms · sum of steps 8.8 ms')).toBeInTheDocument()
+    expectNoTechnicalText()
+    expect(screen.queryByText(/Shortage of 30 pcs of ABC-100/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run orchestrator' })).not.toBeInTheDocument()
     expect(screen.queryByText(/consent to a substitute not confirmed/)).not.toBeInTheDocument()
   })
 
-  it('shows the Omega plan without substitute tasks', () => {
+  it('shows the Omega findings without substitute checks', () => {
     renderSection(OMEGA_ORCHESTRATION)
 
     expect(screen.getByText('Substitute consent: refused')).toBeInTheDocument()
-    expect(within(stage('Stage 1 — in parallel')).getAllByRole('listitem')).toHaveLength(2)
-    expect(screen.queryByText(/^Stage 2/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/substitute-compatibility →/)).not.toBeInTheDocument()
-    expect(task('supplier-availability')).toHaveTextContent(
+    expect(within(findings()).getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.queryByText('Compatible substitutes')).not.toBeInTheDocument()
+    expect(task('Supplier deliveries')).toHaveTextContent(
       'Valve Works: 80 pcs on 2026-11-10 (5 days), meets the deadline, covers the shortage',
     )
-    expect(task('customer-history')).toHaveTextContent('declined substitutes before')
+    expect(task('Customer history')).toHaveTextContent('declined substitutes before')
+    expectNoTechnicalText()
   })
 
   it('flags the unconfirmed consent of Delta and the shortage nothing covers', () => {
@@ -203,64 +221,66 @@ describe('OrchestrationSection', () => {
 
     expect(screen.getByText('Substitute consent: not confirmed')).toBeInTheDocument()
     expect(screen.getByText('Customer consent to a substitute not confirmed')).toBeInTheDocument()
-    expect(task('substitute-availability')).toHaveTextContent(
+    expect(task('Substitute stock')).toHaveTextContent(
       'ABC-110: 40 in stock, does not cover the shortage',
     )
-    expect(task('supplier-availability')).toHaveTextContent(
+    expect(task('Supplier deliveries')).toHaveTextContent(
       'no deadline, does not cover the shortage',
     )
-    expect(task('customer-history')).toHaveTextContent('no substitute history')
+    expect(task('Customer history')).toHaveTextContent('no substitute history')
   })
 
-  it('shows a partial result with the failed task, its retry and the skipped dependant', () => {
+  it('says a failed or skipped check is unavailable, without its error type', () => {
     renderSection(PARTIAL)
 
-    expect(screen.getByText('Orchestration: Partial — some checks failed')).toBeInTheDocument()
-    const compatibility = task('substitute-compatibility')
-    expect(compatibility).toHaveTextContent('Failed')
-    expect(compatibility).toHaveTextContent('Attempts2')
-    expect(compatibility).toHaveTextContent('Duration2.8 ms')
-    expect(compatibility).toHaveTextContent('ErrorOperationalError')
-    const availability = task('substitute-availability')
-    expect(availability).toHaveTextContent('Skipped')
-    expect(availability).toHaveTextContent('Attempts0')
-    expect(availability).toHaveTextContent('Duration—')
-    expect(task('supplier-availability')).toHaveTextContent('Completed')
+    expect(screen.getByText('Additional checks: some are unavailable')).toBeInTheDocument()
+    const compatibility = task('Compatible substitutes')
+    expect(compatibility).toHaveTextContent('Unavailable')
+    expect(compatibility).toHaveTextContent('This check is unavailable.')
+    const availability = task('Substitute stock')
+    expect(availability).toHaveTextContent('Unavailable')
+    expect(availability).toHaveTextContent(
+      'This check is unavailable because an earlier check did not complete.',
+    )
+    expect(task('Supplier deliveries')).toHaveTextContent('Completed')
+    expect(screen.queryByText(/OperationalError/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^(Failed|Skipped)$/)).not.toBeInTheDocument()
+    expectNoTechnicalText()
     expect(screen.getByRole('button', { name: 'Re-run orchestrator' })).toBeEnabled()
   })
 
   it.each([
-    [
-      { kind: 'planner_failed', code: 'rate_limited', message: 'Planner rate limit reached' },
-      'Planner failed: rate_limited',
-    ],
-    [
-      {
-        kind: 'plan_rejected',
-        code: 'substitute_refused',
-        message: 'The plan checks substitutes the customer refused',
-      },
-      'Plan rejected: substitute_refused',
-    ],
-    [
-      { kind: 'capability_mismatch', code: 'no_agent', message: 'No agent for customer-history' },
-      'Capability mismatch: no_agent',
-    ],
-  ] as [OrchestrationError, string][])('shows a failed orchestration (%o)', (error, heading) => {
-    renderSection(failed(error))
+    { kind: 'planner_failed', code: 'rate_limited', message: 'Planner rate limit reached' },
+    {
+      kind: 'plan_rejected',
+      code: 'substitute_refused',
+      message: 'The plan checks substitutes the customer refused',
+    },
+    { kind: 'capability_mismatch', code: 'no_agent', message: 'No agent for customer-history' },
+  ] as OrchestrationError[])(
+    'shows a failed orchestration as one sentence with the inspector link (%o)',
+    (error) => {
+      renderSection(failed(error))
 
-    expect(screen.getByText('Orchestration: Failed')).toBeInTheDocument()
-    expect(screen.getByText(heading)).toBeInTheDocument()
-    expect(screen.getByText(error.message)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Re-run orchestrator' })).toBeInTheDocument()
-    const rejected = screen.queryByRole('list', { name: 'Rejected planner choice' })
-    if (error.kind === 'plan_rejected') {
-      expect(within(rejected!).getAllByRole('listitem')).toHaveLength(4)
-      expect(rejected).toHaveTextContent('substitute-compatibility — ABC-100 is short by 30 pcs')
-    } else {
-      expect(rejected).not.toBeInTheDocument()
-    }
-  })
+      expect(screen.getByText('Additional checks: failed')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'The additional checks could not be prepared, so their results are unavailable.',
+        ),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Technical details' })).toHaveAttribute(
+        'href',
+        '/inquiries/7/run',
+      )
+      expect(screen.getByRole('button', { name: 'Re-run orchestrator' })).toBeInTheDocument()
+      expect(screen.queryByText(new RegExp(error.code))).not.toBeInTheDocument()
+      expect(screen.queryByText(error.message)).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('list', { name: 'Rejected planner choice' }),
+      ).not.toBeInTheDocument()
+      expectNoTechnicalText()
+    },
+  )
 
   it('shows a placeholder with the button when the exception has no orchestration yet', () => {
     renderSection(null)
@@ -293,7 +313,7 @@ describe('OrchestrationSection', () => {
     )
     answer(json(200, analysis(ACME_ORCHESTRATION)))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run orchestrator' })).not.toBeInTheDocument()
   })
 
@@ -309,7 +329,7 @@ describe('OrchestrationSection', () => {
     expect(alert).toHaveTextContent('Nothing to orchestrate')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })

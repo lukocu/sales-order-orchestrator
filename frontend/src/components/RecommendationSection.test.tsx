@@ -122,24 +122,39 @@ function items(container: HTMLElement, list: string): string[] {
     .map((item) => item.textContent ?? '')
 }
 
-function option(list: string, id: string): HTMLElement {
+// An option by the readable name of its kind (each kind appears once in the fixtures).
+function option(list: string, kind: string): HTMLElement {
   const item = within(screen.getByRole('list', { name: list }))
     .getAllByRole('listitem')
-    .find((li) => li.querySelector('dd')?.textContent === id)
-  if (item === undefined) throw new Error(`No option ${id}`)
+    .find((li) => li.querySelector('.check__name')?.textContent === kind)
+  if (item === undefined) throw new Error(`No option ${kind}`)
   return item
 }
 
+// The recommender, the run metrics and the raw option ids stay in the run inspector.
+function expectNoTechnicalText() {
+  expect(screen.queryByText(/recommender/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/rule-based/)).not.toBeInTheDocument()
+  // The confidence chips read as words; the recommender's own justification may quote the enum.
+  const bands = document.querySelectorAll('.recommendation__band')
+  expect(bands.length).toBeGreaterThan(0)
+  for (const band of bands) {
+    expect(band.textContent).toMatch(/^(High|Medium|Low) confidence$/)
+  }
+  expect(screen.queryByText(/^stock(\+.*)?$/)).not.toBeInTheDocument()
+  expect(screen.queryByText('Option')).not.toBeInTheDocument()
+  expect(screen.queryByText(/ in \/ \d+ out|deterministic/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
+}
+
 describe('RecommendationSection', () => {
-  it('shows the ACME substitute as a HIGH recommendation with its cited positives', () => {
+  it('shows the ACME substitute as a high-confidence recommendation with its cited positives', () => {
     renderSection(ACME_RECOMMENDATION)
 
     expect(screen.getByText('Recommendation: Completed')).toBeInTheDocument()
-    expect(screen.getByText(/recommender rule-based/)).toBeInTheDocument()
     const card = recommended()
     expect(card).toHaveTextContent('Stock + substitute')
-    expect(card).toHaveTextContent('HIGH confidence')
-    expect(card).toHaveTextContent('Optionstock+ABC-110')
+    expect(within(card).getByText('High confidence')).toBeInTheDocument()
     expect(card).toHaveTextContent(
       '50 × ABC-100 Czujnik ciśnienia ABC-100 — own stock, available 2026-11-02, 114.00 PLN/pc',
     )
@@ -162,26 +177,27 @@ describe('RecommendationSection', () => {
 
     const others = screen.getByRole('list', { name: 'Other options' })
     expect(others.querySelectorAll(':scope > li')).toHaveLength(2)
-    const supplier = option('Other options', 'stock+supplier:Sensortech Polska')
-    expect(supplier).toHaveTextContent('Stock + supplier')
-    expect(supplier).toHaveTextContent('LOW confidence')
+    const supplier = option('Other options', 'Stock + supplier')
+    expect(supplier).toHaveTextContent('Low confidence')
     expect(supplier).toHaveTextContent('supplier Sensortech Polska, available 2026-11-09')
     expect(supplier).toHaveTextContent('Fulfilled2026-11-09, misses the deadline')
     expect(items(supplier, 'Risks')).toEqual(['⚠ Realizacja 2026-11-09 po terminie 2026-11-06'])
-    expect(option('Other options', 'stock')).toHaveTextContent('Partial delivery from stock')
+    expect(option('Other options', 'Partial delivery from stock')).toHaveTextContent(
+      'Coverage50 / 80 pcs',
+    )
 
-    expect(screen.getByRole('region', { name: 'Recommendation metrics' })).toBeInTheDocument()
+    expectNoTechnicalText()
     expect(
       screen.queryByRole('button', { name: 'Re-run recommendation' }),
     ).not.toBeInTheDocument()
   })
 
-  it('shows the Delta combination as LOW with cited risks and uncited information', () => {
+  it('shows the Delta combination as low confidence with cited risks and uncited information', () => {
     renderSection(DELTA_RECOMMENDATION, DELTA_ORCHESTRATION)
 
     const card = recommended()
     expect(card).toHaveTextContent('Stock + substitute + supplier')
-    expect(card).toHaveTextContent('LOW confidence')
+    expect(card).toHaveTextContent('Low confidence')
     expect(card).toHaveTextContent('Coverage290 / 500 pcs')
     expect(card).toHaveTextContent('Fulfilled2026-11-10, no deadline')
     expect(card).toHaveTextContent('Margin14.29%')
@@ -214,12 +230,12 @@ describe('RecommendationSection', () => {
       options: [ACME_RECOMMENDATION.options[0], ACME_RECOMMENDATION.options[1], supplier],
     })
 
-    expect(items(option('Other options', supplier.id), 'Information')).toEqual([
+    expect(items(option('Other options', 'Stock + supplier'), 'Information')).toEqual([
       'ℹ Alternatywy nie sprawdzono: historia klienta',
     ])
   })
 
-  it('shows a rejected choice as failed with all options, the error code and a re-run', () => {
+  it('shows a rejected choice as failed with all options, one sentence and a re-run', () => {
     renderSection({
       ...ACME_RECOMMENDATION,
       status: 'failed',
@@ -232,18 +248,20 @@ describe('RecommendationSection', () => {
     })
 
     expect(screen.getByText('Recommendation: Failed — no option chosen')).toBeInTheDocument()
-    expect(screen.getByText('Choice rejected: foreign_signal')).toBeInTheDocument()
+    expect(screen.getByText('No option could be recommended this time.')).toBeInTheDocument()
+    expect(screen.queryByText(/foreign_signal|Choice rejected/)).not.toBeInTheDocument()
     expect(
-      screen.getByText('A cited signal does not belong to the chosen option'),
-    ).toBeInTheDocument()
+      screen.queryByText('A cited signal does not belong to the chosen option'),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Recommended option' })).not.toBeInTheDocument()
-    expect(option('Options', 'stock+ABC-110')).toHaveTextContent('HIGH confidence')
-    expect(option('Options', 'stock')).toHaveTextContent('LOW confidence')
+    expect(option('Options', 'Stock + substitute')).toHaveTextContent('High confidence')
+    expect(option('Options', 'Partial delivery from stock')).toHaveTextContent('Low confidence')
+    expectNoTechnicalText()
     expect(screen.queryByText(/· cited/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Re-run recommendation' })).toBeEnabled()
   })
 
-  it('shows a recommender failure with its code', () => {
+  it('shows a recommender failure as one sentence, without its code', () => {
     renderSection({
       ...ACME_RECOMMENDATION,
       status: 'failed',
@@ -251,8 +269,10 @@ describe('RecommendationSection', () => {
       error: { kind: 'recommender_failed', code: 'rate_limited', message: 'Rate limit reached' },
     })
 
-    expect(screen.getByText('Recommender failed: rate_limited')).toBeInTheDocument()
-    expect(option('Options', 'stock')).toHaveTextContent('Partial delivery from stock')
+    expect(screen.getByText('No option could be recommended this time.')).toBeInTheDocument()
+    expect(screen.queryByText(/rate_limited|Rate limit reached/)).not.toBeInTheDocument()
+    expect(option('Options', 'Partial delivery from stock')).toBeInTheDocument()
+    expectNoTechnicalText()
     expect(screen.getByRole('button', { name: 'Re-run recommendation' })).toBeInTheDocument()
   })
 
@@ -309,7 +329,7 @@ describe('RecommendationSection', () => {
     answer(json(200, analysis(ACME_RECOMMENDATION)))
 
     expect(await screen.findByText('Recommendation: Completed')).toBeInTheDocument()
-    expect(recommended()).toHaveTextContent('HIGH confidence')
+    expect(recommended()).toHaveTextContent('High confidence')
     expect(
       screen.queryByRole('button', { name: 'Re-run recommendation' }),
     ).not.toBeInTheDocument()

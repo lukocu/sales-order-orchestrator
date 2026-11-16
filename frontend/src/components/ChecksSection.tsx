@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   type Analysis,
   type CheckInput,
@@ -13,12 +14,11 @@ import {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
-import { formatDate, formatPercent, formatPln, totalCost, totalDuration } from './format'
+import { formatDate, formatPercent, formatPln } from './format'
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
 import RecommendationSection from './RecommendationSection'
 import ReplyDraftSection from './ReplyDraftSection'
-import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
@@ -112,25 +112,11 @@ function substituteText(allowed: boolean | null): string {
 }
 
 function Banner({ checks, analysis }: { checks: ChecksView; analysis: Analysis }) {
+  const { t } = useTranslation()
   if (checks.outcome === 'standard') {
-    const run = checks.run
     return (
       <div className="checks__banner checks__banner--standard">
-        <p className="checks__outcome">Standard inquiry — completed without agents</p>
-        {run !== null && (
-          <dl className="metrics__list">
-            <dt>Tokens</dt>
-            <dd>
-              {run.totals.input_tokens} in / {run.totals.output_tokens} out
-            </dd>
-            <dt>Cost</dt>
-            <dd>{totalCost(run)}</dd>
-            <dt>Duration</dt>
-            <dd>{totalDuration(run)}</dd>
-            <dt>Steps</dt>
-            <dd>{run.steps.length}</dd>
-          </dl>
-        )}
+        <p className="checks__outcome">{t('checks.standard')}</p>
       </div>
     )
   }
@@ -426,7 +412,6 @@ function ChecksSection({
             <DiscountItem check={checks.results.discount} />
             <CreditItem check={checks.results.credit} />
           </ul>
-          <RunMetrics run={checks.run} label="Checks metrics" />
         </>
       )}
     </section>

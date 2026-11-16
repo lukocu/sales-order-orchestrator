@@ -1,6 +1,12 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Analysis, OrchestrationView, ParsedFields, RunSummary } from '../api/analysis'
+import type {
+  Analysis,
+  OrchestrationError,
+  OrchestrationView,
+  ParsedFields,
+  RunSummary,
+} from '../api/analysis'
 import {
   ACME_ORCHESTRATION,
   COMPATIBILITY_TASK,
@@ -189,6 +195,72 @@ describe('RunInspector', () => {
     expect(failed).toHaveTextContent('ErrorTimeoutError')
     expect(within(plan).getByText('Plan rejected: missing_prerequisite')).toBeInTheDocument()
     expect(within(plan).getByRole('list', { name: 'Rejected planner choice' })).toBeInTheDocument()
+  })
+
+  it('marks the rule-based demo parser in Parsing', () => {
+    const dialog = renderInspector(analysis({ extractor: 'fake' }))
+
+    const parsing = section(dialog, 'Parsing')
+    expect(within(parsing).getByText('Parser: fake')).toBeInTheDocument()
+    expect(within(parsing).getByText('Rule-based demo parser (no LLM)')).toBeInTheDocument()
+  })
+
+  it('does not mark an LLM parser as the demo parser', () => {
+    const dialog = renderInspector(analysis())
+    expect(within(dialog).queryByText('Rule-based demo parser (no LLM)')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [
+      { kind: 'planner_failed', code: 'rate_limited', message: 'Planner rate limit reached' },
+      'Planner failed: rate_limited',
+    ],
+    [
+      { kind: 'capability_mismatch', code: 'no_agent', message: 'No agent for customer-history' },
+      'Capability mismatch: no_agent',
+    ],
+  ] as [OrchestrationError, string][])(
+    'shows a planner error with its code and message (%o)',
+    (error, heading) => {
+      const orchestration: OrchestrationView = {
+        ...ACME_ORCHESTRATION,
+        status: 'failed',
+        tasks: [],
+        error,
+      }
+      const dialog = renderInspector(analysis({ orchestration }))
+
+      const plan = within(section(dialog, 'Orchestration')).getByRole('region', { name: 'Plan' })
+      expect(within(plan).getByText(heading)).toBeInTheDocument()
+      expect(within(plan).getByText(error.message)).toBeInTheDocument()
+      expect(
+        within(plan).queryByRole('list', { name: 'Rejected planner choice' }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it('shows the recommender error with its code and message', () => {
+    const dialog = renderInspector(
+      analysis({
+        recommendation: {
+          ...ACME_RECOMMENDATION,
+          status: 'failed',
+          choice: null,
+          error: {
+            kind: 'choice_rejected',
+            code: 'foreign_signal',
+            message: 'A cited signal does not belong to the chosen option',
+          },
+        },
+      }),
+    )
+
+    const recommendation = section(dialog, 'Recommendation')
+    expect(within(recommendation).getByText('Recommender: rule-based')).toBeInTheDocument()
+    expect(within(recommendation).getByText('Choice rejected: foreign_signal')).toBeInTheDocument()
+    expect(
+      within(recommendation).getByText('A cited signal does not belong to the chosen option'),
+    ).toBeInTheDocument()
   })
 
   it('says when a stage has not run yet', () => {

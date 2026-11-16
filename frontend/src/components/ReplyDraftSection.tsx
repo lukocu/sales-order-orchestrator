@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type {
   LineSource,
   PolicyOutcome,
@@ -18,7 +19,6 @@ import type {
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { formatDate, formatPercent, formatPln } from './format'
-import RunMetrics from './RunMetrics'
 
 type Decision = 'approve' | 'reject'
 
@@ -291,6 +291,7 @@ function ReplyDraftSection({
 }
 
 function DraftResult({ draft }: { draft: ReplyDraftView }) {
+  const { t } = useTranslation()
   const [status, tone] = STATUS[draft.status]
   const offer = draft.offer
   return (
@@ -301,13 +302,11 @@ function DraftResult({ draft }: { draft: ReplyDraftView }) {
         </p>
       </div>
       <p className="analysis__meta">
-        Drafted {formatDate(draft.drafted_at)} · option {offer.option_id}
+        Drafted {formatDate(draft.drafted_at)}
         {offer.edited && ' · edited offer'}
       </p>
       {draft.text_source === 'fallback' && (
-        <p className="draft__fallback">
-          The model’s paragraphs were unavailable; the draft uses the fixed fallback text.
-        </p>
+        <p className="draft__fallback">{t('draft.fallback')}</p>
       )}
 
       <section className="draft__email" aria-label="E-mail preview">
@@ -347,8 +346,6 @@ function DraftResult({ draft }: { draft: ReplyDraftView }) {
       )}
 
       <VerdictInForce policy={draft.policy} edited={offer.edited} />
-
-      <RunMetrics run={draft.run} label="Draft metrics" />
     </>
   )
 }
@@ -497,6 +494,7 @@ type EditProps = FormProps<ReplyDraftEdit> & {
 // Another option, quantities and unit prices of its lines, and a required reason. Range
 // checks (quantity ≥ 1, price above zero) stay with the API, whose 422 message is shown here.
 function EditForm(props: EditProps) {
+  const { t } = useTranslation()
   const { draft, options, disabled, saving, onDone } = props
   const offer = draft.offer
   const [optionId, setOptionId] = useState(offer.option_id)
@@ -508,9 +506,12 @@ function EditForm(props: EditProps) {
   // The current offer's lines carry its list prices; another option's only its own prices.
   const shown: (ReplyDraftOfferLine | RecommendationOption['lines'][number])[] =
     optionId === offer.option_id || option === undefined ? offer.lines : option.lines
-  const choices = options.some((item) => item.id === offer.option_id)
+  // The current offer leads when the recommendation no longer lists its option.
+  const choices: Pick<RecommendationOption, 'id' | 'kind' | 'value'>[] = options.some(
+    (item) => item.id === offer.option_id,
+  )
     ? options
-    : [{ id: offer.option_id }, ...options]
+    : [{ id: offer.option_id, kind: offer.kind, value: offer.value }, ...options]
 
   function choose(id: string) {
     setOptionId(id)
@@ -567,7 +568,10 @@ function EditForm(props: EditProps) {
       <select id={id('option')} value={optionId} onChange={(event) => choose(event.target.value)}>
         {choices.map((item) => (
           <option key={item.id} value={item.id}>
-            {item.id}
+            {t('draft.optionLabel', {
+              kind: t(`optionKind.${item.kind}`),
+              value: formatPln(item.value),
+            })}
           </option>
         ))}
       </select>
@@ -688,7 +692,7 @@ export function DecisionHistory({
                 <dd>
                   {snapshot === null
                     ? 'Details unavailable'
-                    : `${formatPln(snapshot.offer.value)} · option ${snapshot.offer.option_id}`}
+                    : formatPln(snapshot.offer.value)}
                 </dd>
                 <dt>Policy</dt>
                 <dd>

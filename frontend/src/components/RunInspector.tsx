@@ -274,12 +274,15 @@ function RecommenderLine({ recommendation }: { recommendation: RecommendationVie
     <>
       <p className="text-sm">{t('inspector.recommender', { name: recommendation.recommender })}</p>
       {error !== null && (
-        <p className="text-sm font-medium text-destructive">
-          {t('inspector.errorCode', {
-            kind: t(`inspector.errorKind.${error.kind}`),
-            code: error.code,
-          })}
-        </p>
+        <div className="grid gap-1 rounded-md border border-destructive p-3 text-sm">
+          <p className="font-medium text-destructive">
+            {t('inspector.errorCode', {
+              kind: t(`inspector.errorKind.${error.kind}`),
+              code: error.code,
+            })}
+          </p>
+          <p className="text-muted-foreground">{error.message}</p>
+        </div>
       )}
     </>
   )
@@ -330,6 +333,9 @@ function Runs({ analysis }: { analysis: Analysis }) {
     <>
       <RunSection title={t('inspector.section.parsing')} ran run={analysis.run}>
         <p className="text-sm">{t('inspector.extractor', { name: analysis.extractor })}</p>
+        {analysis.extractor === 'fake' && (
+          <p className="text-sm text-muted-foreground">{t('inspector.demoParser')}</p>
+        )}
       </RunSection>
       <RunSection title={t('inspector.section.checks')} ran={checks !== null} run={checks?.run ?? null} />
       <RunSection
