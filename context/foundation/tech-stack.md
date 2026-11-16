@@ -34,12 +34,13 @@ Decided 2026-11-16 and introduced in F-03 (`design-system-i18n-foundation`); ans
 - **Core:** React 19 + Vite 8 + TypeScript 7 (`frontend/`, npm; oxlint, Vitest 5).
 - **Styling:** Tailwind CSS v4 via `@tailwindcss/vite`. Design tokens in `frontend/src/index.css`, published through `@theme inline`.
 - **Components:** shadcn/ui primitives copied into `frontend/src/components/ui` (Radix through the `radix-ui` package), added with `npx shadcn@latest add <name>`.
+- **Routing:** TanStack Router with code-based routes in `frontend/src/router.tsx`, introduced in S-11 (`run-inspector-and-system-page`).
 - **Icons:** lucide-react.
 - **i18n:** react-i18next with bundled PL and EN resources (`frontend/src/i18n`). Polish is the default; tests are pinned to English.
 - **Constraints:**
   - No `baseUrl` (TypeScript 7). The `@/` alias comes from tsconfig `paths` plus Vite `resolve.tsconfigPaths`.
   - Dark mode follows the OS (`prefers-color-scheme`); there is no `.dark` class or theme toggle.
   - The old stylesheet lives in `frontend/src/styles/legacy.css`, in a `legacy` cascade layer, until S-12 removes it.
-- **Parked:** TanStack Router (S-17, shareable URLs), sonner (S-14), TanStack Query (data-fetching rework, parked in the roadmap).
+- **Parked:** sonner (S-14), TanStack Query (data-fetching rework, parked in the roadmap).
 
 Agent rules for the UI: `AGENTS.md` ("Frontend UI").

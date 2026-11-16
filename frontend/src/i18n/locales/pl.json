@@ -38,6 +38,16 @@
     "fetchInProgress": "Pobieranie poczty już trwa",
     "mailboxUnavailable": "Skrzynka pocztowa niedostępna, spróbuj ponownie"
   },
+  "nav": {
+    "label": "Nawigacja główna",
+    "inbox": "Skrzynka",
+    "system": "System"
+  },
+  "notFound": {
+    "heading": "Nie znaleziono strony",
+    "body": "Pod tym adresem nic nie ma.",
+    "back": "Wróć do skrzynki"
+  },
   "role": {
     "salesperson": "Handlowiec",
     "supervisor": "Przełożony"
@@ -57,11 +67,146 @@
     "apiOk": "ok",
     "database": "Baza danych",
     "migration": "Migracja",
-    "unknown": "nieznana"
+    "unknown": "nieznana",
+    "refresh": "Odśwież"
+  },
+  "system": {
+    "title": "System"
   },
   "language": {
     "label": "Język",
     "pl": "Polski",
     "en": "English"
+  },
+  "analysisFields": {
+    "editedOriginally": "edytowano · pierwotnie: {{value}}"
+  },
+  "checks": {
+    "standard": "Zapytanie standardowe — dodatkowe sprawdzenia nie są potrzebne"
+  },
+  "orchestration": {
+    "status": {
+      "completed": "Dodatkowe sprawdzenia: zakończone",
+      "partial": "Dodatkowe sprawdzenia: część jest niedostępna",
+      "failed": "Dodatkowe sprawdzenia: nie powiodły się"
+    },
+    "capability": {
+      "substituteCompatibility": "Zgodne zamienniki",
+      "substituteAvailability": "Stan zamienników",
+      "supplierAvailability": "Dostawy od dostawców",
+      "customerHistory": "Historia klienta",
+      "other": "Dodatkowe sprawdzenie"
+    },
+    "task": {
+      "completed": "Zakończone",
+      "unavailable": "Niedostępne",
+      "failed": "To sprawdzenie jest niedostępne.",
+      "skipped": "To sprawdzenie jest niedostępne, bo wcześniejsze sprawdzenie się nie zakończyło."
+    },
+    "findings": "Wyniki dodatkowych sprawdzeń",
+    "failed": "Nie udało się przygotować dodatkowych sprawdzeń, więc ich wyniki są niedostępne.",
+    "details": "Szczegóły techniczne"
+  },
+  "recommendation": {
+    "band": {
+      "HIGH": "Wysoka pewność",
+      "MEDIUM": "Średnia pewność",
+      "LOW": "Niska pewność"
+    },
+    "failed": "Tym razem nie udało się zarekomendować żadnej opcji."
+  },
+  "optionKind": {
+    "partial_delivery": "Częściowa dostawa z magazynu",
+    "substitute": "Magazyn + zamiennik",
+    "other_source": "Magazyn + dostawca",
+    "combined": "Magazyn + zamiennik + dostawca"
+  },
+  "draft": {
+    "fallback": "Dopasowane akapity były niedostępne; szkic używa stałego tekstu zastępczego.",
+    "optionLabel": "{{kind}} · {{value}}"
+  },
+  "inspector": {
+    "open": "Jak to policzono?",
+    "title": "Inspektor przebiegu",
+    "description": "Plan i każdy przebieg tego zapytania: kroki, tokeny, koszt i czas.",
+    "close": "Zamknij",
+    "loading": "Wczytywanie analizy…",
+    "noAnalysis": "To zapytanie nie zostało jeszcze przeanalizowane, więc nie ma przebiegów do pokazania.",
+    "notRun": "Jeszcze nie uruchomiono",
+    "noTrace": "Ten przebieg nie został zapisany.",
+    "section": {
+      "parsing": "Parsowanie",
+      "checks": "Weryfikacja",
+      "orchestration": "Orkiestracja",
+      "recommendation": "Rekomendacja",
+      "policy": "Polityka",
+      "draft": "Szkic odpowiedzi"
+    },
+    "extractor": "Parser: {{name}}",
+    "demoParser": "Regułowy parser demonstracyjny (bez LLM)",
+    "recommender": "Rekomendator: {{name}}",
+    "stepsOf": "Kroki: {{run}}",
+    "column": {
+      "step": "Krok",
+      "kind": "Rodzaj",
+      "model": "Model",
+      "tokensIn": "Tokeny wej.",
+      "tokensOut": "Tokeny wyj.",
+      "cost": "Koszt",
+      "duration": "Czas",
+      "status": "Status"
+    },
+    "kind": {
+      "llm": "LLM",
+      "deterministic": "deterministyczny"
+    },
+    "stepOk": "ok",
+    "stepFailed": "błąd",
+    "stepFailedWith": "błąd ({{error}})",
+    "total": "Razem",
+    "cost": {
+      "notPriced": "bez wyceny",
+      "listPrice": "{{amount}} wg cennika",
+      "incomplete": "{{cost}} (część kroków bez wyceny)"
+    },
+    "grandTotal": {
+      "heading": "Suma wszystkich przebiegów",
+      "tokens": "Tokeny",
+      "tokensValue": "{{input}} wej. / {{output}} wyj.",
+      "cost": "Koszt",
+      "duration": "Czas"
+    },
+    "plan": {
+      "heading": "Plan",
+      "planner": "Planista: {{name}}",
+      "summary": "Podsumowanie planisty: {{summary}}",
+      "stage": "Etap {{stage}}",
+      "parallel": "równolegle",
+      "noTasks": "Plan nie ma zadań.",
+      "agent": "Agent",
+      "dependsOn": "Zależy od",
+      "none": "brak",
+      "reason": "Powód",
+      "status": "Status",
+      "attempts": "Próby",
+      "duration": "Czas",
+      "error": "Błąd",
+      "unknownError": "nieznany",
+      "rejectedChoice": "Odrzucony wybór planisty",
+      "noRejectedTasks": "(brak zadań)"
+    },
+    "taskStatus": {
+      "completed": "ukończone",
+      "failed": "błąd",
+      "skipped": "pominięte"
+    },
+    "errorKind": {
+      "planner_failed": "Błąd planisty",
+      "plan_rejected": "Plan odrzucony",
+      "capability_mismatch": "Brak agenta dla zadania",
+      "recommender_failed": "Błąd rekomendatora",
+      "choice_rejected": "Wybór odrzucony"
+    },
+    "errorCode": "{{kind}}: {{code}}"
   }
 }

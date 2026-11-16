@@ -1,10 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import App from './App'
 import i18n from './i18n'
 import type { Analysis, ChecksView } from './api/analysis'
 import type { User } from './api/auth'
 import type { InquiryDetail } from './api/inquiries'
+import { renderWithRouter } from './test/renderWithRouter'
 
 type Handler = () => Response
 type Routes = Record<string, Handler | Handler[]>
@@ -120,7 +120,7 @@ function summary({ body: _body, ...rest }: InquiryDetail) {
 }
 
 // Routes are keyed "METHOD /path"; an array answers with its items in order (the
-// last one repeats). Health is always answered so the footer has data.
+// last one repeats). Health is always answered so the system page has data.
 function stubApi(routes: Routes) {
   const queues = new Map(Object.entries(routes))
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -158,7 +158,7 @@ describe('App', () => {
   it('shows the sign-in form when there is no session', async () => {
     stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
 
-    render(<App />)
+    await renderWithRouter('/')
 
     expect(screen.getByRole('heading', { name: 'Sales Order Orchestrator' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
@@ -173,7 +173,7 @@ describe('App', () => {
       'POST /api/auth/login': () => json(200, SALES),
     })
 
-    render(<App />)
+    await renderWithRouter('/')
     await screen.findByRole('heading', { name: 'Sign in' })
     signIn('sales', 'demo')
 
@@ -196,8 +196,8 @@ describe('App', () => {
   it('shows the body of a clicked inquiry', async () => {
     stubApi(SIGNED_IN_INBOX)
 
-    render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: /Zapytanie o papier A4/ }))
+    await renderWithRouter('/')
+    fireEvent.click(await screen.findByRole('link', { name: /Zapytanie o papier A4/ }))
 
     expect(await screen.findByText(/proszę o wycenę 2 palet papieru A4/)).toBeInTheDocument()
     expect(screen.getByText(/jan@example\.com/)).toBeInTheDocument()
@@ -206,7 +206,7 @@ describe('App', () => {
   it('returns to the sign-in form after Sign out', async () => {
     const fetchMock = stubApi(SIGNED_IN_INBOX)
 
-    render(<App />)
+    await renderWithRouter('/')
     fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
@@ -222,7 +222,7 @@ describe('App', () => {
       'POST /api/auth/logout': () => json(500, { detail: 'Logout failed' }),
     })
 
-    render(<App />)
+    await renderWithRouter('/')
     fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Logout failed')
@@ -233,7 +233,7 @@ describe('App', () => {
   it('returns to the sign-in form when the inbox answers 401', async () => {
     stubApi({ ...SIGNED_IN_INBOX, 'GET /api/inquiries': UNAUTHORIZED })
 
-    render(<App />)
+    await renderWithRouter('/')
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
@@ -241,8 +241,8 @@ describe('App', () => {
   it('returns to the sign-in form when an inquiry answers 401', async () => {
     stubApi({ ...SIGNED_IN_INBOX, 'GET /api/inquiries/2': UNAUTHORIZED })
 
-    render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: /Zapytanie o papier A4/ }))
+    await renderWithRouter('/')
+    fireEvent.click(await screen.findByRole('link', { name: /Zapytanie o papier A4/ }))
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
@@ -253,9 +253,9 @@ describe('App', () => {
       'POST /api/inquiries/1/analysis': () => json(200, OLDER_ANALYSIS),
     })
 
-    render(<App />)
-    const newer = await screen.findByRole('button', { name: /Zapytanie o papier A4/ })
-    const older = screen.getByRole('button', { name: /Tonery do drukarek/ })
+    await renderWithRouter('/')
+    const newer = await screen.findByRole('link', { name: /Zapytanie o papier A4/ })
+    const older = screen.getByRole('link', { name: /Tonery do drukarek/ })
     expect(within(newer).getByText('Exception')).toBeInTheDocument()
     expect(older.querySelector('[data-slot="badge"]')).toBeNull()
 
@@ -271,7 +271,7 @@ describe('App', () => {
   it('shows a message for an empty inbox', async () => {
     stubApi({ ...SIGNED_IN_INBOX, 'GET /api/inquiries': () => json(200, []) })
 
-    render(<App />)
+    await renderWithRouter('/')
 
     expect(await screen.findByText('No inquiries yet.')).toBeInTheDocument()
   })
@@ -281,29 +281,40 @@ describe('App', () => {
       'GET /api/auth/me': [() => json(503, { detail: 'Database unavailable' }), UNAUTHORIZED],
     })
 
-    render(<App />)
+    await renderWithRouter('/')
 
     expect(await screen.findByText(/Database unavailable/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
-  it('shows the health footer when signed in', async () => {
-    stubApi(SIGNED_IN_INBOX)
+  it('shows the system status on /system when signed in', async () => {
+    stubApi({ 'GET /api/auth/me': () => json(200, SALES) })
 
-    render(<App />)
+    await renderWithRouter('/system')
 
     expect(await screen.findByText('All systems operational')).toBeInTheDocument()
     expect(screen.getByText('0003_users_inquiries')).toBeInTheDocument()
   })
 
-  it('hides the health footer on the sign-in screen', async () => {
+  it('shows sign-in on /system while anonymous and does not check health', async () => {
     const fetchMock = stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
 
-    render(<App />)
+    await renderWithRouter('/system')
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'System status' })).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/health', expect.anything())
+  })
+
+  it('shows no system status in the inbox', async () => {
+    const fetchMock = stubApi(SIGNED_IN_INBOX)
+
+    await renderWithRouter('/')
+
+    expect(await screen.findByRole('link', { name: /Tonery do drukarek/ })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'System status' })).not.toBeInTheDocument()
+    expect(screen.queryByText('0003_users_inquiries')).not.toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalledWith('/api/health', expect.anything())
   })
 
@@ -311,9 +322,101 @@ describe('App', () => {
     await i18n.changeLanguage('pl')
     stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
 
-    render(<App />)
+    await renderWithRouter('/')
 
     expect(await screen.findByRole('button', { name: 'Zaloguj się' })).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('pl')
+  })
+
+  describe('routing', () => {
+    it('opens the inquiry named in the address', async () => {
+      stubApi(SIGNED_IN_INBOX)
+
+      const router = await renderWithRouter('/inquiries/1')
+
+      expect(await screen.findByText('Prosimy o ofertę na tonery.')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Tonery do drukarek/ })).toHaveAttribute(
+        'aria-current',
+        'page',
+      )
+      expect(router.state.location.pathname).toBe('/inquiries/1')
+    })
+
+    it('moves to the address of a clicked inquiry', async () => {
+      stubApi(SIGNED_IN_INBOX)
+
+      const router = await renderWithRouter('/')
+      fireEvent.click(await screen.findByRole('link', { name: /Tonery do drukarek/ }))
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/1'))
+      expect(await screen.findByText('Prosimy o ofertę na tonery.')).toBeInTheDocument()
+    })
+
+    it('shows not-found for an unknown address', async () => {
+      stubApi(SIGNED_IN_INBOX)
+
+      await renderWithRouter('/nope')
+
+      expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Back to the inbox' })).toHaveAttribute('href', '/')
+      expect(screen.queryByRole('region', { name: 'Inbox' })).not.toBeInTheDocument()
+    })
+
+    it.each(['abc', '0', '-1', '1.5'])(
+      'shows not-found for the inquiry id "%s" without asking the API',
+      async (id) => {
+        const fetchMock = stubApi(SIGNED_IN_INBOX)
+
+        await renderWithRouter(`/inquiries/${id}`)
+
+        expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+        const inquiryReads = fetchMock.mock.calls.filter(([input]) =>
+          String(input).startsWith('/api/inquiries'),
+        )
+        expect(inquiryReads).toHaveLength(0)
+      },
+    )
+
+    it('shows sign-in at an inquiry address, keeps it, and opens the inquiry after sign-in', async () => {
+      stubApi({
+        ...SIGNED_IN_INBOX,
+        'GET /api/auth/me': UNAUTHORIZED,
+        'POST /api/auth/login': () => json(200, SALES),
+      })
+
+      const router = await renderWithRouter('/inquiries/1')
+
+      expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/inquiries/1')
+      expect(screen.queryByRole('navigation', { name: 'Main navigation' })).not.toBeInTheDocument()
+
+      signIn('sales', 'demo')
+
+      expect(await screen.findByText('Prosimy o ofertę na tonery.')).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/inquiries/1')
+    })
+
+    it('marks the current page in the navigation', async () => {
+      stubApi(SIGNED_IN_INBOX)
+
+      const router = await renderWithRouter('/inquiries/1')
+      const nav = await screen.findByRole('navigation', { name: 'Main navigation' })
+      const inbox = within(nav).getByRole('link', { name: 'Inbox' })
+      const system = within(nav).getByRole('link', { name: 'System' })
+      expect(inbox).toHaveAttribute('aria-current', 'page')
+      expect(system).not.toHaveAttribute('aria-current')
+
+      fireEvent.click(system)
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/system'))
+      expect(system).toHaveAttribute('aria-current', 'page')
+      expect(inbox).not.toHaveAttribute('aria-current')
+
+      fireEvent.click(inbox)
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+      expect(inbox).toHaveAttribute('aria-current', 'page')
+      expect(system).not.toHaveAttribute('aria-current')
+    })
   })
 })

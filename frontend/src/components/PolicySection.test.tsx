@@ -126,7 +126,7 @@ describe('PolicySection', () => {
     renderSection(ACME_POLICY)
 
     expect(screen.getByText('No approval needed')).toBeInTheDocument()
-    expect(screen.getByText(/option stock\+ABC-110$/)).toBeInTheDocument()
+    expect(screen.getByText(/^Evaluated /)).not.toHaveTextContent(/option|stock\+/)
     expect(rows()).toEqual([
       ['Margin', '25.51%', '≥ 20%', 'Pass', 'Margin at or above the minimum'],
       ['Discount', '5%', '≤ 15%', 'Pass', 'Standard discount within the maximum'],
@@ -139,7 +139,10 @@ describe('PolicySection', () => {
         'Balance + selected option value within limit',
       ],
     ])
-    expect(screen.getByRole('region', { name: 'Policy metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/ in \/ \d+ out|deterministic|stock\+ABC-110/),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run policy' })).not.toBeInTheDocument()
   })
 

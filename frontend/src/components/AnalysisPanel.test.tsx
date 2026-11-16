@@ -1,3 +1,4 @@
+import { createMemoryHistory, RouterContextProvider } from '@tanstack/react-router'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields, RunSummary } from '../api/analysis'
@@ -12,7 +13,9 @@ import {
   DELTA_AWAITING,
   DELTA_SUBMITTED,
 } from '../test/replyDraftFixtures'
+import { renderWithRouter } from '../test/renderWithRouter'
 import { SALES, SUPERVISOR } from '../test/userFixtures'
+import { createAppRouter } from '../router'
 import AnalysisPanel from './AnalysisPanel'
 
 type Handler = () => Response | Promise<Response>
@@ -205,14 +208,19 @@ function renderPanel(
   onOutcome = vi.fn(),
   { user = SALES, onDraftStatus = vi.fn() }: { user?: User; onDraftStatus?: () => void } = {},
 ) {
+  // The panel links to the run inspector, so it needs a router (not loaded: no route
+  // matches, the inspector stays closed).
+  const router = createAppRouter(createMemoryHistory({ initialEntries: ['/inquiries/7'] }))
   render(
-    <AnalysisPanel
-      inquiryId={7}
-      user={user}
-      onUnauthorized={onUnauthorized}
-      onOutcome={onOutcome}
-      onDraftStatus={onDraftStatus}
-    />,
+    <RouterContextProvider router={router}>
+      <AnalysisPanel
+        inquiryId={7}
+        user={user}
+        onUnauthorized={onUnauthorized}
+        onOutcome={onOutcome}
+        onDraftStatus={onDraftStatus}
+      />
+    </RouterContextProvider>,
   )
   return onUnauthorized
 }
@@ -282,7 +290,8 @@ describe('AnalysisPanel', () => {
       reviewed: ['customer'],
       analyzed_at: '2026-11-10T09:00:01.123456Z',
     })
-    expect(screen.getByText('edited · model: 80')).toBeInTheDocument()
+    expect(screen.getByText('edited · originally: 80')).toBeInTheDocument()
+    expect(screen.queryByText(/model/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Quantity')).toHaveValue('90')
   })
 
@@ -403,51 +412,24 @@ describe('AnalysisPanel', () => {
     expect(await screen.findByLabelText('Customer')).toHaveValue('ACME Sp. z o.o.')
   })
 
-  it('shows step metrics with list cost and unpriced steps', async () => {
-    const unpricedStep = {
-      ...LLM_RUN.steps[0],
-      id: 12,
-      name: 'parse-retry',
-      model: 'gpt-oss-120b',
-      cost_usd: null,
-      price_status: 'unpriced' as const,
+  it('keeps run metrics, model names and the parser out of the analysis', async () => {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis({ extractor: 'fake' })) })
+
+    renderPanel()
+
+    expect(await screen.findByLabelText('Customer')).toHaveValue('ACME Sp. z o.o.')
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
+    for (const text of [
+      / in \/ \d+ out/,
+      /list price/,
+      /deterministic/,
+      /gpt-oss/,
+      /Rule-based demo parser/,
+      /Metrics unavailable/,
+    ]) {
+      expect(screen.queryByText(text)).not.toBeInTheDocument()
     }
-    stubApi({
-      [`GET ${PATH}`]: () =>
-        json(
-          200,
-          analysis({
-            run: {
-              ...LLM_RUN,
-              steps: [...LLM_RUN.steps, unpricedStep],
-              totals: { ...LLM_RUN.totals, cost_complete: false },
-            },
-          }),
-        ),
-    })
-
-    renderPanel()
-
-    const metrics = await screen.findByRole('region', { name: 'Metrics' })
-    const [parse, resolve, retry, total] = within(metrics).getAllByRole('listitem')
-    expect(parse).toHaveTextContent('openai/gpt-oss-120b')
-    expect(parse).toHaveTextContent('1200 in / 300 out')
-    expect(parse).toHaveTextContent('$0.00036 list price')
-    expect(parse).toHaveTextContent('1500 ms')
-    expect(resolve).toHaveTextContent('deterministic')
-    expect(resolve).toHaveTextContent('—')
-    expect(retry).toHaveTextContent('not priced')
-    expect(total).toHaveTextContent('$0.00036 list price (some steps not priced)')
-    expect(screen.queryByText('Rule-based demo parser (no LLM)')).not.toBeInTheDocument()
-  })
-
-  it('marks the rule-based parser and a missing run', async () => {
-    stubApi({ [`GET ${PATH}`]: () => json(200, analysis({ extractor: 'fake', run: null })) })
-
-    renderPanel()
-
-    expect(await screen.findByText('Rule-based demo parser (no LLM)')).toBeInTheDocument()
-    expect(screen.getByText('Metrics unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'How was this calculated?' })).toBeInTheDocument()
   })
 
   it('shows the checks below the analysis and reports the outcome after a correction', async () => {
@@ -475,12 +457,10 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
 
     expect(
-      await screen.findByText('Standard inquiry — completed without agents'),
+      await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
     expect(onOutcome).toHaveBeenLastCalledWith(7, 'standard')
-    // Two runs on one panel: the analysis and the checks have their own metrics.
-    expect(screen.getByRole('region', { name: 'Metrics' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Checks metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
   })
 
   it('re-runs stale checks without discarding unsaved edits', async () => {
@@ -554,10 +534,10 @@ describe('AnalysisPanel', () => {
     )
     answer(json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeEnabled()
     expect(screen.getByLabelText('Customer')).toHaveValue('ACME SA')
-    expect(screen.getByRole('region', { name: 'Orchestration metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
   })
 
   it('shows a failed orchestrator re-run with retry', async () => {
@@ -576,7 +556,7 @@ describe('AnalysisPanel', () => {
     expect(alert).toHaveTextContent('Re-running the orchestrator failed: Database unavailable')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -677,7 +657,7 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
 
     expect(
-      await screen.findByText('Standard inquiry — completed without agents'),
+      await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Reply draft' })).not.toBeInTheDocument()
     const history = screen.getByRole('region', { name: 'Decision history' })
@@ -801,5 +781,99 @@ describe('AnalysisPanel', () => {
     const onUnauthorized = renderPanel()
 
     await vi.waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+})
+
+describe('AnalysisPanel run inspector (routed)', () => {
+  const INQUIRY = {
+    id: 7,
+    sender_name: 'ACME Sp. z o.o.',
+    sender_email: 'zakupy@acme.example.com',
+    subject: 'Zapytanie ofertowe ABC-100',
+    received_at: '2026-11-09T10:00:00Z',
+    source: 'sample',
+    outcome: null,
+    draft_status: null,
+  }
+
+  // The whole app at `path`, signed in, with inquiry 7 and its analysis.
+  function stubApp(analysisReply: Handler) {
+    stubApi({
+      'GET /api/auth/me': () => json(200, SALES),
+      'GET /api/inquiries': () => json(200, [INQUIRY]),
+      'GET /api/inquiries/7': () => json(200, { ...INQUIRY, body: 'Prosimy o 80 szt. ABC-100.' }),
+      [`GET ${PATH}`]: analysisReply,
+    })
+  }
+
+  it('opens the inspector from the link and changes the address', async () => {
+    stubApp(() => json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
+
+    const router = await renderWithRouter('/inquiries/7')
+    fireEvent.click(await screen.findByRole('link', { name: 'How was this calculated?' }))
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7/run'))
+    expect(within(inspector).getByRole('table', { name: 'Steps: Parsing' })).toBeInTheDocument()
+    expect(within(inspector).getByRole('region', { name: 'Plan' })).toBeInTheDocument()
+  })
+
+  it('opens the inspector at its own address once the analysis has loaded', async () => {
+    let answer: (response: Response) => void = () => {}
+    stubApp(() => new Promise<Response>((resolve) => (answer = resolve)))
+
+    await renderWithRouter('/inquiries/7/run')
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    expect(within(inspector).getByText('Loading analysis…')).toBeInTheDocument()
+    answer(json(200, analysis()))
+    expect(
+      await within(inspector).findByRole('table', { name: 'Steps: Parsing' }),
+    ).toBeInTheDocument()
+  })
+
+  it('says when the inquiry has no analysis', async () => {
+    stubApp(() => json(200, null))
+
+    await renderWithRouter('/inquiries/7/run')
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    expect(
+      await within(inspector).findByText(
+        'This inquiry has not been analysed yet, so there are no runs to show.',
+      ),
+    ).toBeInTheDocument()
+    expect(within(inspector).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('returns to the inquiry with focus on the link after Esc', async () => {
+    stubApp(() => json(200, analysis()))
+
+    const router = await renderWithRouter('/inquiries/7/run')
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    await within(inspector).findByRole('table', { name: 'Steps: Parsing' })
+    fireEvent.keyDown(inspector, { key: 'Escape' })
+
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Run inspector' })).not.toBeInTheDocument(),
+    )
+    await vi.waitFor(() =>
+      expect(screen.getByRole('link', { name: 'How was this calculated?' })).toHaveFocus(),
+    )
+  })
+
+  it('returns to the inquiry with focus on the link after the close button', async () => {
+    stubApp(() => json(200, analysis()))
+
+    const router = await renderWithRouter('/inquiries/7')
+    fireEvent.click(await screen.findByRole('link', { name: 'How was this calculated?' }))
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }))
+
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+    await vi.waitFor(() =>
+      expect(screen.getByRole('link', { name: 'How was this calculated?' })).toHaveFocus(),
+    )
   })
 })

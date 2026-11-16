@@ -38,6 +38,16 @@
     "fetchInProgress": "A fetch is already in progress",
     "mailboxUnavailable": "Mailbox unavailable, try again"
   },
+  "nav": {
+    "label": "Main navigation",
+    "inbox": "Inbox",
+    "system": "System"
+  },
+  "notFound": {
+    "heading": "Page not found",
+    "body": "There is nothing at this address.",
+    "back": "Back to the inbox"
+  },
   "role": {
     "salesperson": "Salesperson",
     "supervisor": "Supervisor"
@@ -57,11 +67,146 @@
     "apiOk": "ok",
     "database": "Database",
     "migration": "Migration",
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "refresh": "Refresh"
+  },
+  "system": {
+    "title": "System"
   },
   "language": {
     "label": "Language",
     "pl": "Polski",
     "en": "English"
+  },
+  "analysisFields": {
+    "editedOriginally": "edited · originally: {{value}}"
+  },
+  "checks": {
+    "standard": "Standard inquiry — no additional checks needed"
+  },
+  "orchestration": {
+    "status": {
+      "completed": "Additional checks: completed",
+      "partial": "Additional checks: some are unavailable",
+      "failed": "Additional checks: failed"
+    },
+    "capability": {
+      "substituteCompatibility": "Compatible substitutes",
+      "substituteAvailability": "Substitute stock",
+      "supplierAvailability": "Supplier deliveries",
+      "customerHistory": "Customer history",
+      "other": "Additional check"
+    },
+    "task": {
+      "completed": "Completed",
+      "unavailable": "Unavailable",
+      "failed": "This check is unavailable.",
+      "skipped": "This check is unavailable because an earlier check did not complete."
+    },
+    "findings": "Findings of the additional checks",
+    "failed": "The additional checks could not be prepared, so their results are unavailable.",
+    "details": "Technical details"
+  },
+  "recommendation": {
+    "band": {
+      "HIGH": "High confidence",
+      "MEDIUM": "Medium confidence",
+      "LOW": "Low confidence"
+    },
+    "failed": "No option could be recommended this time."
+  },
+  "optionKind": {
+    "partial_delivery": "Partial delivery from stock",
+    "substitute": "Stock + substitute",
+    "other_source": "Stock + supplier",
+    "combined": "Stock + substitute + supplier"
+  },
+  "draft": {
+    "fallback": "The tailored paragraphs were unavailable; the draft uses the fixed fallback text.",
+    "optionLabel": "{{kind}} · {{value}}"
+  },
+  "inspector": {
+    "open": "How was this calculated?",
+    "title": "Run inspector",
+    "description": "The plan and every run of this inquiry: steps, tokens, cost and time.",
+    "close": "Close",
+    "loading": "Loading analysis…",
+    "noAnalysis": "This inquiry has not been analysed yet, so there are no runs to show.",
+    "notRun": "Not run yet",
+    "noTrace": "This run was not recorded.",
+    "section": {
+      "parsing": "Parsing",
+      "checks": "Checks",
+      "orchestration": "Orchestration",
+      "recommendation": "Recommendation",
+      "policy": "Policy",
+      "draft": "Reply draft"
+    },
+    "extractor": "Parser: {{name}}",
+    "demoParser": "Rule-based demo parser (no LLM)",
+    "recommender": "Recommender: {{name}}",
+    "stepsOf": "Steps: {{run}}",
+    "column": {
+      "step": "Step",
+      "kind": "Kind",
+      "model": "Model",
+      "tokensIn": "Tokens in",
+      "tokensOut": "Tokens out",
+      "cost": "Cost",
+      "duration": "Duration",
+      "status": "Status"
+    },
+    "kind": {
+      "llm": "LLM",
+      "deterministic": "deterministic"
+    },
+    "stepOk": "ok",
+    "stepFailed": "failed",
+    "stepFailedWith": "failed ({{error}})",
+    "total": "Total",
+    "cost": {
+      "notPriced": "not priced",
+      "listPrice": "{{amount}} list price",
+      "incomplete": "{{cost}} (some steps not priced)"
+    },
+    "grandTotal": {
+      "heading": "Grand total",
+      "tokens": "Tokens",
+      "tokensValue": "{{input}} in / {{output}} out",
+      "cost": "Cost",
+      "duration": "Duration"
+    },
+    "plan": {
+      "heading": "Plan",
+      "planner": "Planner: {{name}}",
+      "summary": "Planner summary: {{summary}}",
+      "stage": "Stage {{stage}}",
+      "parallel": "in parallel",
+      "noTasks": "The plan has no tasks.",
+      "agent": "Agent",
+      "dependsOn": "Depends on",
+      "none": "none",
+      "reason": "Reason",
+      "status": "Status",
+      "attempts": "Attempts",
+      "duration": "Duration",
+      "error": "Error",
+      "unknownError": "unknown",
+      "rejectedChoice": "Rejected planner choice",
+      "noRejectedTasks": "(no tasks)"
+    },
+    "taskStatus": {
+      "completed": "completed",
+      "failed": "failed",
+      "skipped": "skipped"
+    },
+    "errorKind": {
+      "planner_failed": "Planner failed",
+      "plan_rejected": "Plan rejected",
+      "capability_mismatch": "Capability mismatch",
+      "recommender_failed": "Recommender failed",
+      "choice_rejected": "Choice rejected"
+    },
+    "errorCode": "{{kind}}: {{code}}"
   }
 }

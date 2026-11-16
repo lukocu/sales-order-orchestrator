@@ -189,7 +189,9 @@ describe('ReplyDraftSection', () => {
     expect(screen.getByRole('table', { name: /^Policy verdict in force:/ })).toHaveTextContent(
       'No approval needed',
     )
-    expect(screen.getByRole('region', { name: 'Draft metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/ in \/ \d+ out|deterministic/)).not.toBeInTheDocument()
+    expect(screen.getByText(/^Drafted /)).not.toHaveTextContent(/option|stock\+/)
     expect(screen.queryByText(/fallback text/)).not.toBeInTheDocument()
     expect(decisionButtons()).toEqual(['Approve', 'Edit offer', 'Reject'])
     expect(screen.queryByRole('button', { name: 'Regenerate draft' })).not.toBeInTheDocument()
@@ -198,7 +200,12 @@ describe('ReplyDraftSection', () => {
   it('marks the fallback text and the verdict of an edited offer', () => {
     renderSection({ ...ACME_EDITED_DRAFT, text_source: 'fallback' })
 
-    expect(screen.getByText(/uses the fixed fallback text/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'The tailored paragraphs were unavailable; the draft uses the fixed fallback text.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/model/)).not.toBeInTheDocument()
     expect(screen.getByText(/· edited offer$/)).toBeInTheDocument()
     const table = screen.getByRole('table', { name: /^Policy verdict in force \(edited offer\)/ })
     expect(table).toHaveTextContent('Requires supervisor approval')
@@ -419,6 +426,20 @@ describe('ReplyDraftSection', () => {
     })
     expect(screen.queryByRole('form', { name: 'Edit offer' })).not.toBeInTheDocument()
     expect(screen.getByRole('table', { name: /edited offer/ })).toHaveTextContent('Fail')
+  })
+
+  it('labels each option of the edit by its kind and value, not by its id', () => {
+    renderSection(ACME_DRAFT)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit offer' }))
+    const select = screen.getByLabelText('Option')
+    const labels = within(select)
+      .getAllByRole('option')
+      .map((item) => item.textContent)
+    expect(labels).toContain('Stock + substitute · 9262.50 PLN')
+    expect(labels).toContain('Partial delivery from stock · 5700.00 PLN')
+    expect(labels.some((label) => label?.includes('stock+'))).toBe(false)
+    expect(select).toHaveValue('stock+ABC-110')
   })
 
   it('switches the edit to another option with its lines', () => {
@@ -672,6 +693,7 @@ describe('DecisionHistory', () => {
     expect(items[2]).toHaveTextContent('Approved')
     expect(items[2]).toHaveTextContent('Ready to send (sending is simulated)')
     expect(items[2]).toHaveTextContent('Reason—')
+    for (const item of items) expect(item).not.toHaveTextContent(/option|stock\+/)
   })
 
   it("labels the supervisor's decisions and lists the rules not evaluated", () => {

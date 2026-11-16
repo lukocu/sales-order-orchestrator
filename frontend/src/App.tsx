@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Outlet } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fetchMe, logout, UnauthorizedError, type User } from './api/auth'
+import AppNav from './components/AppNav'
 import AppShell from './components/AppShell'
-import HealthFooter from './components/HealthFooter'
-import Inbox from './components/Inbox'
 import LoginForm from './components/LoginForm'
+import { SessionContext, type Session } from './session'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -15,6 +16,8 @@ type State =
   // `message` is null when the failure carried no text.
   | { kind: 'error'; message: string | null }
 
+// The root route's component: it stays mounted across navigation, so the session lives here.
+// Without a session every address renders sign-in in place, and the URL is kept.
 function App() {
   const { t } = useTranslation()
   const [state, setState] = useState<State>({ kind: 'loading' })
@@ -23,7 +26,7 @@ function App() {
   // Server text, or null for the translated fallback (translated at render time).
   const [signOutError, setSignOutError] = useState<{ message: string | null } | null>(null)
 
-  // No router: the session (GET /api/auth/me) picks the view.
+  // Once per mount (and per Retry): the session (GET /api/auth/me) picks the view.
   useEffect(() => {
     const controller = new AbortController()
     fetchMe(controller.signal).then(
@@ -66,6 +69,12 @@ function App() {
     handleSignedOut()
   }
 
+  const user = state.kind === 'authenticated' ? state.user : null
+  const session = useMemo<Session | null>(
+    () => (user === null ? null : { user, onUnauthorized: handleSignedOut }),
+    [user, handleSignedOut],
+  )
+
   function retry() {
     setState({ kind: 'loading' })
     setAttempt((n) => n + 1)
@@ -73,9 +82,10 @@ function App() {
 
   return (
     <AppShell
-      user={state.kind === 'authenticated' ? state.user : null}
+      user={user}
       onSignOut={handleSignOut}
       signingOut={signingOut}
+      nav={user !== null ? <AppNav /> : undefined}
     >
       {state.kind === 'loading' && <p className="text-muted-foreground">{t('app.loading')}</p>}
       {state.kind === 'error' && (
@@ -96,10 +106,11 @@ function App() {
           {signOutError.message ?? t('inbox.genericError')}
         </p>
       )}
-      {state.kind === 'authenticated' && (
-        <Inbox user={state.user} onUnauthorized={handleSignedOut} />
+      {session !== null && (
+        <SessionContext.Provider value={session}>
+          <Outlet />
+        </SessionContext.Provider>
       )}
-      {state.kind === 'authenticated' && <HealthFooter />}
     </AppShell>
   )
 }

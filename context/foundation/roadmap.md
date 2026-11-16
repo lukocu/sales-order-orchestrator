@@ -43,7 +43,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | ID   | Change ID                     | Outcome (user can …)                                                                                  | Prerequisites | PRD refs                                         | Status   |
 | ---- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------ | -------- |
 | F-03 | design-system-i18n-foundation | (foundation) tokeny, współdzielone komponenty i tłumaczenia PL / EN; powłoka aplikacji z nich korzysta | —             | FR-021, NFR (system projektowy, WCAG)            | done        |
-| S-11 | run-inspector-and-system-page | użytkownik otwiera inspektor przebiegu i stronę systemową; diagnostyka znika z przepływu handlowca     | F-03          | FR-015, FR-005, US-03, FR-020, NFR, Access Control | proposed |
+| S-11 | run-inspector-and-system-page | użytkownik otwiera inspektor przebiegu i stronę systemową; diagnostyka znika z przepływu handlowca     | F-03          | FR-015, FR-005, US-03, FR-020, NFR, Access Control | done |
 | S-12 | inquiry-steps                 | handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź z jedną główną akcją         | F-03, S-11    | FR-016, US-01, FR-002, FR-010, FR-011, NFR       | proposed |
 | S-13 | variant-comparison            | handlowiec porównuje warianty realizacji obok siebie                                                  | S-12          | FR-017, FR-007, US-01, NFR                       | proposed |
 | S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | proposed |
@@ -102,7 +102,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Pierwsze wejście routera i pierwsza duża zmiana w widoku zapytania (6 bloków metryk w 6 sekcjach); idzie przed krokami, bo strona robi się krótsza i S-12 przebudowuje już tylko warstwę biznesową.
-- **Status:** proposed
+- **Status:** done
 
 ### S-12: Kroki zapytania z jedną główną akcją
 
@@ -230,3 +230,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-10: autor puszcza ten sam zestaw testowych zapytań z zapisanymi oczekiwanymi decyzjami przez stały workflow i przez orchestrator i widzi porównanie trafności, kosztu i czasu.** — Archived 2026-11-14 → `context/archive/2026-11-13-workflow-vs-orchestrator-eval/`. Lesson: —.
 - **S-09: handlowiec widzi w skrzynce zapytania odczytane z dedykowanej testowej skrzynki e-mail (tylko odczyt).** — Archived 2026-11-16 → `context/archive/2026-11-14-test-mailbox-ingest/`. Lesson: —.
 - **F-03: (foundation) w repozytorium są semantyczne tokeny (kolory, odstępy, promienie, typografia — w tym granice pól ≥ 3:1 i token fokusu), kilka współdzielonych komponentów oraz infrastruktura tłumaczeń z przełącznikiem PL | EN (domyślnie polski); powłoka aplikacji (logowanie, nagłówek, skrzynka) korzysta z nich, a widok zapytania działa bez zmian do czasu S-11 i S-12.** — Archived 2026-11-16 → `context/archive/2026-11-16-design-system-i18n-foundation/`. Lesson: —.
+- **S-11: użytkownik otwiera „Inspektor przebiegu” z widoku zapytania i widzi plan orchestratora, wyniki agentów oraz tokeny, koszt i czas każdego kroku i łącznie; stan systemu jest na osobnej stronie dostępnej po zalogowaniu; z przepływu handlowca i z ekranu logowania znikają metryki, nazwy agentów, numer migracji i inne identyfikatory techniczne.** — Archived 2026-11-16 → `context/archive/2026-11-16-run-inspector-and-system-page/`. Lesson: —.

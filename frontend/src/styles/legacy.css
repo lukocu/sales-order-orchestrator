@@ -50,62 +50,6 @@ body {
   overflow-wrap: anywhere;
 }
 
-.status {
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--muted);
-  border-radius: 8px;
-  background: var(--card);
-}
-
-.status--ok {
-  border-left-color: var(--ok);
-}
-
-.status--degraded {
-  border-left-color: var(--warn);
-}
-
-.status--error {
-  border-left-color: var(--error);
-}
-
-.status h2 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.status__summary {
-  margin: 0.25rem 0 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.status__detail {
-  margin: 0.5rem 0 0;
-  color: var(--muted);
-}
-
-.status__list {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1.5rem;
-  margin: 1rem 0 0;
-}
-
-.status__list dt {
-  color: var(--muted);
-}
-
-.status__list dd {
-  margin: 0;
-  font-family: ui-monospace, Consolas, monospace;
-}
-
 /* Analysis */
 
 .analysis {
@@ -128,15 +72,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
-}
-
-.analysis__banner {
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--warn);
-  border-radius: 6px;
-  font-size: 0.875rem;
 }
 
 .analysis__meta,
@@ -254,30 +189,6 @@ body {
   gap: 0.5rem;
   align-items: center;
   font-size: 0.875rem;
-}
-
-.metrics__steps {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.metrics__step {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.metrics__step--total {
-  border-color: var(--muted);
-}
-
-.metrics__name {
-  margin: 0 0 0.25rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
 }
 
 .metrics__list {
@@ -673,103 +584,4 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted);
-}
-
-/*
-  Every selector below is wrapped in :where(), so it has zero specificity: any rule
-  above wins over it, and it only replaces what Tailwind Preflight (`base` layer)
-  reset to the browser default.
-*/
-
-/* Preflight compatibility for the inquiry view — delete in S-11/S-12 */
-
-:where(.inbox__detail) :where(h1, h2, h3, h4, h5, h6) {
-  font-weight: bold;
-}
-
-:where(.inbox__detail) :where(h1) {
-  margin-block: 0.67em;
-  font-size: 2em;
-}
-
-:where(.inbox__detail) :where(h2) {
-  margin-block: 0.83em;
-  font-size: 1.5em;
-}
-
-:where(.inbox__detail) :where(h3) {
-  margin-block: 1em;
-  font-size: 1.17em;
-}
-
-:where(.inbox__detail) :where(h4) {
-  margin-block: 1.33em;
-  font-size: 1em;
-}
-
-:where(.inbox__detail) :where(h5) {
-  margin-block: 1.67em;
-  font-size: 0.83em;
-}
-
-:where(.inbox__detail) :where(h6) {
-  margin-block: 2.33em;
-  font-size: 0.67em;
-}
-
-:where(.inbox__detail) :where(ul, ol) {
-  margin-block: 1em;
-  padding-inline-start: 40px;
-}
-
-:where(.inbox__detail) :where(ul) {
-  list-style: disc;
-}
-
-:where(.inbox__detail) :where(ol) {
-  list-style: decimal;
-}
-
-:where(.inbox__detail) :where(ul, ol) :where(ul, ol) {
-  margin-block: 0;
-}
-
-:where(.inbox__detail) :where(ul, ol) :where(ul) {
-  list-style-type: circle;
-}
-
-:where(.inbox__detail) :where(dl) {
-  margin-block: 1em;
-}
-
-:where(.inbox__detail) :where(dd) {
-  margin-inline-start: 40px;
-}
-
-:where(.inbox__detail) :where(pre) {
-  margin-block: 1em;
-}
-
-/* The old global `button` look, still used by the buttons of the inquiry view. */
-:where(.inbox__detail) :where(button) {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-  color: inherit;
-  background: var(--card);
-  cursor: pointer;
-}
-
-:where(.inbox__detail) :where(button:disabled) {
-  cursor: default;
-  opacity: 0.6;
-}
-
-:where(.inbox__detail) :where(input[type='checkbox']) {
-  margin: 3px 3px 3px 4px;
-}
-
-:where(.inbox__detail) :where(textarea) {
-  resize: auto;
 }

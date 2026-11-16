@@ -8,8 +8,8 @@ import type {
   RuleVerdict,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import { formatDate, formatPercent, formatPln } from './format'
-import RunMetrics from './RunMetrics'
 
 type Props = {
   inquiryId: number
@@ -82,8 +82,8 @@ function thresholdText(rule: RuleResult): string {
   return rule.code === 'credit' ? `${text} (credit limit)` : text
 }
 
-// The policy verdict on the recommended option: each rule against its threshold, the overall
-// outcome and the run's cost.
+// The policy verdict on the recommended option: each rule against its threshold and the overall
+// outcome; the run's cost is in the run inspector.
 function PolicySection({
   inquiryId,
   policy,
@@ -128,17 +128,17 @@ function PolicySection({
       )}
       {offerRerun && (
         <div className="analysis__actions">
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             {running ? 'Running policy…' : 'Re-run policy'}
-          </button>
+          </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
           <p className="error">Re-running the policy failed: {error}</p>
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
@@ -159,9 +159,7 @@ function PolicyResult({ policy }: { policy: PolicyView }) {
           )}
         </p>
       </div>
-      <p className="analysis__meta">
-        Evaluated {formatDate(policy.evaluated_at)} · option {policy.option_id}
-      </p>
+      <p className="analysis__meta">Evaluated {formatDate(policy.evaluated_at)}</p>
 
       <div className="policy__table-wrap">
         <table className="policy__table">
@@ -195,8 +193,6 @@ function PolicyResult({ policy }: { policy: PolicyView }) {
           </tbody>
         </table>
       </div>
-
-      <RunMetrics run={policy.run} label="Policy metrics" />
     </>
   )
 }

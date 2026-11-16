@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type { Outcome, ReplyDraftStatus } from '../api/analysis'
-import { ApiError, UnauthorizedError, type User } from '../api/auth'
+import { ApiError, UnauthorizedError } from '../api/auth'
 import {
   fetchInquiries,
   fetchInquiry,
@@ -14,13 +15,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { useSession } from '../session'
 import AnalysisPanel from './AnalysisPanel'
 import { formatDate } from './format'
 
 type Props = {
-  user: User
-  // Called whenever the API answers 401 (session gone).
-  onUnauthorized: () => void
+  // The open inquiry, parsed from /inquiries/$inquiryId by the route; null on `/`.
+  selectedId?: number | null
 }
 
 // State keeps raw results and server text; `t()` runs at render time, so a language
@@ -71,11 +72,12 @@ function fetchErrorMessage(error: unknown, t: TFunction): string {
   return errorText(error) ?? t('inbox.genericError')
 }
 
-function Inbox({ user, onUnauthorized }: Props) {
+function Inbox({ selectedId = null }: Props) {
   const { t } = useTranslation()
+  // `onUnauthorized` is called whenever the API answers 401 (session gone).
+  const { user, onUnauthorized } = useSession()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [listAttempt, setListAttempt] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [awaitingOnly, setAwaitingOnly] = useState(false)
   const [fetching, setFetching] = useState(false)
@@ -243,14 +245,16 @@ function Inbox({ user, onUnauthorized }: Props) {
                 const selected = inquiry.id === selectedId
                 return (
                   <li key={inquiry.id}>
-                    <button
-                      type="button"
+                    {/* Links to the inquiry's address; the router marks the open one
+                        aria-current="page". */}
+                    <Link
+                      to="/inquiries/$inquiryId"
+                      params={{ inquiryId: String(inquiry.id) }}
+                      activeProps={{}}
                       className={cn(
                         'grid w-full gap-0.5 rounded-md border bg-card px-4 py-2 text-left transition-colors hover:bg-muted',
                         selected && 'border-primary bg-muted',
                       )}
-                      aria-current={selected ? 'true' : undefined}
-                      onClick={() => setSelectedId(inquiry.id)}
                     >
                       <span className="font-semibold wrap-anywhere">{inquiry.sender_name}</span>
                       <span className="wrap-anywhere" data-field="subject">
@@ -279,7 +283,7 @@ function Inbox({ user, onUnauthorized }: Props) {
                           )}
                         </span>
                       </span>
-                    </button>
+                    </Link>
                   </li>
                 )
               })}
@@ -289,7 +293,7 @@ function Inbox({ user, onUnauthorized }: Props) {
       </Card>
 
       <section
-        className="card inbox__detail md:col-span-3"
+        className="card md:col-span-3"
         aria-live="polite"
         aria-label={t('inbox.detailLabel')}
       >
@@ -304,7 +308,7 @@ function Inbox({ user, onUnauthorized }: Props) {
         )}
         {currentDetail?.kind === 'ok' && (
           <article>
-            <h3 className="detail__subject">{currentDetail.inquiry.subject}</h3>
+            <h3 className="detail__subject font-bold">{currentDetail.inquiry.subject}</h3>
             <p className="detail__meta">
               {currentDetail.inquiry.sender_name} &lt;{currentDetail.inquiry.sender_email}&gt;
               {' · '}

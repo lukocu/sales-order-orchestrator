@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields } from '../api/analysis'
 import type { User } from '../api/auth'
@@ -7,9 +7,9 @@ import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import { DELTA_POLICY } from '../test/policyFixtures'
 import { DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
 import { DELTA_AWAITING, DELTA_SUBMITTED } from '../test/replyDraftFixtures'
+import { renderWithRouter } from '../test/renderWithRouter'
 import { SALES, SUPERVISOR } from '../test/userFixtures'
 import i18n from '@/i18n'
-import Inbox from './Inbox'
 
 type Handler = () => Response | Promise<Response>
 type Routes = Record<string, Handler | Handler[]>
@@ -21,12 +21,19 @@ function json(status: number, body: unknown): Response {
   })
 }
 
+// The inbox renders inside the signed-in app; `renderInbox` picks who is signed in.
+let signedIn: User = SALES
+
 // Routes are keyed "METHOD /path"; an array answers with its items in order (the last one
-// repeats).
+// repeats). The session and the health footer are always answered.
 function stubApi(routes: Routes) {
   const queues = new Map(Object.entries(routes))
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const key = `${init?.method ?? 'GET'} ${String(input)}`
+    if (key === 'GET /api/auth/me') return json(200, signedIn)
+    if (key === 'GET /api/health') {
+      return json(200, { status: 'ok', database: 'ok', migration: '0012' })
+    }
     const route = queues.get(key)
     if (route === undefined) throw new Error(`Unexpected request: ${key}`)
     if (Array.isArray(route)) {
@@ -169,10 +176,10 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
   }
 }
 
-function renderInbox(user: User) {
-  const onUnauthorized = vi.fn()
-  render(<Inbox user={user} onUnauthorized={onUnauthorized} />)
-  return onUnauthorized
+// Renders the app at `path` (the inbox lives on `/` and `/inquiries/$inquiryId`).
+function renderInbox(user: User, path = '/') {
+  signedIn = user
+  return renderWithRouter(path)
 }
 
 function listedSubjects(): string[] {
@@ -195,15 +202,15 @@ describe('Inbox', () => {
   it('marks an inquiry awaiting the supervisor with a badge', async () => {
     stubApi({ 'GET /api/inquiries': () => json(200, SUMMARIES) })
 
-    renderInbox(SALES)
+    await renderInbox(SALES)
 
-    const delta = await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    const delta = await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     expect(within(delta).getByText('Awaiting supervisor')).toHaveAttribute(
       'data-variant',
       'warning',
     )
     expect(within(delta).getByText('Exception')).toBeInTheDocument()
-    const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
+    const acme = screen.getByRole('link', { name: /Zapytanie ofertowe ABC-100/ })
     expect(within(acme).queryByText('Awaiting supervisor')).not.toBeInTheDocument()
   })
 
@@ -213,9 +220,9 @@ describe('Inbox', () => {
   ])('lets a %s filter to the inquiries awaiting the supervisor', async (_, user) => {
     stubApi({ 'GET /api/inquiries': () => json(200, SUMMARIES) })
 
-    renderInbox(user)
+    await renderInbox(user)
 
-    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     expect(filterButton()).toHaveAttribute('aria-pressed', 'false')
     expect(filterButton()).toHaveTextContent('Awaiting supervisor only (1)')
     expect(listedSubjects()).toHaveLength(3)
@@ -234,9 +241,9 @@ describe('Inbox', () => {
   it('says when no inquiry awaits the supervisor', async () => {
     stubApi({ 'GET /api/inquiries': () => json(200, [ACME, OMEGA]) })
 
-    renderInbox(SUPERVISOR)
+    await renderInbox(SUPERVISOR)
 
-    await screen.findByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
+    await screen.findByRole('link', { name: /Zapytanie ofertowe ABC-100/ })
     expect(filterButton()).toHaveTextContent('Awaiting supervisor only (0)')
     fireEvent.click(filterButton())
 
@@ -268,8 +275,8 @@ describe('Inbox', () => {
         ),
     })
 
-    renderInbox(SUPERVISOR)
-    fireEvent.click(await screen.findByRole('button', { name: /Zamówienie ABC-100/ }))
+    await renderInbox(SUPERVISOR)
+    fireEvent.click(await screen.findByRole('link', { name: /Zamówienie ABC-100/ }))
     fireEvent.click(filterButton())
 
     const group = await screen.findByRole('group', { name: 'Supervisor decision' })
@@ -287,7 +294,7 @@ describe('Inbox', () => {
     )
     expect(listedSubjects()).toEqual([])
     fireEvent.click(filterButton())
-    const delta = screen.getByRole('button', { name: /Zamówienie ABC-100/ })
+    const delta = screen.getByRole('link', { name: /Zamówienie ABC-100/ })
     expect(within(delta).queryByText('Awaiting supervisor')).not.toBeInTheDocument()
   })
 
@@ -298,15 +305,15 @@ describe('Inbox', () => {
         json(200, { fetched: 5, created: 1, duplicates: 3, skipped: 1 }),
     })
 
-    renderInbox(SALES)
-    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    await renderInbox(SALES)
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     expect(screen.queryByText('E-mail')).not.toBeInTheDocument()
 
     fireEvent.click(fetchButton())
 
-    const mailed = await screen.findByRole('button', { name: /Zapytanie z poczty/ })
+    const mailed = await screen.findByRole('link', { name: /Zapytanie z poczty/ })
     expect(within(mailed).getByText('E-mail')).toHaveAttribute('data-variant', 'outline')
-    const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
+    const acme = screen.getByRole('link', { name: /Zapytanie ofertowe ABC-100/ })
     expect(within(acme).queryByText('E-mail')).not.toBeInTheDocument()
     expect(screen.getByText('1 new, 3 already in inbox, 1 skipped')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith(
@@ -324,8 +331,8 @@ describe('Inbox', () => {
         json(200, { fetched: 3, created: 0, duplicates: 3, skipped: 0 }),
     })
 
-    renderInbox(SALES)
-    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    await renderInbox(SALES)
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
 
     expect(await screen.findByText('No new mail')).toBeInTheDocument()
@@ -338,8 +345,8 @@ describe('Inbox', () => {
         json(200, { fetched: 3, created: 0, duplicates: 3, skipped: 0 }),
     })
 
-    renderInbox(SALES)
-    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    await renderInbox(SALES)
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
     await screen.findByText('No new mail')
 
@@ -355,8 +362,8 @@ describe('Inbox', () => {
       'POST /api/mailbox/fetch': () => json(503, { detail: 'Mailbox not configured' }),
     })
 
-    renderInbox(SALES)
-    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    await renderInbox(SALES)
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
 
     expect(await screen.findByText('Mailbox not configured')).toHaveClass('text-destructive')
@@ -373,8 +380,8 @@ describe('Inbox', () => {
         }),
     })
 
-    renderInbox(SALES)
-    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    await renderInbox(SALES)
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
 
     expect(fetchButton()).toBeDisabled()
@@ -385,5 +392,47 @@ describe('Inbox', () => {
     expect(await screen.findByText('No new mail')).toBeInTheDocument()
     expect(fetchButton()).toBeEnabled()
     expect(fetchButton()).toHaveTextContent('Fetch mail')
+  })
+
+  it("opens a clicked inquiry at its address and keeps the list", async () => {
+    const fetchMock = stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'GET /api/inquiries/3': () => json(200, DELTA),
+      'GET /api/inquiries/3/analysis': () => json(200, null),
+    })
+
+    const router = await renderInbox(SALES)
+    const delta = await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
+    expect(delta).toHaveAttribute('href', '/inquiries/3')
+    expect(delta).not.toHaveAttribute('aria-current')
+
+    fireEvent.click(delta)
+
+    expect(await screen.findByText('Prosimy o 500 szt. ABC-100.')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/inquiries/3')
+    expect(screen.getByRole('link', { name: /Zamówienie ABC-100/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: /Zapytanie ofertowe ABC-100/ })).not.toHaveAttribute(
+      'aria-current',
+    )
+    const listReads = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/inquiries')
+    expect(listReads).toHaveLength(1)
+  })
+
+  it('opens the inquiry named in the address', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'GET /api/inquiries/3': () => json(200, DELTA),
+      'GET /api/inquiries/3/analysis': () => json(200, null),
+    })
+
+    await renderInbox(SUPERVISOR, '/inquiries/3')
+
+    expect(await screen.findByText('Prosimy o 500 szt. ABC-100.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('link', { name: /Zamówienie ABC-100/ }),
+    ).toHaveAttribute('aria-current', 'page')
   })
 })

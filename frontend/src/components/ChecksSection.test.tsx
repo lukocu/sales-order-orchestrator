@@ -250,16 +250,15 @@ function checkItem(name: string): HTMLElement {
 }
 
 describe('ChecksSection', () => {
-  it('shows a standard inquiry with the 0-token metrics of the checks run', () => {
+  it('shows a standard inquiry in business words, without the metrics of the checks run', () => {
     renderSection(analysis(STANDARD))
 
-    const banner = screen.getByText('Standard inquiry — completed without agents').parentElement!
-    expect(banner).toHaveTextContent('0 in / 0 out')
-    expect(banner).toHaveTextContent('Cost—')
-    expect(banner).toHaveTextContent('4.2 ms')
-    expect(banner).toHaveTextContent('Steps6')
+    const banner = screen.getByText('Standard inquiry — no additional checks needed').parentElement!
+    expect(banner).not.toHaveTextContent(/agents/)
+    expect(banner).not.toHaveTextContent(/in \/ \d+ out|Tokens|Cost|Steps|ms\b/)
     expect(checkItem('Stock')).toHaveTextContent('In stock')
-    expect(screen.getByRole('region', { name: 'Checks metrics' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/deterministic/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run checks' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Orchestration' })).not.toBeInTheDocument()
   })
@@ -268,8 +267,10 @@ describe('ChecksSection', () => {
     renderSection({ ...analysis(EXCEPTION), orchestration: ACME_ORCHESTRATION })
 
     const orchestration = screen.getByRole('region', { name: 'Orchestration' })
-    expect(within(orchestration).getByText('Orchestration: Completed')).toBeInTheDocument()
-    expect(within(orchestration).getByText('Stage 1 — in parallel')).toBeInTheDocument()
+    expect(within(orchestration).getByText('Additional checks: completed')).toBeInTheDocument()
+    expect(within(orchestration).getByText('Compatible substitutes')).toBeInTheDocument()
+    expect(within(orchestration).queryByText(/Stage \d/)).not.toBeInTheDocument()
+    expect(within(orchestration).queryByText(/-agent\b/)).not.toBeInTheDocument()
     expect(screen.queryByText('Orchestration not run yet')).not.toBeInTheDocument()
   })
 
@@ -289,7 +290,7 @@ describe('ChecksSection', () => {
     )
     answer(json(200, { ...analysis(EXCEPTION), orchestration: ACME_ORCHESTRATION }))
 
-    expect(await screen.findByText('Orchestration: Completed')).toBeInTheDocument()
+    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run checks' })).not.toBeInTheDocument()
   })
 
@@ -379,7 +380,7 @@ describe('ChecksSection', () => {
     answer(json(200, analysis(STANDARD)))
 
     expect(
-      await screen.findByText('Standard inquiry — completed without agents'),
+      await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run checks' })).not.toBeInTheDocument()
   })
@@ -407,7 +408,7 @@ describe('ChecksSection', () => {
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(
-      await screen.findByText('Standard inquiry — completed without agents'),
+      await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(2)

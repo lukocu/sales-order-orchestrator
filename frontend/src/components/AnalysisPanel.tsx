@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link, useMatch, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   analyzeInquiry,
   decideAsSupervisor,
@@ -22,10 +24,11 @@ import {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { ApiError, UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
 import { formatDate } from './format'
 import { DecisionHistory } from './ReplyDraftSection'
-import RunMetrics from './RunMetrics'
+import RunInspector from './RunInspector'
 
 type Props = {
   inquiryId: number
@@ -173,7 +176,7 @@ function formatPrice(kind: PriceKind, value: string | null): string {
   return PRICE_KIND_LABEL[kind]
 }
 
-// How the model's value of a field reads next to the "edited" mark.
+// How the original (parsed) value of a field reads next to the "edited" mark.
 function modelValue(field: FieldName, fields: ParsedFields): string {
   switch (field) {
     case 'customer':
@@ -202,6 +205,7 @@ type FieldProps = {
 }
 
 function Field({ name, label, inputId, analysis, reviewed, onReviewed, children }: FieldProps) {
+  const { t } = useTranslation()
   const reason = analysis.uncertain[name]
   const edited = analysis.corrected_fields.includes(name)
   return (
@@ -210,7 +214,9 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
         <label htmlFor={inputId}>{label}</label>
         {edited && (
           <span className="field__edited">
-            edited · model: {modelValue(name, analysis.model_fields)}
+            {t('analysisFields.editedOriginally', {
+              value: modelValue(name, analysis.model_fields),
+            })}
           </span>
         )}
       </div>
@@ -221,6 +227,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
           <label className="field__check">
             <input
               type="checkbox"
+              className="m-1"
               checked={reviewed.includes(name)}
               onChange={(event) => onReviewed(name, event.target.checked)}
             />
@@ -233,6 +240,12 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
 }
 
 function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
+  // this panel holds, so it never refetches.
+  const inspecting = useMatch({ from: '/inbox/inquiries/$inquiryId/run', shouldThrow: false })
+  const inspectorLink = useRef<HTMLAnchorElement>(null)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -454,9 +467,6 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     const fieldProps = { analysis, reviewed, onReviewed: setFieldReviewed }
     return (
       <>
-        {analysis.extractor === 'fake' && (
-          <p className="analysis__banner">Rule-based demo parser (no LLM)</p>
-        )}
         <p className="analysis__meta">
           Analyzed {formatDate(analysis.analyzed_at)}
           {analysis.analyzed_by_name && ` by ${analysis.analyzed_by_name}`}
@@ -566,29 +576,36 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
           )}
 
           <div className="analysis__actions">
-            <button type="submit" disabled={busy !== null || !(dirty || reviewed.length > 0)}>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={busy !== null || !(dirty || reviewed.length > 0)}
+            >
               {busy === 'saving' ? 'Saving…' : 'Save corrections'}
-            </button>
-            <button type="button" onClick={requestReanalysis} disabled={busy !== null}>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={requestReanalysis}
+              disabled={busy !== null}
+            >
               {busy === 'analyzing' ? 'Analyzing…' : 'Re-analyze'}
-            </button>
+            </Button>
           </div>
           {confirming && (
             <div className="analysis__confirm">
               <p>Corrections will be lost.</p>
               <div className="analysis__actions">
-                <button type="button" onClick={runAnalysis} disabled={busy !== null}>
+                <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
                   Re-analyze anyway
-                </button>
-                <button type="button" onClick={() => setConfirming(false)}>
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
         </form>
-
-        <RunMetrics run={analysis.run} />
 
         <ChecksSection
           inquiryId={inquiryId}
@@ -622,17 +639,29 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
 
   return (
     <section className="analysis" aria-labelledby={id('heading')}>
-      <h3 id={id('heading')} className="analysis__heading">
-        Analysis
-      </h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 id={id('heading')} className="analysis__heading font-bold">
+          Analysis
+        </h3>
+        {analysis !== null && (
+          <Link
+            ref={inspectorLink}
+            to="/inquiries/$inquiryId/run"
+            params={{ inquiryId: String(inquiryId) }}
+            className="text-sm text-primary underline underline-offset-4"
+          >
+            {t('inspector.open')}
+          </Link>
+        )}
+      </div>
 
       {load.kind === 'loading' && <p className="muted">Loading analysis…</p>}
       {load.kind === 'error' && (
         <div role="alert" className="analysis__problem">
           <p className="error">{load.message}</p>
-          <button type="button" onClick={reload}>
+          <Button type="button" variant="outline" onClick={reload}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
       {notice && (
@@ -643,21 +672,36 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       {analyzeError && (
         <div role="alert" className="analysis__problem">
           <p className="error">{analyzeError}</p>
-          <button type="button" onClick={requestReanalysis} disabled={busy !== null}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={requestReanalysis}
+            disabled={busy !== null}
+          >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
       {load.kind === 'ok' && analysis === null && (
         <div className="analysis__actions">
-          <button type="button" onClick={runAnalysis} disabled={busy !== null}>
+          <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
             {busy === 'analyzing' ? 'Analyzing…' : 'Analyze request'}
-          </button>
+          </Button>
         </div>
       )}
 
       {analysis !== null && draft !== null && renderResult(analysis, draft)}
+
+      <RunInspector
+        analysis={analysis}
+        loading={load.kind === 'loading'}
+        open={inspecting !== undefined}
+        onClose={() =>
+          void navigate({ to: '/inquiries/$inquiryId', params: { inquiryId: String(inquiryId) } })
+        }
+        returnFocusTo={inspectorLink}
+      />
     </section>
   )
 }
