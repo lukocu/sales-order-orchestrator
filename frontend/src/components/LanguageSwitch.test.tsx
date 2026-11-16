@@ -13,14 +13,14 @@ describe('LanguageSwitch', () => {
 
     const group = screen.getByRole('group', { name: 'Language' })
     expect(group).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Polski' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'EN – English' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'PL – Polski' })).toHaveAttribute('aria-pressed', 'false')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Polski' }))
+    fireEvent.click(screen.getByRole('button', { name: 'PL – Polski' }))
 
     expect(await screen.findByRole('group', { name: 'Język' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Polski' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'PL – Polski' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'EN – English' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByText('PL')).toHaveAttribute('lang', 'pl')
     expect(document.documentElement.lang).toBe('pl')
     expect(localStorage.getItem(STORAGE_KEY)).toBe('pl')

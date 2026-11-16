@@ -1,30 +1,9 @@
+/* Colour values live in index.css (:root tokens + legacy aliases --text, --muted, --bg, --ok, --warn, --error). */
 :root {
-  --text: #1f2328;
-  --muted: #59636e;
-  --bg: #f6f8fa;
-  --card: #fff;
-  --border: #d1d9e0;
-  --ok: #1a7f37;
-  --warn: #9a6700;
-  --error: #cf222e;
-
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #e6edf3;
-    --muted: #9198a1;
-    --bg: #0d1117;
-    --card: #151b23;
-    --border: #3d444d;
-    --ok: #3fb950;
-    --warn: #d29922;
-    --error: #f85149;
-  }
 }
 
 body {

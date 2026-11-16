@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Analysis, ChecksView, ParsedFields } from '../api/analysis'
 import type { User } from '../api/auth'
@@ -8,6 +8,7 @@ import { DELTA_POLICY } from '../test/policyFixtures'
 import { DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
 import { DELTA_AWAITING, DELTA_SUBMITTED } from '../test/replyDraftFixtures'
 import { SALES, SUPERVISOR } from '../test/userFixtures'
+import i18n from '@/i18n'
 import Inbox from './Inbox'
 
 type Handler = () => Response | Promise<Response>
@@ -328,6 +329,24 @@ describe('Inbox', () => {
     fireEvent.click(fetchButton())
 
     expect(await screen.findByText('No new mail')).toBeInTheDocument()
+  })
+
+  it('translates the fetch summary again after a language switch', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'POST /api/mailbox/fetch': () =>
+        json(200, { fetched: 3, created: 0, duplicates: 3, skipped: 0 }),
+    })
+
+    renderInbox(SALES)
+    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    fireEvent.click(fetchButton())
+    await screen.findByText('No new mail')
+
+    await act(() => i18n.changeLanguage('pl'))
+
+    expect(screen.getByText('Brak nowej poczty')).toBeInTheDocument()
+    expect(screen.queryByText('No new mail')).not.toBeInTheDocument()
   })
 
   it('says when the mailbox is not configured', async () => {

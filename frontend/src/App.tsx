@@ -20,7 +20,8 @@ function App() {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [signingOut, setSigningOut] = useState(false)
-  const [signOutError, setSignOutError] = useState<string | null>(null)
+  // Server text, or null for the translated fallback (translated at render time).
+  const [signOutError, setSignOutError] = useState<{ message: string | null } | null>(null)
 
   // No router: the session (GET /api/auth/me) picks the view.
   useEffect(() => {
@@ -57,7 +58,7 @@ function App() {
     } catch (error) {
       // A 401 means the session is already gone, which is what Sign out wants.
       if (!(error instanceof UnauthorizedError)) {
-        setSignOutError(error instanceof Error ? error.message : t('inbox.genericError'))
+        setSignOutError({ message: error instanceof Error ? error.message : null })
         setSigningOut(false)
         return
       }
@@ -92,7 +93,7 @@ function App() {
       {state.kind === 'anonymous' && <LoginForm onSignedIn={handleSignedIn} />}
       {state.kind === 'authenticated' && signOutError && (
         <p className="text-destructive" role="alert">
-          {signOutError}
+          {signOutError.message ?? t('inbox.genericError')}
         </p>
       )}
       {state.kind === 'authenticated' && (

@@ -19,7 +19,7 @@ function LanguageSwitch() {
             size="sm"
             variant={pressed ? 'outline' : 'ghost'}
             aria-pressed={pressed}
-            aria-label={t(`language.${language}`)}
+            aria-label={`${OPTION_LABEL[language]} – ${t(`language.${language}`)}`}
             onClick={() => void i18n.changeLanguage(language)}
           >
             <span lang={language}>{OPTION_LABEL[language]}</span>

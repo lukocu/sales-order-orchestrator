@@ -1,7 +1,7 @@
 ---
 change_id: design-system-i18n-foundation
 title: Design system and PL|EN i18n foundation for the app shell
-status: implemented
+status: impl_reviewed
 created: 2026-11-16
 updated: 2026-11-16
 archived_at: null

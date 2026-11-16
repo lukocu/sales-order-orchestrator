@@ -1,6 +1,6 @@
 # Design tokens
 
-Source: mapped from `index.css:1-28` @ 84d1438 (now `frontend/src/styles/legacy.css:1-28`); primary per plan decision 2026-11-16.
+Source: mapped from `index.css:1-28` @ 84d1438; primary per plan decision 2026-11-16.
 
 Defined in `frontend/src/index.css`: raw values only in `:root` and in `@media (prefers-color-scheme: dark) { :root {…} }`. Derived roles and the old names are `var()` references. `@theme inline` publishes each role as `--color-*`, plus `--radius-sm/md/lg`. Dark mode follows the OS; there is no `.dark` class.
 
@@ -46,7 +46,7 @@ Radius scale: `--radius-sm` = `--radius` − 2px, `--radius-md` = `--radius` (6p
 
 ### Old names (aliases)
 
-`--text` → `--foreground`, `--muted` → `--muted-foreground`, `--bg` → `--background`, `--ok` → `--success`, `--warn` → `--warning`, `--error` → `--destructive`. `--card` and `--border` keep their names and meaning. `legacy.css` still carries its own raw `:root` block with the same values; the unlayered aliases in `index.css` win, and both resolve to the same colours.
+`--text` → `--foreground`, `--muted` → `--muted-foreground`, `--bg` → `--background`, `--ok` → `--success`, `--warn` → `--warning`, `--error` → `--destructive`. `--card` and `--border` keep their names and meaning. `legacy.css` no longer defines colour values; it reads the aliases.
 
 **Naming note on `--muted`.** shadcn reads `--muted` as a surface and `--muted-foreground` as text, but the old stylesheet reads `--muted` as text. To keep legacy rendering unchanged, `--muted` stays a text alias, and the shadcn muted surface is the custom property `--muted-surface`, published to Tailwind as `--color-muted` (so `bg-muted` works).
 
@@ -113,7 +113,7 @@ Alpha colours are composited over the surface the control sits on (`--card` and 
 | white on `bg-destructive` (light) / `bg-destructive/60` (dark) | 5.36:1 | 6.70:1 / 7.05:1 |
 | `--destructive-foreground` (= `--card`) on `bg-destructive/60` (dark) | — | 2.58:1 / 2.46:1 |
 
-Both pass 4.5:1 with `text-white`, so the generated Button and Badge `destructive` variants stay as they are. Switching them to `text-destructive-foreground` would fail in dark, because of the `/60` background.
+Both pass 4.5:1 with white text. To keep literal colours out of `ui/`, white is the token `--on-destructive` (`#fff` in both themes, published as `text-on-destructive`), used by the Button and Badge `destructive` variants. `text-destructive-foreground` would fail in dark, because of the `/60` background.
 
 ### Disabled states
 

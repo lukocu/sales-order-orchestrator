@@ -23,16 +23,18 @@ type Props = {
   onUnauthorized: () => void
 }
 
+// State keeps raw results and server text; `t()` runs at render time, so a language
+// switch re-translates messages already on screen. A null message means "no server text".
 type ListState =
   | { kind: 'loading' }
   | { kind: 'ok'; inquiries: InquirySummary[] }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string | null }
 
 type DetailState =
   | { id: number; kind: 'ok'; inquiry: InquiryDetail }
-  | { id: number; kind: 'error'; message: string }
+  | { id: number; kind: 'error'; message: string | null }
 
-type FetchStatus = { kind: 'ok' | 'error'; message: string }
+type FetchStatus = { kind: 'ok'; result: FetchResult } | { kind: 'error'; error: unknown }
 
 // Text and colour: the badge never relies on colour alone. Outline marks an outcome.
 const OUTCOME_VARIANT = {
@@ -41,8 +43,8 @@ const OUTCOME_VARIANT = {
   needs_input: 'warning-outline',
 } as const satisfies Record<Outcome, string>
 
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback
+function errorText(error: unknown): string | null {
+  return error instanceof Error ? error.message : null
 }
 
 // "2 new, 3 already in inbox, 1 skipped"; `fetched` is the sum and adds nothing.
@@ -66,11 +68,11 @@ function fetchErrorMessage(error: unknown, t: TFunction): string {
       return t('inbox.mailboxUnavailable')
     }
   }
-  return errorMessage(error, t('inbox.genericError'))
+  return errorText(error) ?? t('inbox.genericError')
 }
 
 function Inbox({ user, onUnauthorized }: Props) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [listAttempt, setListAttempt] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -86,13 +88,11 @@ function Inbox({ user, onUnauthorized }: Props) {
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else {
-          setList({ kind: 'error', message: errorMessage(error, i18n.t('inbox.genericError')) })
-        }
+        else setList({ kind: 'error', message: errorText(error) })
       },
     )
     return () => controller.abort()
-  }, [listAttempt, onUnauthorized, i18n])
+  }, [listAttempt, onUnauthorized])
 
   useEffect(() => {
     if (selectedId === null) return
@@ -102,14 +102,11 @@ function Inbox({ user, onUnauthorized }: Props) {
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else {
-          const message = errorMessage(error, i18n.t('inbox.genericError'))
-          setDetail({ id: selectedId, kind: 'error', message })
-        }
+        else setDetail({ id: selectedId, kind: 'error', message: errorText(error) })
       },
     )
     return () => controller.abort()
-  }, [selectedId, onUnauthorized, i18n])
+  }, [selectedId, onUnauthorized])
 
   // The panel reports the outcome after an analysis, a correction or a re-run of the
   // checks; the list item is updated in place, without fetching the list again.
@@ -160,14 +157,14 @@ function Inbox({ user, onUnauthorized }: Props) {
     setFetchStatus(null)
     try {
       const result = await fetchMail()
-      setFetchStatus({ kind: 'ok', message: fetchSummary(result, t) })
+      setFetchStatus({ kind: 'ok', result })
       setListAttempt((n) => n + 1)
     } catch (error) {
       if (error instanceof UnauthorizedError) {
         onUnauthorized()
         return
       }
-      setFetchStatus({ kind: 'error', message: fetchErrorMessage(error, t) })
+      setFetchStatus({ kind: 'error', error })
     } finally {
       setFetching(false)
     }
@@ -205,7 +202,9 @@ function Inbox({ user, onUnauthorized }: Props) {
                   fetchStatus.kind === 'error' ? 'text-destructive' : 'text-muted-foreground'
                 }
               >
-                {fetchStatus.message}
+                {fetchStatus.kind === 'ok'
+                  ? fetchSummary(fetchStatus.result, t)
+                  : fetchErrorMessage(fetchStatus.error, t)}
               </p>
             )}
           </div>
@@ -214,7 +213,7 @@ function Inbox({ user, onUnauthorized }: Props) {
           )}
           {list.kind === 'error' && (
             <div role="alert" className="grid justify-items-start gap-2">
-              <p className="text-destructive">{list.message}</p>
+              <p className="text-destructive">{list.message ?? t('inbox.genericError')}</p>
               <Button type="button" variant="outline" onClick={retryList}>
                 {t('inbox.retry')}
               </Button>
@@ -300,7 +299,7 @@ function Inbox({ user, onUnauthorized }: Props) {
         )}
         {currentDetail?.kind === 'error' && (
           <p className="error" role="alert">
-            {currentDetail.message}
+            {currentDetail.message ?? t('inbox.genericError')}
           </p>
         )}
         {currentDetail?.kind === 'ok' && (

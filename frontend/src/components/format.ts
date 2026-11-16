@@ -1,10 +1,25 @@
 import type { RunSummary, StepSummary } from '../api/analysis'
+import i18n, { type Language } from '@/i18n'
 
-const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+// Dates follow the UI language; resolved at call time, so a re-render after a switch
+// picks up the new format.
+const DATE_LOCALE: Record<Language, string> = { pl: 'pl-PL', en: 'en-GB' }
+const dateFormats = new Map<string, Intl.DateTimeFormat>()
+
+function dateFormat(): Intl.DateTimeFormat {
+  const language = i18n.resolvedLanguage === 'pl' ? 'pl' : 'en'
+  const locale = DATE_LOCALE[language]
+  let format = dateFormats.get(locale)
+  if (format === undefined) {
+    format = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' })
+    dateFormats.set(locale, format)
+  }
+  return format
+}
 
 export function formatDate(iso: string): string {
   const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? iso : DATE_FORMAT.format(date)
+  return Number.isNaN(date.getTime()) ? iso : dateFormat().format(date)
 }
 
 // Decimal strings from the API (may be in exponent form, e.g. "1E-7").
