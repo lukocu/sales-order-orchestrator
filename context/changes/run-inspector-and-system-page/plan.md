@@ -530,16 +530,16 @@ No data or backend migration. Rollback is a revert of the phase commits. Old boo
 
 #### Automated
 
-- [ ] 1.1 Lint, typecheck, tests and build pass
-- [ ] 1.2 Router tests for deep link, row navigation, not-found, in-place sign-in keeping the URL, and active nav pass
-- [ ] 1.3 No router code generator or devtools in the bundle
-- [ ] 1.4 AGENTS.md colour scan with the extended list prints nothing
+- [x] 1.1 Lint, typecheck, tests and build pass
+- [x] 1.2 Router tests for deep link, row navigation, not-found, in-place sign-in keeping the URL, and active nav pass
+- [x] 1.3 No router code generator or devtools in the bundle
+- [x] 1.4 AGENTS.md colour scan with the extended list prints nothing
 
 #### Manual
 
-- [ ] 1.5 Selecting an inquiry changes the URL, reload keeps it, back/forward work
-- [ ] 1.6 Signed out deep link shows sign-in, then the same inquiry after sign-in
-- [ ] 1.7 Nav links work by keyboard with visible focus, PL/EN, light/dark
+- [x] 1.5 Selecting an inquiry changes the URL, reload keeps it, back/forward work
+- [x] 1.6 Signed out deep link shows sign-in, then the same inquiry after sign-in
+- [x] 1.7 Nav links work by keyboard with visible focus, PL/EN, light/dark
 
 ### Phase 2: System page
 

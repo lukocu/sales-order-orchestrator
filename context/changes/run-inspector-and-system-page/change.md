@@ -1,7 +1,7 @@
 ---
 change_id: run-inspector-and-system-page
 title: Inspektor przebiegu i strona systemowa (S-11)
-status: planned
+status: implementing
 created: 2026-11-16
 updated: 2026-11-16
 archived_at: null

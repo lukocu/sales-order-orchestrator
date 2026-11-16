@@ -3,12 +3,13 @@
 // The captions are developer notes and stay in English; the components follow the PL | EN switch.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { createMemoryHistory, RouterContextProvider, RouterProvider } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import './index.css'
 import './i18n'
-import App from './App'
 import type { User } from './api/auth'
 import type { InquirySummary } from './api/inquiries'
+import AppNav from './components/AppNav'
 import AppShell from './components/AppShell'
 import Inbox from './components/Inbox'
 import LanguageSwitch from './components/LanguageSwitch'
@@ -18,6 +19,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { createAppRouter } from './router'
+import { SessionContext, type Session } from './session'
 
 // --- Static data --------------------------------------------------------------------
 
@@ -113,6 +116,49 @@ function Stub({ replies, children }: { replies: Replies; children: ReactNode }) 
       {children}
       <ScopeClose />
     </>
+  )
+}
+
+// --- Routing ----------------------------------------------------------------------------
+// Each cell gets its own router on memory history, so clicks inside a cell never touch the
+// page's address.
+
+function memoryRouter(path: string) {
+  return createAppRouter(createMemoryHistory({ initialEntries: [path] }))
+}
+
+// The whole app (App as the root layout) at `path`. The route is matched before the first
+// render, so App's session fetch runs inside the Stub's scope, as it did for `<App />`.
+function RoutedApp({ replies, path = '/' }: { replies: Replies; path?: string }) {
+  const [router] = useState(() => memoryRouter(path))
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    let live = true
+    router.load().then(
+      () => live && setReady(true),
+      (error: unknown) => console.error(error),
+    )
+    return () => {
+      live = false
+    }
+  }, [router])
+  if (!ready) return null
+  return (
+    <Stub replies={replies}>
+      <RouterProvider router={router} />
+    </Stub>
+  )
+}
+
+const SESSION: Session = { user: SUPERVISOR, onUnauthorized: () => {} }
+
+// A view outside App (Inbox, AppNav): the signed-in session and a router for its links.
+function Routed({ children }: { children: ReactNode }) {
+  const [router] = useState(() => memoryRouter('/'))
+  return (
+    <RouterContextProvider router={router}>
+      <SessionContext.Provider value={SESSION}>{children}</SessionContext.Provider>
+    </RouterContextProvider>
   )
 }
 
@@ -266,10 +312,12 @@ function KitchenSink() {
               </div>
             </div>
           </Cell>
-          <Cell label="Header logged in + inbox list (selecting a row opens the inquiry view, not stubbed here)" wide shell>
-            <AppShell user={SUPERVISOR} onSignOut={() => {}}>
-              <Inbox user={SUPERVISOR} onUnauthorized={() => {}} />
-            </AppShell>
+          <Cell label="Header logged in with nav + inbox list (selecting a row opens the inquiry view, not stubbed here)" wide shell>
+            <Routed>
+              <AppShell user={SUPERVISOR} onSignOut={() => {}} nav={<AppNav />}>
+                <Inbox />
+              </AppShell>
+            </Routed>
           </Cell>
         </Section>
 
@@ -334,7 +382,9 @@ function KitchenSink() {
           </Cell>
           <Cell label="Fetch mail: fetching" wide>
             <Driven drive={(root) => clickFetchMail(root, 'pending')}>
-              <Inbox user={SUPERVISOR} onUnauthorized={() => {}} />
+              <Routed>
+                <Inbox />
+              </Routed>
             </Driven>
           </Cell>
           <NotApplicable
@@ -354,29 +404,27 @@ function KitchenSink() {
             </Driven>
           </Cell>
           <Cell label="Session check failed (App, 500) with Retry" shell>
-            <Stub replies={SESSION_ERROR}>
-              <App />
-            </Stub>
+            <RoutedApp replies={SESSION_ERROR} />
           </Cell>
           <Cell label="Inbox list failed (500) with Retry; Fetch mail failed (502)" wide>
             <Stub replies={LIST_ERROR}>
               <Driven drive={(root) => clickFetchMail(root, { status: 502, body: { detail: 'Mailbox unavailable' } })}>
-                <Inbox user={SUPERVISOR} onUnauthorized={() => {}} />
+                <Routed>
+                  <Inbox />
+                </Routed>
               </Driven>
             </Stub>
           </Cell>
           <Cell label="Sign out failed (App, logout 500)" wide shell>
-            <Stub replies={SIGNED_IN}>
-              <Driven
-                drive={async (root) => {
-                  // The language buttons carry aria-pressed; Sign out does not.
-                  const signOut = await find<HTMLButtonElement>(root, 'header button:not([aria-pressed])')
-                  withReplies({ 'POST /api/auth/logout': { status: 500 } }, () => signOut.click())
-                }}
-              >
-                <App />
-              </Driven>
-            </Stub>
+            <Driven
+              drive={async (root) => {
+                // The language buttons carry aria-pressed; Sign out does not.
+                const signOut = await find<HTMLButtonElement>(root, 'header button:not([aria-pressed])')
+                withReplies({ 'POST /api/auth/logout': { status: 500 } }, () => signOut.click())
+              }}
+            >
+              <RoutedApp replies={SIGNED_IN} />
+            </Driven>
           </Cell>
           <NotApplicable items={[['Language switch', 'bundled resources, nothing to fail']]} />
         </Section>
@@ -384,13 +432,17 @@ function KitchenSink() {
         <Section state="empty" caption="Lists with nothing to show.">
           <Cell label="No inquiries" wide>
             <Stub replies={NO_INQUIRIES}>
-              <Inbox user={SUPERVISOR} onUnauthorized={() => {}} />
+              <Routed>
+                <Inbox />
+              </Routed>
             </Stub>
           </Cell>
           <Cell label="None awaiting a supervisor (filter on)" wide>
             <Stub replies={NONE_AWAITING_LIST}>
               <Driven drive={async (root) => (await find<HTMLButtonElement>(root, '[role="region"] button[aria-pressed]')).click()}>
-                <Inbox user={SUPERVISOR} onUnauthorized={() => {}} />
+                <Routed>
+                  <Inbox />
+                </Routed>
               </Driven>
             </Stub>
           </Cell>
@@ -399,13 +451,13 @@ function KitchenSink() {
 
         <Section state="loading" caption="Requests that never answer.">
           <Cell label="Session check (App)" shell>
-            <Stub replies={SESSION_PENDING}>
-              <App />
-            </Stub>
+            <RoutedApp replies={SESSION_PENDING} />
           </Cell>
           <Cell label="Inbox list loading" wide>
             <Stub replies={LIST_PENDING}>
-              <Inbox user={SUPERVISOR} onUnauthorized={() => {}} />
+              <Routed>
+                <Inbox />
+              </Routed>
             </Stub>
           </Cell>
           <NotApplicable

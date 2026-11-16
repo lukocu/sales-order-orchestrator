@@ -38,6 +38,16 @@
     "fetchInProgress": "A fetch is already in progress",
     "mailboxUnavailable": "Mailbox unavailable, try again"
   },
+  "nav": {
+    "label": "Main navigation",
+    "inbox": "Inbox",
+    "system": "System"
+  },
+  "notFound": {
+    "heading": "Page not found",
+    "body": "There is nothing at this address.",
+    "back": "Back to the inbox"
+  },
   "role": {
     "salesperson": "Salesperson",
     "supervisor": "Supervisor"

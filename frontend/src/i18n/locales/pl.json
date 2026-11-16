@@ -38,6 +38,16 @@
     "fetchInProgress": "Pobieranie poczty już trwa",
     "mailboxUnavailable": "Skrzynka pocztowa niedostępna, spróbuj ponownie"
   },
+  "nav": {
+    "label": "Nawigacja główna",
+    "inbox": "Skrzynka",
+    "system": "System"
+  },
+  "notFound": {
+    "heading": "Nie znaleziono strony",
+    "body": "Pod tym adresem nic nie ma.",
+    "back": "Wróć do skrzynki"
+  },
   "role": {
     "salesperson": "Handlowiec",
     "supervisor": "Przełożony"
