@@ -1,4 +1,5 @@
-import type { RunSummary, StepSummary } from '../api/analysis'
+import type { TFunction } from 'i18next'
+import type { LineSource } from '../api/analysis'
 import i18n, { type Language } from '@/i18n'
 
 // Dates follow the UI language; resolved at call time, so a re-render after a switch
@@ -11,7 +12,10 @@ function dateFormat(): Intl.DateTimeFormat {
   const locale = DATE_LOCALE[language]
   let format = dateFormats.get(locale)
   if (format === undefined) {
-    format = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' })
+    format = new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })
     dateFormats.set(locale, format)
   }
   return format
@@ -44,19 +48,26 @@ export function formatMs(ms: number): string {
   return `${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
 }
 
-export function stepCost(step: StepSummary): string {
-  if (step.price_status === 'not_applicable') return '—'
-  if (step.price_status === 'unpriced' || step.cost_usd === null) return 'not priced'
-  return `${formatUsd(step.cost_usd)} list price`
+// The text of an error shown in a section; an error without a message reads as a generic one.
+export function errorMessage(error: unknown, t: TFunction): string {
+  return error instanceof Error ? error.message : t('common.genericError')
 }
 
-export function totalCost(run: RunSummary): string {
-  const anyPriced = run.steps.some((step) => step.price_status === 'priced')
-  if (!anyPriced) return run.totals.cost_complete ? '—' : 'not priced'
-  const cost = `${formatUsd(run.totals.cost_usd)} list price`
-  return run.totals.cost_complete ? cost : `${cost} (some steps not priced)`
+export function deadlineText(meets: boolean | null, t: TFunction): string {
+  if (meets === null) return t('common.deadline.none')
+  return meets ? t('common.deadline.meets') : t('common.deadline.misses')
 }
 
-export function totalDuration(run: RunSummary): string {
-  return formatMs(run.totals.duration_ms ?? run.totals.steps_duration_ms)
+export function sourceText(
+  line: { source: LineSource; supplier: string | null },
+  t: TFunction,
+): string {
+  switch (line.source) {
+    case 'stock':
+      return t('common.source.stock')
+    case 'substitute_stock':
+      return t('common.source.substituteStock')
+    case 'supplier':
+      return t('common.source.supplier', { name: line.supplier ?? '—' })
+  }
 }

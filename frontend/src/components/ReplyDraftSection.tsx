@@ -1,8 +1,7 @@
 import { useState } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
-  LineSource,
-  PolicyOutcome,
   PolicyResult,
   RecommendationOption,
   RecommendationView,
@@ -12,14 +11,12 @@ import type {
   ReplyDraftOfferLine,
   ReplyDraftStatus,
   ReplyDraftView,
-  RuleCode,
-  RuleResult,
-  RuleVerdict,
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
-import { formatDate, formatPercent, formatPln } from './format'
+import { errorMessage, formatDate, formatPercent, formatPln, sourceText } from './format'
+import { OUTCOME_LABEL, RULE_LABEL, ruleAmount, VERDICT_LABEL } from './policyLabels'
 
 type Decision = 'approve' | 'reject'
 
@@ -56,68 +53,29 @@ type Props = {
 // Every status is shown as text; the tone only adds the colour.
 type Tone = 'ok' | 'warn' | 'error'
 
-const STATUS: Record<ReplyDraftStatus, [string, Tone]> = {
-  draft: ['Draft', 'warn'],
-  ready_to_send: ['Ready to send (sending is simulated)', 'ok'],
-  awaiting_supervisor: ['Awaiting supervisor approval', 'warn'],
-  rejected: ['Rejected', 'error'],
-}
+const STATUS = {
+  draft: ['draft.status.draft', 'warn'],
+  ready_to_send: ['draft.status.ready_to_send', 'ok'],
+  awaiting_supervisor: ['draft.status.awaiting_supervisor', 'warn'],
+  rejected: ['draft.status.rejected', 'error'],
+} as const satisfies Record<ReplyDraftStatus, [string, Tone]>
 
-const ACTION: Record<ReplyDraftAction, string> = {
-  edit: 'Edited',
-  approve: 'Approved',
-  reject: 'Rejected',
-  supervisor_approve: 'Approved by supervisor',
-  supervisor_reject: 'Rejected by supervisor',
-}
-
-const OUTCOME: Record<PolicyOutcome, [string, Tone]> = {
-  no_approval_needed: ['No approval needed', 'ok'],
-  requires_supervisor: ['Requires supervisor approval', 'warn'],
-}
-
-const RULE: Record<RuleCode, string> = {
-  margin: 'Margin',
-  discount: 'Discount',
-  order_value: 'Order value',
-  credit: 'Credit',
-}
-
-const VERDICT: Record<RuleVerdict, [string, Tone]> = {
-  pass: ['Pass', 'ok'],
-  fail: ['Fail', 'error'],
-  not_evaluated: ['Not evaluated', 'warn'],
-}
-
-const SOURCE: Record<LineSource, string> = {
-  stock: 'own stock',
-  substitute_stock: 'substitute from stock',
-  supplier: 'supplier',
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
+const ACTION_KEY = {
+  edit: 'decisionHistory.action.edit',
+  approve: 'decisionHistory.action.approve',
+  reject: 'decisionHistory.action.reject',
+  supervisor_approve: 'decisionHistory.action.supervisor_approve',
+  supervisor_reject: 'decisionHistory.action.supervisor_reject',
+} as const satisfies Record<ReplyDraftAction, string>
 
 // Why there cannot be a (current) draft; null when the recommendation allows one.
-function blockedReason(recommendation: RecommendationView | null): string | null {
-  if (recommendation === null) return 'No draft: there is no recommendation yet.'
+function blockedReason(recommendation: RecommendationView | null, t: TFunction): string | null {
+  if (recommendation === null) return t('draft.blocked.noRecommendation')
   if (recommendation.status === 'failed' || recommendation.choice === null) {
-    return 'No draft: the recommendation has no chosen option.'
+    return t('draft.blocked.noChoice')
   }
-  if (recommendation.stale) {
-    return 'No draft: the recommendation is out of date; re-run the recommendation first.'
-  }
+  if (recommendation.stale) return t('draft.blocked.recommendationStale')
   return null
-}
-
-function sourceText(line: { source: LineSource; supplier: string | null }): string {
-  return line.source === 'supplier' ? `supplier ${line.supplier ?? '—'}` : SOURCE[line.source]
-}
-
-function ruleAmount(rule: RuleResult, value: string | null): string {
-  if (value === null) return '—'
-  return rule.unit === 'percent' ? formatPercent(value) : formatPln(value)
 }
 
 // The reply draft of the recommended option: the e-mail preview, why this option, the policy
@@ -144,6 +102,7 @@ function ReplyDraftSection({
   onSupervisorDecide,
   onUnauthorized,
 }: Props) {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode | null>(null)
   const headingId = `draft-${inquiryId}-heading`
@@ -155,19 +114,17 @@ function ReplyDraftSection({
       await onRegenerate()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure))
+      else setError(errorMessage(failure, t))
     }
   }
 
-  const blocked = blockedReason(recommendation)
+  const blocked = blockedReason(recommendation, t)
   const outdated = draft === null || draft.stale
   // A decided draft (ready to send / awaiting supervisor) is never regenerated: the backend
   // refuses it even when stale; a new recommendation replaces it instead.
   const offerRegenerate =
     blocked === null &&
-    (draft === null ||
-      draft.status === 'rejected' ||
-      (draft.stale && draft.status === 'draft'))
+    (draft === null || draft.status === 'rejected' || (draft.stale && draft.status === 'draft'))
   const canDecide = draft !== null && draft.status === 'draft' && !draft.stale
   const awaiting = draft !== null && draft.status === 'awaiting_supervisor' && !draft.stale
   const asSupervisor = supervisorActions(draft, user)
@@ -177,31 +134,26 @@ function ReplyDraftSection({
   return (
     <section className="orchestration draft" aria-labelledby={headingId}>
       <h4 id={headingId} className="analysis__subheading">
-        Reply draft
+        {t('draft.heading')}
       </h4>
 
       {blocked !== null && outdated && <p className="checks__line">{blocked}</p>}
       {blocked === null && draft === null && (
-        <p className="checks__line">Draft not generated yet</p>
+        <p className="checks__line">{t('draft.notGenerated')}</p>
       )}
-      {draft?.stale && (
-        <p className="checks__line">
-          The recommendation or its policy verdict changed after this draft was made; the draft
-          may be out of date.
-        </p>
-      )}
+      {draft?.stale && <p className="checks__line">{t('draft.stale')}</p>}
       {offerRegenerate && (
         <div className="analysis__actions">
           <Button type="button" variant="outline" onClick={regenerate} disabled={disabled}>
-            {drafting ? 'Drafting…' : 'Regenerate draft'}
+            {drafting ? t('draft.drafting') : t('draft.regenerate')}
           </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">Regenerating the draft failed: {error}</p>
+          <p className="error">{t('draft.regenerateFailed', { message: error })}</p>
           <Button type="button" variant="outline" onClick={regenerate} disabled={disabled}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
@@ -209,14 +161,14 @@ function ReplyDraftSection({
       {draft !== null && <DraftResult draft={draft} />}
 
       {draft !== null && canDecide && mode === null && (
-        <div className="analysis__actions" role="group" aria-label="Decision">
+        <div className="analysis__actions" role="group" aria-label={t('draft.decisionGroup')}>
           <Button
             type="button"
             variant="outline"
             onClick={() => setMode('approve')}
             disabled={disabled}
           >
-            Approve
+            {t('common.approve')}
           </Button>
           <Button
             type="button"
@@ -224,7 +176,7 @@ function ReplyDraftSection({
             onClick={() => setMode('edit')}
             disabled={disabled}
           >
-            Edit offer
+            {t('draft.editOffer')}
           </Button>
           <Button
             type="button"
@@ -232,7 +184,7 @@ function ReplyDraftSection({
             onClick={() => setMode('reject')}
             disabled={disabled}
           >
-            Reject
+            {t('common.reject')}
           </Button>
         </div>
       )}
@@ -261,21 +213,16 @@ function ReplyDraftSection({
       )}
 
       {draft?.stale && draft.status === 'awaiting_supervisor' && (
-        <p className="checks__line">
-          No supervisor decision is possible on this draft; re-run the recommendation to continue.
-        </p>
+        <p className="checks__line">{t('draft.staleAwaiting')}</p>
       )}
       {awaiting && user.role !== 'supervisor' && (
-        <p className="checks__line">Waiting for a supervisor decision.</p>
+        <p className="checks__line">{t('draft.waiting')}</p>
       )}
       {awaiting && user.role === 'supervisor' && draft?.submitted_by === user.id && (
-        <p className="checks__line">
-          You submitted this draft; another supervisor must approve it. You can reject it to
-          start over.
-        </p>
+        <p className="checks__line">{t('draft.submittedBySelf')}</p>
       )}
       {draft !== null && asSupervisor.length > 0 && supervisorMode === null && (
-        <div className="analysis__actions" role="group" aria-label="Supervisor decision">
+        <div className="analysis__actions" role="group" aria-label={t('draft.supervisorGroup')}>
           {asSupervisor.includes('approve') && (
             <Button
               type="button"
@@ -283,7 +230,7 @@ function ReplyDraftSection({
               onClick={() => setMode('supervisor-approve')}
               disabled={disabled}
             >
-              Approve
+              {t('common.approve')}
             </Button>
           )}
           <Button
@@ -292,7 +239,7 @@ function ReplyDraftSection({
             onClick={() => setMode('supervisor-reject')}
             disabled={disabled}
           >
-            Reject
+            {t('common.reject')}
           </Button>
         </div>
       )}
@@ -314,26 +261,24 @@ function ReplyDraftSection({
 
 function DraftResult({ draft }: { draft: ReplyDraftView }) {
   const { t } = useTranslation()
-  const [status, tone] = STATUS[draft.status]
+  const [statusKey, tone] = STATUS[draft.status]
   const offer = draft.offer
   return (
     <>
       <div className={`checks__banner orchestration__banner--${tone}`}>
         <p className="checks__outcome">
-          Status: <span className="draft__status">{status}</span>
+          {t('draft.statusLabel')} <span className="draft__status">{t(statusKey)}</span>
         </p>
       </div>
       <p className="analysis__meta">
-        Drafted {formatDate(draft.drafted_at)}
-        {offer.edited && ' · edited offer'}
+        {t('draft.drafted', { date: formatDate(draft.drafted_at) })}
+        {offer.edited && ` · ${t('draft.editedOffer')}`}
       </p>
-      {draft.text_source === 'fallback' && (
-        <p className="draft__fallback">{t('draft.fallback')}</p>
-      )}
+      {draft.text_source === 'fallback' && <p className="draft__fallback">{t('draft.fallback')}</p>}
 
-      <section className="draft__email" aria-label="E-mail preview">
+      <section className="draft__email" aria-label={t('draft.emailPreview')}>
         <p className="draft__subject">
-          Subject: <span lang="pl">{draft.subject}</span>
+          {t('draft.subject')} <span lang="pl">{draft.subject}</span>
         </p>
         <pre className="draft__body" lang="pl">
           {draft.body}
@@ -341,24 +286,31 @@ function DraftResult({ draft }: { draft: ReplyDraftView }) {
       </section>
 
       <dl className="metrics__list">
-        <dt>Offer value</dt>
+        <dt>{t('draft.offerValue')}</dt>
         <dd>{formatPln(offer.value)}</dd>
-        <dt>Margin</dt>
+        <dt>{t('draft.margin')}</dt>
         <dd>{formatPercent(offer.margin_percent)}</dd>
-        <dt>Coverage</dt>
+        <dt>{t('draft.coverage')}</dt>
         <dd>
-          {offer.covered_quantity} / {offer.requested_quantity} pcs
+          {t('common.coverage', {
+            covered: offer.covered_quantity,
+            requested: offer.requested_quantity,
+          })}
         </dd>
       </dl>
 
       {draft.why !== null && (
         <div className="draft__why">
-          <p className="recommendation__why">Why this recommendation?</p>
+          <p className="recommendation__why">{t('draft.why')}</p>
           <p className="checks__line" lang="pl">
             {draft.why.justification}
           </p>
           {draft.why.signals.length > 0 && (
-            <ul className="recommendation__signal-list" aria-label="Cited signals" lang="pl">
+            <ul
+              className="recommendation__signal-list"
+              aria-label={t('draft.citedSignals')}
+              lang="pl"
+            >
               {draft.why.signals.map((label) => (
                 <li key={label}>{label}</li>
               ))}
@@ -373,40 +325,40 @@ function DraftResult({ draft }: { draft: ReplyDraftView }) {
 }
 
 function VerdictInForce({ policy, edited }: { policy: PolicyResult | null; edited: boolean }) {
-  const title = edited ? 'Policy verdict in force (edited offer)' : 'Policy verdict in force'
+  const { t } = useTranslation()
+  const title = edited ? t('draft.verdictTitleEdited') : t('draft.verdictTitle')
   if (policy === null) {
-    return (
-      <p className="checks__line">
-        {title}: none — approval needs a current policy verdict.
-      </p>
-    )
+    return <p className="checks__line">{t('draft.verdictNone', { title })}</p>
   }
-  const [outcome, tone] = OUTCOME[policy.outcome]
+  const { key: outcomeKey, tone } = OUTCOME_LABEL[policy.outcome]
   return (
     <div className="policy__table-wrap">
       <table className="policy__table">
         <caption className="orchestration__stage-title">
-          {title}: <span className={`check__status check__status--${tone}`}>{outcome}</span>
+          {t('draft.verdictLabel', { title })}{' '}
+          <span className={`check__status check__status--${tone}`}>{t(outcomeKey)}</span>
         </caption>
         <thead>
           <tr>
-            <th scope="col">Rule</th>
-            <th scope="col">Actual</th>
-            <th scope="col">Threshold</th>
-            <th scope="col">Verdict</th>
-            <th scope="col">Reason</th>
+            <th scope="col">{t('policy.column.rule')}</th>
+            <th scope="col">{t('policy.column.actual')}</th>
+            <th scope="col">{t('policy.column.threshold')}</th>
+            <th scope="col">{t('policy.column.verdict')}</th>
+            <th scope="col">{t('policy.column.reason')}</th>
           </tr>
         </thead>
         <tbody>
           {policy.rules.map((rule) => {
-            const [verdict, verdictTone] = VERDICT[rule.verdict]
+            const { key: verdictKey, tone: verdictTone } = VERDICT_LABEL[rule.verdict]
             return (
               <tr key={rule.code}>
-                <th scope="row">{RULE[rule.code]}</th>
+                <th scope="row">{t(RULE_LABEL[rule.code])}</th>
                 <td>{ruleAmount(rule, rule.actual)}</td>
                 <td>{ruleAmount(rule, rule.threshold)}</td>
                 <td>
-                  <span className={`check__status check__status--${verdictTone}`}>{verdict}</span>
+                  <span className={`check__status check__status--${verdictTone}`}>
+                    {t(verdictKey)}
+                  </span>
                 </td>
                 <td>{rule.reason}</td>
               </tr>
@@ -434,6 +386,7 @@ async function send<T>(
   props: FormProps<T>,
   value: T,
   setError: (error: string | null) => void,
+  t: TFunction,
 ): Promise<void> {
   setError(null)
   try {
@@ -441,7 +394,7 @@ async function send<T>(
     props.onDone()
   } catch (failure) {
     if (failure instanceof UnauthorizedError) props.onUnauthorized()
-    else setError(errorMessage(failure))
+    else setError(errorMessage(failure, t))
   }
 }
 
@@ -450,34 +403,46 @@ async function send<T>(
 function DecisionForm(
   props: FormProps<string | null> & { action: Decision; supervisor?: boolean },
 ) {
+  const { t } = useTranslation()
   const { action, supervisor = false, disabled, saving, onDone } = props
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const approve = action === 'approve'
   const required = supervisor || !approve
   const id = supervisor ? `draft-supervisor-${action}-reason` : `draft-${action}-reason`
-  const name = approve ? 'Approve' : 'Reject'
 
   function submit() {
     const text = reason.trim()
     if (required && text === '') {
-      setError(approve ? 'Enter a reason for the approval.' : 'Enter a reason for the rejection.')
+      setError(
+        approve ? t('draft.form.approvalReasonRequired') : t('draft.form.rejectionReasonRequired'),
+      )
       return
     }
-    void send(props, text === '' ? null : text, setError)
+    void send(props, text === '' ? null : text, setError, t)
   }
 
   return (
     <form
       className="draft__form"
       noValidate
-      aria-label={supervisor ? `${name} as supervisor` : `${name} draft`}
+      aria-label={
+        supervisor
+          ? approve
+            ? t('draft.form.approveSupervisor')
+            : t('draft.form.rejectSupervisor')
+          : approve
+            ? t('draft.form.approveDraft')
+            : t('draft.form.rejectDraft')
+      }
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <label htmlFor={id}>{required ? 'Reason (required)' : 'Comment (optional)'}</label>
+      <label htmlFor={id}>
+        {required ? t('draft.form.reasonRequired') : t('draft.form.commentOptional')}
+      </label>
       <textarea
         className="resize-y"
         id={id}
@@ -492,10 +457,14 @@ function DecisionForm(
       )}
       <div className="analysis__actions">
         <Button type="submit" disabled={disabled}>
-          {saving ? 'Saving…' : approve ? 'Confirm approval' : 'Confirm rejection'}
+          {saving
+            ? t('common.saving')
+            : approve
+              ? t('draft.form.confirmApproval')
+              : t('draft.form.confirmRejection')}
         </Button>
         <Button type="button" variant="outline" onClick={onDone} disabled={saving}>
-          Cancel
+          {t('common.cancel')}
         </Button>
       </div>
     </form>
@@ -505,7 +474,10 @@ function DecisionForm(
 type LineDraft = { quantity: string; unit_price: string }
 
 function lineDrafts(lines: { quantity: number; unit_price: string }[]): LineDraft[] {
-  return lines.map((line) => ({ quantity: String(line.quantity), unit_price: line.unit_price }))
+  return lines.map((line) => ({
+    quantity: String(line.quantity),
+    unit_price: line.unit_price,
+  }))
 }
 
 type EditProps = FormProps<ReplyDraftEdit> & {
@@ -554,11 +526,11 @@ function EditForm(props: EditProps) {
       const quantity = line.quantity.trim()
       const price = line.unit_price.trim().replace(',', '.')
       if (!/^\d+$/.test(quantity)) {
-        setError('Quantity must be a whole number.')
+        setError(t('draft.form.quantityWhole'))
         return
       }
       if (!/^\d+(\.\d{1,2})?$/.test(price)) {
-        setError('Unit price must be a number with at most two decimal places.')
+        setError(t('draft.form.unitPriceInvalid'))
         return
       }
       built.push({
@@ -569,10 +541,10 @@ function EditForm(props: EditProps) {
     }
     const text = reason.trim()
     if (text === '') {
-      setError('Enter a reason for the edit.')
+      setError(t('draft.form.editReasonRequired'))
       return
     }
-    void send(props, { option_id: optionId, lines: built, reason: text }, setError)
+    void send(props, { option_id: optionId, lines: built, reason: text }, setError, t)
   }
 
   const id = (name: string) => `draft-edit-${name}`
@@ -581,13 +553,13 @@ function EditForm(props: EditProps) {
     <form
       className="draft__form"
       noValidate
-      aria-label="Edit offer"
+      aria-label={t('draft.editOffer')}
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <label htmlFor={id('option')}>Option</label>
+      <label htmlFor={id('option')}>{t('draft.form.option')}</label>
       <select id={id('option')} value={optionId} onChange={(event) => choose(event.target.value)}>
         {choices.map((item) => (
           <option key={item.id} value={item.id}>
@@ -601,30 +573,32 @@ function EditForm(props: EditProps) {
 
       <div className="policy__table-wrap">
         <table className="policy__table draft__lines">
-          <caption className="orchestration__stage-title">Offer lines</caption>
+          <caption className="orchestration__stage-title">{t('draft.form.offerLines')}</caption>
           <thead>
             <tr>
-              <th scope="col">Product</th>
-              <th scope="col">Quantity</th>
-              <th scope="col">Unit price (PLN)</th>
+              <th scope="col">{t('draft.form.product')}</th>
+              <th scope="col">{t('draft.form.quantity')}</th>
+              <th scope="col">{t('draft.form.unitPrice')}</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((line, index) => {
-              const name = `${line.product_code}, ${sourceText(line)}`
+              const name = `${line.product_code}, ${sourceText(line, t)}`
               return (
                 <tr key={`${line.source}-${line.product_code}-${index}`}>
                   <th scope="row">
-                    {line.product_code} <span className="muted">· {sourceText(line)}</span>
+                    {line.product_code} <span className="muted">· {sourceText(line, t)}</span>
                     {'list_price' in line && (
                       <span className="draft__list-price">
-                        list {formatPln(line.list_price)}
+                        {t('draft.form.listPrice', {
+                          price: formatPln(line.list_price),
+                        })}
                       </span>
                     )}
                   </th>
                   <td>
                     <input
-                      aria-label={`Quantity of ${name}`}
+                      aria-label={t('draft.form.quantityOf', { name })}
                       inputMode="numeric"
                       value={lines[index]?.quantity ?? ''}
                       onChange={(event) => update(index, 'quantity', event.target.value)}
@@ -632,7 +606,7 @@ function EditForm(props: EditProps) {
                   </td>
                   <td>
                     <input
-                      aria-label={`Unit price of ${name}`}
+                      aria-label={t('draft.form.unitPriceOf', { name })}
                       inputMode="decimal"
                       value={lines[index]?.unit_price ?? ''}
                       onChange={(event) => update(index, 'unit_price', event.target.value)}
@@ -645,7 +619,7 @@ function EditForm(props: EditProps) {
         </table>
       </div>
 
-      <label htmlFor={id('reason')}>Reason (required)</label>
+      <label htmlFor={id('reason')}>{t('draft.form.reasonRequired')}</label>
       <textarea
         className="resize-y"
         id={id('reason')}
@@ -660,10 +634,10 @@ function EditForm(props: EditProps) {
       )}
       <div className="analysis__actions">
         <Button type="submit" disabled={disabled}>
-          {saving ? 'Saving…' : 'Save edit'}
+          {saving ? t('common.saving') : t('draft.form.saveEdit')}
         </Button>
         <Button type="button" variant="outline" onClick={onDone} disabled={saving}>
-          Cancel
+          {t('common.cancel')}
         </Button>
       </div>
     </form>
@@ -678,53 +652,66 @@ export function DecisionHistory({
   inquiryId: number
   decisions: ReplyDraftDecision[]
 }) {
+  const { t } = useTranslation()
   const headingId = `decisions-${inquiryId}-heading`
   return (
     <section className="orchestration draft__history" aria-labelledby={headingId}>
       <h4 id={headingId} className="analysis__subheading">
-        Decision history
+        {t('decisionHistory.heading')}
       </h4>
       <ol className="checks__list">
         {decisions.map((decision, index) => {
-          const [status, tone] = STATUS[decision.status_after]
+          const [statusKey, tone] = STATUS[decision.status_after]
           const snapshot = decision.snapshot
           const outcome = snapshot?.policy_outcome ?? null
-          const failing = snapshot?.failing_rules.map((code) => RULE[code]) ?? []
+          const failing = snapshot?.failing_rules.map((code) => t(RULE_LABEL[code])) ?? []
           // Older snapshots lack the rules the verdict could not evaluate.
-          const notEvaluated = (snapshot?.not_evaluated_rules ?? []).map((code) => RULE[code])
+          const notEvaluated = (snapshot?.not_evaluated_rules ?? []).map((code) =>
+            t(RULE_LABEL[code]),
+          )
           const rules = [
-            ...(failing.length > 0 ? [`failing: ${failing.join(', ')}`] : []),
-            ...(notEvaluated.length > 0 ? [`not evaluated: ${notEvaluated.join(', ')}`] : []),
+            ...(failing.length > 0
+              ? [t('decisionHistory.failing', { rules: failing.join(', ') })]
+              : []),
+            ...(notEvaluated.length > 0
+              ? [
+                  t('decisionHistory.notEvaluated', {
+                    rules: notEvaluated.join(', '),
+                  }),
+                ]
+              : []),
           ]
           return (
             <li key={`${decision.decided_at}-${index}`} className="check">
               <p className="check__head">
                 <span className="check__name">
-                  {ACTION[decision.action]}
-                  {!decision.current && <span className="draft__earlier">earlier version</span>}
+                  {t(ACTION_KEY[decision.action])}
+                  {!decision.current && (
+                    <span className="draft__earlier">{t('decisionHistory.earlier')}</span>
+                  )}
                 </span>
-                <span className={`check__status check__status--${tone}`}>{status}</span>
+                <span className={`check__status check__status--${tone}`}>{t(statusKey)}</span>
               </p>
               <dl className="metrics__list">
-                <dt>By</dt>
-                <dd>{decision.decided_by_name ?? 'Unknown user'}</dd>
-                <dt>When</dt>
+                <dt>{t('decisionHistory.by')}</dt>
+                <dd>{decision.decided_by_name ?? t('decisionHistory.unknownUser')}</dd>
+                <dt>{t('decisionHistory.when')}</dt>
                 <dd>{formatDate(decision.decided_at)}</dd>
-                <dt>Reason</dt>
+                <dt>{t('decisionHistory.reason')}</dt>
                 <dd>{decision.reason ?? '—'}</dd>
-                <dt>Offer</dt>
+                <dt>{t('decisionHistory.offer')}</dt>
                 <dd>
                   {snapshot === null
-                    ? 'Details unavailable'
+                    ? t('decisionHistory.unavailable')
                     : formatPln(snapshot.offer.value)}
                 </dd>
-                <dt>Policy</dt>
+                <dt>{t('decisionHistory.policy')}</dt>
                 <dd>
                   {snapshot === null
-                    ? 'Details unavailable'
+                    ? t('decisionHistory.unavailable')
                     : outcome === null
-                      ? 'no verdict'
-                      : OUTCOME[outcome][0]}
+                      ? t('decisionHistory.noVerdict')
+                      : t(OUTCOME_LABEL[outcome].key)}
                   {rules.length > 0 && ` (${rules.join('; ')})`}
                 </dd>
               </dl>

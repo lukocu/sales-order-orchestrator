@@ -44,7 +44,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | ---- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------ | -------- |
 | F-03 | design-system-i18n-foundation | (foundation) tokeny, współdzielone komponenty i tłumaczenia PL / EN; powłoka aplikacji z nich korzysta | —             | FR-021, NFR (system projektowy, WCAG)            | done        |
 | S-11 | run-inspector-and-system-page | użytkownik otwiera inspektor przebiegu i stronę systemową; diagnostyka znika z przepływu handlowca     | F-03          | FR-015, FR-005, US-03, FR-020, NFR, Access Control | done |
-| S-12 | inquiry-steps                 | handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź z jedną główną akcją         | F-03, S-11    | FR-016, US-01, FR-002, FR-010, FR-011, NFR       | proposed |
+| S-12 | inquiry-steps                 | handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź z jedną główną akcją         | F-03, S-11    | FR-016, US-01, FR-002, FR-010, FR-011, NFR       | in-progress |
 | S-13 | variant-comparison            | handlowiec porównuje warianty realizacji obok siebie                                                  | S-12          | FR-017, FR-007, US-01, NFR                       | proposed |
 | S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | proposed |
 | S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | proposed |
@@ -115,7 +115,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy aktywny krok wynika tylko ze statusu zapytania, czy użytkownik może swobodnie przechodzić między ukończonymi krokami? — Owner: autor. Block: no.
 - **Risk:** Największa przebudowa M-2 (widok zapytania i jego testy oparte na tekście); gwiazda przewodnia, więc stoi tak wcześnie, jak pozwala fundament i wyniesienie diagnostyki.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-13: Porównanie wariantów obok siebie
 

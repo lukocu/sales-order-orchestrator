@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
   AgentResult,
@@ -13,7 +14,7 @@ import type {
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
-import { formatDate } from './format'
+import { deadlineText, errorMessage, formatDate } from './format'
 
 type Props = {
   inquiryId: number
@@ -47,67 +48,66 @@ const CAPABILITY_KEY = {
   'customer-history': 'orchestration.capability.customerHistory',
 } as const satisfies Record<Capability, string>
 
-const CONSENT: Record<SubstituteConsent, string> = {
-  confirmed: 'Substitute consent: confirmed',
-  refused: 'Substitute consent: refused',
-  unconfirmed: 'Substitute consent: not confirmed',
+const CONSENT_KEY = {
+  confirmed: 'orchestration.consent.confirmed',
+  refused: 'orchestration.consent.refused',
+  unconfirmed: 'orchestration.consent.unconfirmed',
+} as const satisfies Record<SubstituteConsent, string>
+
+const SIGNAL_KEY = {
+  accepted_before: 'orchestration.signal.accepted_before',
+  declined_before: 'orchestration.signal.declined_before',
+  mixed: 'orchestration.signal.mixed',
+  no_substitute_history: 'orchestration.signal.no_substitute_history',
+} as const satisfies Record<HistorySignal, string>
+
+function covers(value: boolean, t: TFunction): string {
+  return value ? t('orchestration.covers') : t('orchestration.coversNot')
 }
 
-const SIGNAL: Record<HistorySignal, string> = {
-  accepted_before: 'accepted substitutes before',
-  declined_before: 'declined substitutes before',
-  mixed: 'mixed substitute history',
-  no_substitute_history: 'no substitute history',
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
-
-function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? '' : 's'}`
-}
-
-function covers(value: boolean): string {
-  return value ? 'covers the shortage' : 'does not cover the shortage'
-}
-
-function deadlineText(meets: boolean | null): string {
-  if (meets === null) return 'no deadline'
-  return meets ? 'meets the deadline' : 'misses the deadline'
-}
-
-function deliveryText(offer: SupplierDelivery): string {
-  return (
-    `${offer.supplier}: ${offer.quantity} pcs on ${offer.available_on} ` +
-    `(${plural(offer.lead_time_days, 'day')}), ${deadlineText(offer.meets_deadline)}, ` +
-    covers(offer.covers_shortage)
-  )
+function deliveryText(offer: SupplierDelivery, t: TFunction): string {
+  return t('orchestration.delivery', {
+    supplier: offer.supplier,
+    quantity: offer.quantity,
+    date: offer.available_on,
+    lead: t('orchestration.days', { count: offer.lead_time_days }),
+    deadline: deadlineText(offer.meets_deadline, t),
+    covers: covers(offer.covers_shortage, t),
+  })
 }
 
 // The short outcome of one agent, one line per candidate or offer.
-function resultLines(result: AgentResult): string[] {
+function resultLines(result: AgentResult, t: TFunction): string[] {
   switch (result.capability) {
     case 'substitute-compatibility':
-      if (result.candidates.length === 0) return ['No substitute in the catalogue']
-      return result.candidates.map(
-        (candidate) =>
-          `${candidate.code} ${candidate.name} — ${candidate.compatibility} compatibility`,
+      if (result.candidates.length === 0) return [t('orchestration.noSubstitute')]
+      return result.candidates.map((candidate) =>
+        t('orchestration.substituteCompat', {
+          code: candidate.code,
+          name: candidate.name,
+          compatibility: t(`orchestration.compatibility.${candidate.compatibility}`),
+        }),
       )
     case 'substitute-availability':
-      if (result.candidates.length === 0) return ['No substitute to check']
-      return result.candidates.map(
-        (candidate) =>
-          `${candidate.code}: ${candidate.stock} in stock, ${covers(candidate.covers_shortage)}`,
+      if (result.candidates.length === 0) return [t('orchestration.noSubstituteToCheck')]
+      return result.candidates.map((candidate) =>
+        t('orchestration.substituteStock', {
+          code: candidate.code,
+          stock: candidate.stock,
+          covers: covers(candidate.covers_shortage, t),
+        }),
       )
     case 'supplier-availability':
-      if (result.offers.length === 0) return ['No supplier offer']
-      return result.offers.map(deliveryText)
+      if (result.offers.length === 0) return [t('orchestration.noSupplierOffer')]
+      return result.offers.map((offer) => deliveryText(offer, t))
     case 'customer-history':
       return [
-        `${plural(result.orders_count, 'order')}, substitutes accepted ` +
-          `${result.substitutes_accepted} of ${result.substitutes_offered} offered — ` +
-          SIGNAL[result.signal],
+        t('orchestration.history', {
+          orders: t('orchestration.orders', { count: result.orders_count }),
+          accepted: result.substitutes_accepted,
+          offered: result.substitutes_offered,
+          signal: t(SIGNAL_KEY[result.signal]),
+        }),
       ]
   }
 }
@@ -133,9 +133,9 @@ function TaskItem({ task }: { task: TaskOutcome }) {
       )}
       {task.result !== null && (
         <dl className="metrics__list">
-          <dt>Result</dt>
+          <dt>{t('orchestration.result')}</dt>
           <dd>
-            {resultLines(task.result).map((line) => (
+            {resultLines(task.result, t).map((line) => (
               <span key={line} className="orchestration__result">
                 {line}
               </span>
@@ -157,6 +157,7 @@ function OrchestrationSection({
   onRerun,
   onUnauthorized,
 }: Props) {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const headingId = `orchestration-${inquiryId}-heading`
 
@@ -166,7 +167,7 @@ function OrchestrationSection({
       await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure))
+      else setError(errorMessage(failure, t))
     }
   }
 
@@ -176,27 +177,23 @@ function OrchestrationSection({
   return (
     <section className="orchestration" aria-labelledby={headingId}>
       <h4 id={headingId} className="analysis__subheading">
-        Orchestration
+        {t('orchestration.heading')}
       </h4>
 
-      {orchestration === null && <p className="checks__line">Orchestration not run yet</p>}
-      {orchestration?.stale && (
-        <p className="checks__line">
-          The analysis changed after this orchestration ran; the result may be out of date.
-        </p>
-      )}
+      {orchestration === null && <p className="checks__line">{t('orchestration.notRun')}</p>}
+      {orchestration?.stale && <p className="checks__line">{t('orchestration.stale')}</p>}
       {offerRerun && (
         <div className="analysis__actions">
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            {running ? 'Running orchestrator…' : 'Re-run orchestrator'}
+            {running ? t('orchestration.running') : t('orchestration.rerun')}
           </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">Re-running the orchestrator failed: {error}</p>
+          <p className="error">{t('orchestration.rerunFailed', { message: error })}</p>
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
@@ -221,14 +218,16 @@ function OrchestrationResult({
     <>
       <div className={`checks__banner orchestration__banner--${tone}`}>
         <p className="checks__outcome">{t(`orchestration.status.${orchestration.status}`)}</p>
-        <p className="checks__line">{CONSENT[orchestration.consent]}</p>
+        <p className="checks__line">{t(CONSENT_KEY[orchestration.consent])}</p>
         {orchestration.consent === 'unconfirmed' && (
-          <p className="orchestration__consent">
-            Customer consent to a substitute not confirmed
-          </p>
+          <p className="orchestration__consent">{t('orchestration.consentWarning')}</p>
         )}
       </div>
-      <p className="analysis__meta">Orchestrated {formatDate(orchestration.orchestrated_at)}</p>
+      <p className="analysis__meta">
+        {t('orchestration.orchestrated', {
+          date: formatDate(orchestration.orchestrated_at),
+        })}
+      </p>
 
       {orchestration.error !== null && (
         <div className="orchestration__error">

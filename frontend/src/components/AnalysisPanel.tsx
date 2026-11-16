@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { TFunction } from 'i18next'
 import { Link, useMatch, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
@@ -26,7 +27,7 @@ import type { User } from '../api/auth'
 import { ApiError, UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
-import { formatDate } from './format'
+import { errorMessage, formatDate } from './format'
 import { DecisionHistory } from './ReplyDraftSection'
 import RunInspector from './RunInspector'
 
@@ -47,7 +48,8 @@ type Props = {
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'ok'; analysis: Analysis | null }
-  | { kind: 'error'; message: string }
+  // null: the error had no message of its own; shown as the generic one.
+  | { kind: 'error'; message: string | null }
 
 type Substitute = 'yes' | 'no' | 'unknown'
 
@@ -72,30 +74,23 @@ const DRAFT_KEYS: readonly (keyof Draft)[] = [
   'price_value',
 ]
 
-const PRICE_KIND_LABEL: Record<PriceKind, string> = {
-  none: 'Not stated',
-  best_price: 'Best price',
-  discount_percent: 'Discount (%)',
-  target_price: 'Target price',
-}
+const PRICE_KIND_KEY = {
+  none: 'analysis.priceKind.none',
+  best_price: 'analysis.priceKind.best_price',
+  discount_percent: 'analysis.priceKind.discount_percent',
+  target_price: 'analysis.priceKind.target_price',
+} as const satisfies Record<PriceKind, string>
 
 const VALUED_PRICE_KINDS: readonly PriceKind[] = ['discount_percent', 'target_price']
 
-const SUBSTITUTE_LABEL: Record<Substitute, string> = {
-  yes: 'Yes',
-  no: 'No',
-  unknown: 'Not stated',
-}
+const SUBSTITUTE_KEY = {
+  yes: 'analysis.substitute.yes',
+  no: 'analysis.substitute.no',
+  unknown: 'analysis.substitute.unknown',
+} as const satisfies Record<Substitute, string>
 
-const RELOADED_NOTICE =
-  'Analysis changed by a re-analysis — reloaded, your unsaved edits were discarded.'
-
-const DRAFT_RELOADED_NOTICE =
-  'The draft changed since it was opened — reloaded, your decision was not saved.'
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
+// Notices are kept as keys and translated at render time, so they follow a language switch.
+type NoticeKey = 'analysis.saved' | 'analysis.reloaded' | 'analysis.draftReloaded'
 
 // The draft was written since it was read (another decision, a regenerated draft or a new
 // recommendation); every other 409 of a decision is shown at its form.
@@ -140,16 +135,17 @@ function sameDraft(a: Draft, b: Draft): boolean {
 function buildFields(
   draft: Draft,
   current: ParsedFields,
+  t: TFunction,
 ): { fields: ParsedFields } | { error: string } {
   const quantity = draft.quantity.trim()
   if (quantity !== '' && !/^\d+$/.test(quantity)) {
-    return { error: 'Quantity must be a whole number.' }
+    return { error: t('analysis.error.quantityWhole') }
   }
   let priceValue: string | null = null
   if (VALUED_PRICE_KINDS.includes(draft.price_kind)) {
     priceValue = draft.price_value.trim().replace(',', '.')
-    if (priceValue === '') return { error: 'Enter a value for the price expectation.' }
-    if (!/^\d+(\.\d+)?$/.test(priceValue)) return { error: 'Price value must be a number.' }
+    if (priceValue === '') return { error: t('analysis.error.priceValueRequired') }
+    if (!/^\d+(\.\d+)?$/.test(priceValue)) return { error: t('analysis.error.priceValueNumber') }
   }
   return {
     fields: {
@@ -166,31 +162,31 @@ function buildFields(
   }
 }
 
-function emptyOr(value: string | null): string {
-  return value === null || value === '' ? '(empty)' : value
+function emptyOr(value: string | null, t: TFunction): string {
+  return value === null || value === '' ? t('analysis.empty') : value
 }
 
-function formatPrice(kind: PriceKind, value: string | null): string {
-  if (kind === 'discount_percent' && value !== null) return `Discount ${value}%`
-  if (kind === 'target_price' && value !== null) return `Target price ${value}`
-  return PRICE_KIND_LABEL[kind]
+function formatPrice(kind: PriceKind, value: string | null, t: TFunction): string {
+  if (kind === 'discount_percent' && value !== null) return t('analysis.discountValue', { value })
+  if (kind === 'target_price' && value !== null) return t('analysis.targetValue', { value })
+  return t(PRICE_KIND_KEY[kind])
 }
 
 // How the original (parsed) value of a field reads next to the "edited" mark.
-function modelValue(field: FieldName, fields: ParsedFields): string {
+function modelValue(field: FieldName, fields: ParsedFields, t: TFunction): string {
   switch (field) {
     case 'customer':
-      return emptyOr(fields.customer)
+      return emptyOr(fields.customer, t)
     case 'product_code':
-      return emptyOr(fields.product_code)
+      return emptyOr(fields.product_code, t)
     case 'quantity':
-      return fields.quantity === null ? '(empty)' : String(fields.quantity)
+      return fields.quantity === null ? t('analysis.empty') : String(fields.quantity)
     case 'deadline':
-      return emptyOr(fields.deadline)
+      return emptyOr(fields.deadline, t)
     case 'substitute_allowed':
-      return SUBSTITUTE_LABEL[substituteOf(fields.substitute_allowed)]
+      return t(SUBSTITUTE_KEY[substituteOf(fields.substitute_allowed)])
     case 'price':
-      return formatPrice(fields.price_kind, fields.price_value)
+      return formatPrice(fields.price_kind, fields.price_value, t)
   }
 }
 
@@ -215,7 +211,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
         {edited && (
           <span className="field__edited">
             {t('analysisFields.editedOriginally', {
-              value: modelValue(name, analysis.model_fields),
+              value: modelValue(name, analysis.model_fields, t),
             })}
           </span>
         )}
@@ -223,7 +219,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
       {children}
       {reason !== undefined && (
         <div className="field__uncertain">
-          <p className="field__reason">Uncertain: {reason}</p>
+          <p className="field__reason">{t('analysis.uncertain', { reason })}</p>
           <label className="field__check">
             <input
               type="checkbox"
@@ -231,7 +227,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
               checked={reviewed.includes(name)}
               onChange={(event) => onReviewed(name, event.target.checked)}
             />
-            Looks right
+            {t('analysis.looksRight')}
           </label>
         </div>
       )}
@@ -244,7 +240,10 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
   // this panel holds, so it never refetches.
-  const inspecting = useMatch({ from: '/inbox/inquiries/$inquiryId/run', shouldThrow: false })
+  const inspecting = useMatch({
+    from: '/inbox/inquiries/$inquiryId/run',
+    shouldThrow: false,
+  })
   const inspectorLink = useRef<HTMLAnchorElement>(null)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -263,7 +262,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
   >(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<NoticeKey | null>(null)
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
@@ -279,7 +278,11 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else setLoad({ kind: 'error', message: errorMessage(error) })
+        else
+          setLoad({
+            kind: 'error',
+            message: error instanceof Error ? error.message : null,
+          })
       },
     )
     return () => controller.abort()
@@ -378,7 +381,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       showChecked(await send())
     } catch (error) {
       if (!draftChanged(error)) throw error
-      setNotice(DRAFT_RELOADED_NOTICE)
+      setNotice('analysis.draftReloaded')
       reload()
     } finally {
       setBusy(null)
@@ -415,7 +418,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       show(await analyzeInquiry(inquiryId))
     } catch (error) {
       if (error instanceof UnauthorizedError) onUnauthorized()
-      else setAnalyzeError(errorMessage(error))
+      else setAnalyzeError(errorMessage(error, t))
     } finally {
       setBusy(null)
     }
@@ -428,7 +431,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
 
   async function save() {
     if (analysis === null || draft === null) return
-    const built = buildFields(draft, analysis.fields)
+    const built = buildFields(draft, analysis.fields, t)
     if ('error' in built) {
       setFormError(built.error)
       return
@@ -439,13 +442,13 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     setConfirming(false)
     try {
       show(await saveCorrections(inquiryId, built.fields, reviewed, analysis.analyzed_at))
-      setNotice('Corrections saved')
+      setNotice('analysis.saved')
     } catch (error) {
       if (error instanceof UnauthorizedError) onUnauthorized()
       else if (error instanceof ApiError && error.status === 409) {
-        setNotice(RELOADED_NOTICE)
+        setNotice('analysis.reloaded')
         reload()
-      } else setFormError(errorMessage(error))
+      } else setFormError(errorMessage(error, t))
     } finally {
       setBusy(null)
     }
@@ -468,12 +471,25 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     return (
       <>
         <p className="analysis__meta">
-          Analyzed {formatDate(analysis.analyzed_at)}
-          {analysis.analyzed_by_name && ` by ${analysis.analyzed_by_name}`}
+          {analysis.analyzed_by_name
+            ? t('analysis.meta.analyzedBy', {
+                date: formatDate(analysis.analyzed_at),
+                name: analysis.analyzed_by_name,
+              })
+            : t('analysis.meta.analyzed', {
+                date: formatDate(analysis.analyzed_at),
+              })}
           {analysis.corrected_at && (
             <>
-              {' · '}corrected {formatDate(analysis.corrected_at)}
-              {analysis.corrected_by_name && ` by ${analysis.corrected_by_name}`}
+              {' · '}
+              {analysis.corrected_by_name
+                ? t('analysis.meta.correctedBy', {
+                    date: formatDate(analysis.corrected_at),
+                    name: analysis.corrected_by_name,
+                  })
+                : t('analysis.meta.corrected', {
+                    date: formatDate(analysis.corrected_at),
+                  })}
             </>
           )}
         </p>
@@ -486,21 +502,36 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
             void save()
           }}
         >
-          <Field name="customer" label="Customer" inputId={id('customer')} {...fieldProps}>
+          <Field
+            name="customer"
+            label={t('analysis.field.customer')}
+            inputId={id('customer')}
+            {...fieldProps}
+          >
             <input
               id={id('customer')}
               value={draft.customer}
               onChange={(event) => update('customer', event.target.value)}
             />
           </Field>
-          <Field name="product_code" label="Product" inputId={id('product')} {...fieldProps}>
+          <Field
+            name="product_code"
+            label={t('analysis.field.product')}
+            inputId={id('product')}
+            {...fieldProps}
+          >
             <input
               id={id('product')}
               value={draft.product_code}
               onChange={(event) => update('product_code', event.target.value)}
             />
           </Field>
-          <Field name="quantity" label="Quantity" inputId={id('quantity')} {...fieldProps}>
+          <Field
+            name="quantity"
+            label={t('analysis.field.quantity')}
+            inputId={id('quantity')}
+            {...fieldProps}
+          >
             <input
               id={id('quantity')}
               inputMode="numeric"
@@ -508,7 +539,12 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               onChange={(event) => update('quantity', event.target.value)}
             />
           </Field>
-          <Field name="deadline" label="Deadline" inputId={id('deadline')} {...fieldProps}>
+          <Field
+            name="deadline"
+            label={t('analysis.field.deadline')}
+            inputId={id('deadline')}
+            {...fieldProps}
+          >
             <div className="field__row">
               <input
                 id={id('deadline')}
@@ -523,7 +559,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
           </Field>
           <Field
             name="substitute_allowed"
-            label="Substitute allowed"
+            label={t('analysis.field.substituteAllowed')}
             inputId={id('substitute')}
             {...fieldProps}
           >
@@ -532,30 +568,37 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               value={draft.substitute}
               onChange={(event) => update('substitute', event.target.value as Substitute)}
             >
-              {(Object.keys(SUBSTITUTE_LABEL) as Substitute[]).map((value) => (
+              {(Object.keys(SUBSTITUTE_KEY) as Substitute[]).map((value) => (
                 <option key={value} value={value}>
-                  {SUBSTITUTE_LABEL[value]}
+                  {t(SUBSTITUTE_KEY[value])}
                 </option>
               ))}
             </select>
           </Field>
-          <Field name="price" label="Price expectation" inputId={id('price-kind')} {...fieldProps}>
+          <Field
+            name="price"
+            label={t('analysis.field.priceExpectation')}
+            inputId={id('price-kind')}
+            {...fieldProps}
+          >
             <div className="field__row">
               <select
                 id={id('price-kind')}
                 value={draft.price_kind}
                 onChange={(event) => update('price_kind', event.target.value as PriceKind)}
               >
-                {(Object.keys(PRICE_KIND_LABEL) as PriceKind[]).map((kind) => (
+                {(Object.keys(PRICE_KIND_KEY) as PriceKind[]).map((kind) => (
                   <option key={kind} value={kind}>
-                    {PRICE_KIND_LABEL[kind]}
+                    {t(PRICE_KIND_KEY[kind])}
                   </option>
                 ))}
               </select>
               {VALUED_PRICE_KINDS.includes(draft.price_kind) && (
                 <input
                   aria-label={
-                    draft.price_kind === 'discount_percent' ? 'Discount percent' : 'Target price'
+                    draft.price_kind === 'discount_percent'
+                      ? t('analysis.priceValueLabel.discount_percent')
+                      : t('analysis.priceValueLabel.target_price')
                   }
                   inputMode="decimal"
                   className="field__value"
@@ -581,7 +624,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               variant="outline"
               disabled={busy !== null || !(dirty || reviewed.length > 0)}
             >
-              {busy === 'saving' ? 'Saving…' : 'Save corrections'}
+              {busy === 'saving' ? t('common.saving') : t('analysis.save')}
             </Button>
             <Button
               type="button"
@@ -589,18 +632,18 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               onClick={requestReanalysis}
               disabled={busy !== null}
             >
-              {busy === 'analyzing' ? 'Analyzing…' : 'Re-analyze'}
+              {busy === 'analyzing' ? t('analysis.analyzing') : t('analysis.reanalyze')}
             </Button>
           </div>
           {confirming && (
             <div className="analysis__confirm">
-              <p>Corrections will be lost.</p>
+              <p>{t('analysis.correctionsLost')}</p>
               <div className="analysis__actions">
                 <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
-                  Re-analyze anyway
+                  {t('analysis.reanalyzeAnyway')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </div>
@@ -641,7 +684,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     <section className="analysis" aria-labelledby={id('heading')}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h3 id={id('heading')} className="analysis__heading font-bold">
-          Analysis
+          {t('analysis.heading')}
         </h3>
         {analysis !== null && (
           <Link
@@ -655,18 +698,18 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
         )}
       </div>
 
-      {load.kind === 'loading' && <p className="muted">Loading analysis…</p>}
+      {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
       {load.kind === 'error' && (
         <div role="alert" className="analysis__problem">
-          <p className="error">{load.message}</p>
+          <p className="error">{load.message ?? t('common.genericError')}</p>
           <Button type="button" variant="outline" onClick={reload}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
       {notice && (
         <p className="analysis__notice" role="status">
-          {notice}
+          {t(notice)}
         </p>
       )}
       {analyzeError && (
@@ -678,7 +721,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
             onClick={requestReanalysis}
             disabled={busy !== null}
           >
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
@@ -686,7 +729,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       {load.kind === 'ok' && analysis === null && (
         <div className="analysis__actions">
           <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
-            {busy === 'analyzing' ? 'Analyzing…' : 'Analyze request'}
+            {busy === 'analyzing' ? t('analysis.analyzing') : t('analysis.analyze')}
           </Button>
         </div>
       )}
@@ -698,7 +741,10 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
         loading={load.kind === 'loading'}
         open={inspecting !== undefined}
         onClose={() =>
-          void navigate({ to: '/inquiries/$inquiryId', params: { inquiryId: String(inquiryId) } })
+          void navigate({
+            to: '/inquiries/$inquiryId',
+            params: { inquiryId: String(inquiryId) },
+          })
         }
         returnFocusTo={inspectorLink}
       />

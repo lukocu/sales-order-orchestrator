@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
   type Analysis,
@@ -15,7 +16,7 @@ import {
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
-import { formatDate, formatPercent, formatPln } from './format'
+import { errorMessage, formatDate, formatPercent, formatPln } from './format'
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
 import RecommendationSection from './RecommendationSection'
@@ -73,43 +74,43 @@ type Props = {
 // Every status is shown as text; the tone only adds the colour.
 type Tone = 'ok' | 'warn' | 'error' | 'muted'
 
-const INPUT_LABEL: Record<CheckInput, string> = {
-  customer: 'Customer',
-  product_code: 'Product',
-  quantity: 'Quantity',
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
+const INPUT_KEY = {
+  customer: 'checks.input.customer',
+  product_code: 'checks.input.product_code',
+  quantity: 'checks.input.quantity',
+} as const satisfies Record<CheckInput, string>
 
 function formatCount(value: number | null): string {
   return value === null ? '—' : String(value)
 }
 
-function reasonText(reason: NeedsInputReason, checks: ChecksView): string {
+function reasonText(reason: NeedsInputReason, checks: ChecksView, t: TFunction): string {
   const { customer, stock } = checks.results
   switch (reason) {
     case 'customer_missing':
-      return 'Customer missing — no name in the inquiry and the sender’s e-mail domain is not in records'
+      return t('checks.reason.customer_missing')
     case 'customer_not_found':
-      return 'Customer not found in records'
+      return t('checks.reason.customer_not_found')
     case 'customer_ambiguous':
-      return `Customer matches several records: ${customer.candidates.join(', ')}`
+      return t('checks.reason.customer_ambiguous', {
+        candidates: customer.candidates.join(', '),
+      })
     case 'product_missing':
-      return 'Product code missing'
+      return t('checks.reason.product_missing')
     case 'product_not_found':
       return stock.product_code === null
-        ? 'Product not found in the catalogue'
-        : `Product ${stock.product_code} not found in the catalogue`
+        ? t('checks.reason.product_not_found')
+        : t('checks.reason.product_not_found_code', {
+            code: stock.product_code,
+          })
     case 'quantity_missing':
-      return 'Quantity missing'
+      return t('checks.reason.quantity_missing')
   }
 }
 
-function substituteText(allowed: boolean | null): string {
-  if (allowed === null) return 'Substitute: not stated in the inquiry'
-  return allowed ? 'Substitute: the customer accepts one' : 'Substitute: the customer does not accept one'
+function substituteText(allowed: boolean | null, t: TFunction): string {
+  if (allowed === null) return t('checks.substitute.unknown')
+  return allowed ? t('checks.substitute.yes') : t('checks.substitute.no')
 }
 
 function Banner({ checks, analysis }: { checks: ChecksView; analysis: Analysis }) {
@@ -126,19 +127,22 @@ function Banner({ checks, analysis }: { checks: ChecksView; analysis: Analysis }
     return (
       <div className="checks__banner checks__banner--exception">
         <p className="checks__outcome">
-          Exception: insufficient stock — requested {formatCount(stock.requested)}, available{' '}
-          {formatCount(stock.available)} (short {formatCount(stock.shortage)})
+          {t('checks.exception', {
+            requested: formatCount(stock.requested),
+            available: formatCount(stock.available),
+            shortage: formatCount(stock.shortage),
+          })}
         </p>
-        <p className="checks__line">{substituteText(analysis.fields.substitute_allowed)}</p>
+        <p className="checks__line">{substituteText(analysis.fields.substitute_allowed, t)}</p>
       </div>
     )
   }
   return (
     <div className="checks__banner checks__banner--needs-input">
-      <p className="checks__outcome">Needs input</p>
+      <p className="checks__outcome">{t('checks.needsInput')}</p>
       <ul className="checks__reasons list-disc ps-5">
         {checks.reasons.map((reason) => (
-          <li key={reason}>{reasonText(reason, checks)}</li>
+          <li key={reason}>{reasonText(reason, checks, t)}</li>
         ))}
       </ul>
     </div>
@@ -165,50 +169,58 @@ function CheckItem({ name, status, tone, children }: CheckItemProps) {
 }
 
 function CustomerItem({ check }: { check: CustomerCheck }) {
+  const { t } = useTranslation()
+  const name = t('checks.customer.name')
   switch (check.status) {
     case 'matched':
       return (
-        <CheckItem name="Customer" status="Matched" tone="ok">
-          <dt>Name</dt>
+        <CheckItem name={name} status={t('checks.customer.matched')} tone="ok">
+          <dt>{t('checks.customer.nameField')}</dt>
           <dd>{check.name ?? '—'}</dd>
-          <dt>Matched by</dt>
-          <dd>{check.matched_by === 'email' ? 'e-mail' : 'name'}</dd>
+          <dt>{t('checks.customer.matchedBy')}</dt>
+          <dd>
+            {check.matched_by === 'email'
+              ? t('checks.customer.byEmail')
+              : t('checks.customer.byName')}
+          </dd>
         </CheckItem>
       )
     case 'ambiguous':
       return (
-        <CheckItem name="Customer" status="Ambiguous" tone="warn">
-          <dt>Candidates</dt>
+        <CheckItem name={name} status={t('checks.customer.ambiguous')} tone="warn">
+          <dt>{t('checks.customer.candidates')}</dt>
           <dd>{check.candidates.join(', ')}</dd>
         </CheckItem>
       )
     case 'not_found':
-      return <CheckItem name="Customer" status="Not found" tone="warn" />
+      return <CheckItem name={name} status={t('checks.customer.notFound')} tone="warn" />
     case 'missing':
-      return <CheckItem name="Customer" status="Missing" tone="warn" />
+      return <CheckItem name={name} status={t('checks.customer.missing')} tone="warn" />
   }
 }
 
 function StockItem({ check }: { check: StockCheck }) {
-  if (check.status === 'skipped') return <CheckItem name="Stock" status="—" tone="muted" />
+  const { t } = useTranslation()
+  const name = t('checks.stock.name')
+  if (check.status === 'skipped') return <CheckItem name={name} status="—" tone="muted" />
   return (
     <CheckItem
-      name="Stock"
-      status={check.status === 'ok' ? 'In stock' : 'Insufficient'}
+      name={name}
+      status={check.status === 'ok' ? t('checks.stock.inStock') : t('checks.stock.insufficient')}
       tone={check.status === 'ok' ? 'ok' : 'error'}
     >
-      <dt>Product</dt>
+      <dt>{t('checks.stock.product')}</dt>
       <dd>
         {check.product_code}
         {check.product_name && ` · ${check.product_name}`}
       </dd>
-      <dt>Requested</dt>
+      <dt>{t('checks.stock.requested')}</dt>
       <dd>{formatCount(check.requested)}</dd>
-      <dt>Available</dt>
+      <dt>{t('checks.stock.available')}</dt>
       <dd>{formatCount(check.available)}</dd>
       {check.status === 'insufficient' && (
         <>
-          <dt>Short</dt>
+          <dt>{t('checks.stock.short')}</dt>
           <dd>{formatCount(check.shortage)}</dd>
         </>
       )}
@@ -217,68 +229,76 @@ function StockItem({ check }: { check: StockCheck }) {
 }
 
 function PriceItem({ check }: { check: PriceCheck }) {
-  if (check.status === 'skipped') return <CheckItem name="Price" status="—" tone="muted" />
+  const { t } = useTranslation()
+  const name = t('checks.price.name')
+  if (check.status === 'skipped') return <CheckItem name={name} status="—" tone="muted" />
   return (
-    <CheckItem name="Price" status="Calculated" tone="ok">
-      <dt>List price</dt>
+    <CheckItem name={name} status={t('checks.price.calculated')} tone="ok">
+      <dt>{t('checks.price.listPrice')}</dt>
       <dd>{formatPln(check.list_price)}</dd>
-      <dt>Discount</dt>
+      <dt>{t('checks.price.discount')}</dt>
       <dd>{check.discount_percent === null ? '—' : formatPercent(check.discount_percent)}</dd>
-      <dt>Unit price</dt>
+      <dt>{t('checks.price.unitPrice')}</dt>
       <dd>{formatPln(check.unit_price)}</dd>
-      <dt>Value</dt>
-      <dd>{check.total === null ? '— (no quantity)' : formatPln(check.total)}</dd>
+      <dt>{t('checks.price.value')}</dt>
+      <dd>{check.total === null ? t('checks.price.noQuantity') : formatPln(check.total)}</dd>
     </CheckItem>
   )
 }
 
-function requestedDiscount(check: DiscountCheck): string {
+function requestedDiscount(check: DiscountCheck, t: TFunction): string {
   const value = check.requested_value
   switch (check.requested_kind) {
     case 'discount_percent':
-      return value === null ? 'a discount' : formatPercent(value)
+      return value === null ? t('checks.discount.aDiscount') : formatPercent(value)
     case 'target_price':
-      return value === null ? 'a target price' : `target price ${formatPln(value)}`
+      return value === null
+        ? t('checks.discount.aTargetPrice')
+        : t('checks.discount.targetPrice', { value: formatPln(value) })
     case 'best_price':
-      return 'best price (no value)'
+      return t('checks.discount.bestPrice')
     case 'none':
-      return 'not stated'
+      return t('checks.discount.notStated')
   }
 }
 
 function DiscountItem({ check }: { check: DiscountCheck }) {
-  if (check.status === 'skipped') return <CheckItem name="Discount" status="—" tone="muted" />
+  const { t } = useTranslation()
+  const name = t('checks.discount.name')
+  if (check.status === 'skipped') return <CheckItem name={name} status="—" tone="muted" />
   const above = check.status === 'above_standard'
   return (
     <CheckItem
-      name="Discount"
-      status={above ? 'Above standard' : 'Within standard'}
+      name={name}
+      status={above ? t('checks.discount.above') : t('checks.discount.within')}
       tone={above ? 'warn' : 'ok'}
     >
-      <dt>Standard</dt>
+      <dt>{t('checks.discount.standard')}</dt>
       <dd>{check.standard_percent === null ? '—' : formatPercent(check.standard_percent)}</dd>
-      <dt>Requested</dt>
-      <dd>{requestedDiscount(check)}</dd>
+      <dt>{t('checks.discount.requested')}</dt>
+      <dd>{requestedDiscount(check, t)}</dd>
     </CheckItem>
   )
 }
 
-const CREDIT_STATUS: Record<Exclude<CreditCheck['status'], 'skipped'>, [string, Tone]> = {
-  ok: ['Within limit', 'ok'],
-  over_limit: ['Over limit', 'warn'],
-  blocked: ['Blocked', 'warn'],
-}
+const CREDIT_STATUS = {
+  ok: ['checks.credit.within', 'ok'],
+  over_limit: ['checks.credit.over', 'warn'],
+  blocked: ['checks.credit.blocked', 'warn'],
+} as const satisfies Record<Exclude<CreditCheck['status'], 'skipped'>, [string, Tone]>
 
 function CreditItem({ check }: { check: CreditCheck }) {
-  if (check.status === 'skipped') return <CheckItem name="Credit" status="—" tone="muted" />
-  const [status, tone] = CREDIT_STATUS[check.status]
+  const { t } = useTranslation()
+  const name = t('checks.credit.name')
+  if (check.status === 'skipped') return <CheckItem name={name} status="—" tone="muted" />
+  const [statusKey, tone] = CREDIT_STATUS[check.status]
   return (
-    <CheckItem name="Credit" status={status} tone={tone}>
-      <dt>Limit</dt>
+    <CheckItem name={name} status={t(statusKey)} tone={tone}>
+      <dt>{t('checks.credit.limit')}</dt>
       <dd>{formatPln(check.limit)}</dd>
-      <dt>Balance</dt>
+      <dt>{t('checks.credit.balance')}</dt>
       <dd>{formatPln(check.balance)}</dd>
-      <dt>Order value</dt>
+      <dt>{t('checks.credit.orderValue')}</dt>
       <dd>{formatPln(check.order_value)}</dd>
     </CheckItem>
   )
@@ -305,6 +325,7 @@ function ChecksSection({
   onSupervisorDecideDraft,
   onUnauthorized,
 }: Props) {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const checks = analysis.checks
   const headingId = `checks-${inquiryId}-heading`
@@ -315,35 +336,31 @@ function ChecksSection({
       await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure))
+      else setError(errorMessage(failure, t))
     }
   }
 
   return (
     <section className="checks" aria-labelledby={headingId}>
       <h4 id={headingId} className="analysis__subheading">
-        Checks
+        {t('checks.heading')}
       </h4>
 
       {(checks === null || checks.stale) && (
         <div className="checks__stale">
-          <p>
-            {checks === null
-              ? 'No check result for this analysis yet.'
-              : 'The analysis changed after these checks ran; the result may be out of date.'}
-          </p>
+          <p>{checks === null ? t('checks.noResult') : t('checks.stale')}</p>
           <div className="analysis__actions">
             <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-              {running ? 'Running checks…' : 'Re-run checks'}
+              {running ? t('checks.running') : t('checks.rerun')}
             </Button>
           </div>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">Re-running the checks failed: {error}</p>
+          <p className="error">{t('checks.rerunFailed', { message: error })}</p>
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
@@ -401,12 +418,15 @@ function ChecksSection({
           )}
           {checks.uncertain_inputs.length > 0 && (
             <p className="checks__uncertain">
-              Based on uncertain fields:{' '}
-              {checks.uncertain_inputs.map((input) => INPUT_LABEL[input]).join(', ')}
+              {t('checks.uncertainBasis', {
+                fields: checks.uncertain_inputs.map((input) => t(INPUT_KEY[input])).join(', '),
+              })}
             </p>
           )}
-          <p className="analysis__meta">Checked {formatDate(checks.checked_at)}</p>
-          <ul className="checks__list" aria-label="Individual checks">
+          <p className="analysis__meta">
+            {t('checks.checked', { date: formatDate(checks.checked_at) })}
+          </p>
+          <ul className="checks__list" aria-label={t('checks.listLabel')}>
             <CustomerItem check={checks.results.customer} />
             <StockItem check={checks.results.stock} />
             <PriceItem check={checks.results.price} />
