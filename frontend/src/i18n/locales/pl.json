@@ -276,9 +276,15 @@
     "other_source": "Magazyn + dostawca",
     "combined": "Magazyn + zamiennik + dostawca"
   },
+  "variant": {
+    "stock": "Stan",
+    "stockOnly": "Tylko stan (dostawa częściowa)",
+    "substitute": "zamiennik {{code}}",
+    "supplier": "dostawca {{supplier}}"
+  },
   "draft": {
     "fallback": "Dopasowane akapity były niedostępne; szkic używa stałego tekstu zastępczego.",
-    "optionLabel": "{{kind}} · {{value}}",
+    "optionLabel": "{{name}} · {{value}}",
     "heading": "Szkic odpowiedzi",
     "blocked": {
       "noRecommendation": "Brak szkicu: nie ma jeszcze rekomendacji.",

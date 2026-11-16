@@ -276,9 +276,15 @@
     "other_source": "Stock + supplier",
     "combined": "Stock + substitute + supplier"
   },
+  "variant": {
+    "stock": "Stock",
+    "stockOnly": "Stock only (partial delivery)",
+    "substitute": "substitute {{code}}",
+    "supplier": "supplier {{supplier}}"
+  },
   "draft": {
     "fallback": "The tailored paragraphs were unavailable; the draft uses the fixed fallback text.",
-    "optionLabel": "{{kind}} · {{value}}",
+    "optionLabel": "{{name}} · {{value}}",
     "heading": "Reply draft",
     "blocked": {
       "noRecommendation": "No draft: there is no recommendation yet.",
