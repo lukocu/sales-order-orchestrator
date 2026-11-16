@@ -133,8 +133,11 @@ Autor systemu albo osoba oceniająca go technicznie (np. rekruter na stanowisko 
   > Socrates: Counter-argument considered: "proces nie jest liniowy — polityka może skierować do przełożonego, przełożony odrzuca, Re-analyze kasuje poprawki, edycja szkicu ponownie uruchamia politykę." Resolution: kroki pokazują postęp, a nie wymuszają kolejności; status zapytania decyduje, który krok jest aktywny, a powrót do wcześniejszego kroku (po odrzuceniu, edycji, ponownej analizie) jest jawny i unieważnia widoczne dalej wyniki.
 - FR-017: Handlowiec can porównać warianty realizacji obok siebie (pokrycie, termin względem oczekiwanego, wartość, marża, ryzyka, pewność) pod czytelnymi nazwami („Stan + zamiennik ABC-110”), z wyróżnionym wariantem rekomendowanym. Priority: must-have
 - FR-018: Użytkownik zawsze widzi status zapytania: na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji. Etykieta akcji mówi, co się stanie („Approve” vs „Send to supervisor”, gdy polityka wymaga akceptacji). Priority: must-have
-- FR-019: Przełożony can otworzyć kolejkę „Do akceptacji” (z licznikiem w nawigacji), w której widok zapytania zaczyna się od reguł, które nie przeszły, rekomendowanego wariantu i akcji Zatwierdź / Odrzuć z komentarzem. Priority: must-have
+- FR-019: Przełożony can otworzyć kolejkę „Do akceptacji” (z licznikiem w nawigacji), w której widok zapytania zaczyna się od reguł, które nie przeszły, rekomendowanego wariantu i akcji Zatwierdź / Odrzuć z komentarzem. Na zapytaniu czekającym na jego decyzję przełożony tylko decyduje — nie poprawia pól, nie uruchamia ponownej analizy i nie edytuje szkicu; poprawki robi handlowiec po odrzuceniu. Priority: must-have
+  > Socrates: Counter-argument considered: "przy drobnym błędzie szybciej, gdyby przełożony sam poprawił." Resolution: rozdzielona odpowiedzialność i czytelny ślad decyzji są ważniejsze; komentarz przy odrzuceniu mówi handlowcowi, co poprawić.
 - FR-020: Skrzynka, zapytanie (z aktywnym krokiem), kolejka przełożonego, inspektor przebiegu i strona systemowa mają własne adresy URL, które można odświeżyć i wysłać innej osobie; wejście bez sesji prowadzi do logowania i wraca pod ten sam adres. Priority: should-have
+- FR-021: Użytkownik can przełączyć język interfejsu PL | EN w nagłówku (domyślnie polski; wybór zapamiętany w przeglądarce, ustawia `lang` dokumentu). Przełącznik obejmuje: (a) teksty interfejsu oraz (b) komunikaty systemu pochodzące z backendu (wyniki sprawdzeń, reguły polityki, sygnały pewności), które frontend tłumaczy po stabilnych kodach, a nie po zapisanym tekście. Nie obejmuje: (c) treści klienta — mail i szkic odpowiedzi zostają w języku klienta — ani (d) uzasadnienia napisanego przez model. Priority: must-have
+  > Socrates: Counter-argument considered: "tłumaczenie zapisanych tekstów wymaga migracji JSONB (decyzje, migawki szkicu) i rozsypie ~430 testów opartych na tekście." Resolution: tłumaczenie przy wyświetlaniu po kodach, bez zmiany zapisanych danych; testy jednostkowe działają z przypiętym językiem angielskim, a samo przełączanie ma własne testy. Infrastruktura tłumaczeń wchodzi w fundamencie designu, żeby nowe komponenty od razu z niej korzystały.
 
 ### Ewaluacja
 
@@ -162,7 +165,7 @@ Użytkownik spotyka regułę po kliknięciu „Analyze request” dla zapytania 
 
 - Dostęp przez logowanie; każdy użytkownik ma konto i jedną rolę.
 - **Handlowiec**: widzi zapytania i rekomendacje, przygotowuje i wysyła oferty.
-- **Przełożony**: wszystko, co handlowiec, plus zatwierdza lub odrzuca wyjątki skierowane przez policy engine do akceptacji człowieka; ma kolejkę „Do akceptacji” (FR-019).
+- **Przełożony**: wszystko, co handlowiec, plus zatwierdza lub odrzuca wyjątki skierowane przez policy engine do akceptacji człowieka; ma kolejkę „Do akceptacji” (FR-019). Na zapytaniu czekającym na jego decyzję tylko decyduje; nie poprawia danych zapytania ani szkicu.
 - **Warstwa techniczna** (inspektor przebiegu, strona systemowa) jest dostępna dla każdego zalogowanego użytkownika na żądanie; nie jest osobną rolą.
 - Niezalogowany użytkownik nie ma dostępu do żadnych danych — także do stanu systemu i numeru migracji w interfejsie (publiczny `/api/health` dla platformy wdrożeniowej zostaje).
 
@@ -173,7 +176,7 @@ Użytkownik spotyka regułę po kliknięciu „Analyze request” dla zapytania 
 - Brak autonomicznej wysyłki — system nigdy sam nie wysyła oferty, nawet gdy polityka przechodzi.
 - Dane testowe nie odwzorowują realnych niespójności (np. nieaktualnych stanów) — świadome ograniczenie MVP (z rundy Sokratesa przy FR-003).
 - Brak własnego brandingu, landing page'a i pełnej biblioteki komponentów — system projektowy obejmuje tylko tokeny i komponenty używane przez główny przepływ.
-- Brak wielojęzyczności interfejsu — jeden język UI (zob. Open Question 5).
+- Brak języków UI innych niż polski i angielski oraz tłumaczenia treści klienta (maile, szkic odpowiedzi) i tekstu generowanego przez model — przełącznik dotyczy tylko interfejsu i komunikatów systemu (FR-021).
 
 ## Open Questions
 
@@ -181,5 +184,5 @@ Użytkownik spotyka regułę po kliknięciu „Analyze request” dla zapytania 
 2. **Problem nie jest zwalidowany.** Koszt dziś nie jest zmierzony (brak danych o czasie przygotowania oferty i częstotliwości wyjątków); Mom Test zaplanowany, niewykonany. — Owner: autor. Block: no (projekt świadomie hipotetyczny).
 3. **Priorytet zapytań przy większej skali.** Notatka skali: przy dużej liczbie wyjątków kolejność ich obsługi staje się częścią reguły. Poza zakresem MVP (skala: kilka osób) — czy zapisać to jako kierunek v2? — Owner: autor. Block: no.
 4. **Typy wyjątków w MVP.** Notatki opisują scenariusz braku pełnej ilości oraz scenariusz odrzucenia przez politykę; nie określają, czy pozostałe typy (konflikt cena–termin, nietypowy rabat, niejasne wymagania) są obsługiwane w MVP. — Owner: autor. By: przed planowaniem.
-5. **Język interfejsu.** Dziś UI jest po angielsku, a treść zapytań, uzasadnienia, reguły i szkic odpowiedzi po polsku; persona to polski handlowiec, a odbiorca portfolio może być anglojęzyczny. Jeden język UI: polski czy angielski? — Owner: autor. By: przed planowaniem widoku zapytania (M-2).
-6. **Uprawnienia przełożonego na zapytaniu czekającym na decyzję.** Dziś przełożony widzi też „Save corrections” i „Re-analyze” na cudzym zapytaniu w statusie „czeka na przełożonego”. Czy przełożony ma tylko decydować (Zatwierdź / Odrzuć), czy także poprawiać? — Owner: autor. By: przed planowaniem kolejki przełożonego (M-2).
+5. ~~**Język interfejsu.**~~ Rozstrzygnięte 2026-11-16: dwa języki UI z przełącznikiem PL | EN, domyślnie polski. Zapisane w FR-021.
+6. ~~**Uprawnienia przełożonego na zapytaniu czekającym na decyzję.**~~ Rozstrzygnięte 2026-11-16: przełożony tylko decyduje (Zatwierdź / Odrzuć z komentarzem); poprawki robi handlowiec po odrzuceniu. Zapisane w FR-019 i Access Control.
