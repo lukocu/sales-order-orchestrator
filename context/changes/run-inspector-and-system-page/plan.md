@@ -589,12 +589,12 @@ No data or backend migration. Rollback is a revert of the phase commits. Old boo
 
 #### Automated
 
-- [x] 5.1 Lint, typecheck, tests and build pass
-- [x] 5.2 The compat block is gone
-- [x] 5.3 No raw buttons remain in the inquiry view
-- [x] 5.4 Docs updated
+- [x] 5.1 Lint, typecheck, tests and build pass — c8214e5
+- [x] 5.2 The compat block is gone — c8214e5
+- [x] 5.3 No raw buttons remain in the inquiry view — c8214e5
+- [x] 5.4 Docs updated — c8214e5
 
 #### Manual
 
-- [x] 5.5 Visual check of the full inquiry flow in light/dark at 1440 and 375 px
-- [x] 5.6 Screenshots of the inquiry view and inspector saved
+- [x] 5.5 Visual check of the full inquiry flow in light/dark at 1440 and 375 px — c8214e5
+- [x] 5.6 Screenshots of the inquiry view and inspector saved — c8214e5
