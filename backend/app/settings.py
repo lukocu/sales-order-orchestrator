@@ -2,13 +2,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BACKEND_DIR.parent
 
 LlmProvider = Literal["fake", "groq", "openrouter"]
+MailboxProvider = Literal["fake", "imap"]
 
 
 def normalize_database_url(url: str) -> str:
@@ -52,15 +53,52 @@ class Settings(BaseSettings):
     llm_model: str | None = None
     llm_timeout_seconds: float = Field(default=30, gt=0)
 
+    # Mailbox ingest. Only a dedicated test mailbox, and only read: the folder is opened
+    # read-only and messages are fetched without setting any flag. `fake` (default) serves
+    # two built-in sample messages (no network); `imap` reads IMAP_FOLDER on IMAP_HOST with
+    # IMAP_USERNAME and IMAP_PASSWORD (e.g. a Gmail app password). IMAP_TIMEOUT_SECONDS
+    # limits each socket operation, not the fetch as a whole.
+    mailbox_provider: MailboxProvider = "fake"
+    imap_host: str | None = None
+    imap_port: int = Field(default=993, gt=0, lt=65536)
+    imap_ssl: bool = True
+    imap_username: str | None = None
+    imap_password: SecretStr | None = None
+    imap_folder: str = "INBOX"
+    imap_timeout_seconds: float = Field(default=15, gt=0)
+
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:
         return normalize_database_url(value)
 
-    @field_validator("demo_password", "llm_api_key", "llm_model", mode="before")
+    @field_validator(
+        "demo_password",
+        "llm_api_key",
+        "llm_model",
+        "imap_host",
+        "imap_username",
+        "imap_password",
+        mode="before",
+    )
     @classmethod
     def _empty_string_is_unset(cls, value: object) -> object:
         return None if value == "" else value
+
+    # `.env.example` lists these empty; an empty value means the default, not an error.
+    @field_validator(
+        "mailbox_provider",
+        "imap_port",
+        "imap_ssl",
+        "imap_folder",
+        "imap_timeout_seconds",
+        mode="before",
+    )
+    @classmethod
+    def _empty_string_is_default(cls, value: object, info: ValidationInfo) -> object:
+        if value == "" and info.field_name is not None:
+            return cls.model_fields[info.field_name].default
+        return value
 
 
 @lru_cache

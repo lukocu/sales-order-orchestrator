@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Outcome, ReplyDraftStatus } from '../api/analysis'
-import { logout, ROLE_LABEL, UnauthorizedError, type User } from '../api/auth'
+import { ApiError, logout, ROLE_LABEL, UnauthorizedError, type User } from '../api/auth'
 import {
   fetchInquiries,
   fetchInquiry,
   type InquiryDetail,
   type InquirySummary,
 } from '../api/inquiries'
+import { fetchMail, type FetchResult } from '../api/mailbox'
 import AnalysisPanel from './AnalysisPanel'
 import { formatDate } from './format'
 
@@ -25,6 +26,8 @@ type DetailState =
   | { id: number; kind: 'ok'; inquiry: InquiryDetail }
   | { id: number; kind: 'error'; message: string }
 
+type FetchStatus = { kind: 'ok' | 'error'; message: string }
+
 // Text and colour: the badge never relies on colour alone.
 const OUTCOME_LABEL: Record<Outcome, string> = {
   standard: 'Standard',
@@ -36,6 +39,30 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong'
 }
 
+// "2 new, 3 already in inbox, 1 skipped"; `fetched` is the sum and adds nothing.
+function fetchSummary({ created, duplicates, skipped }: FetchResult): string {
+  const parts: string[] = []
+  if (created === 0) parts.push('No new mail')
+  else {
+    parts.push(`${created} new`)
+    if (duplicates > 0) parts.push(`${duplicates} already in inbox`)
+  }
+  if (skipped > 0) parts.push(`${skipped} skipped`)
+  return parts.join(', ')
+}
+
+// The server's detail names the mailbox failure ("Mailbox not configured", "Mailbox
+// login failed"); only the cases a retry can fix get a hint.
+function fetchErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409) return 'A fetch is already in progress'
+    if (error.status === 502 && error.message === 'Mailbox unavailable') {
+      return 'Mailbox unavailable, try again'
+    }
+  }
+  return errorMessage(error)
+}
+
 function Inbox({ user, onSignedOut }: Props) {
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [listAttempt, setListAttempt] = useState(0)
@@ -44,6 +71,8 @@ function Inbox({ user, onSignedOut }: Props) {
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [awaitingOnly, setAwaitingOnly] = useState(false)
+  const [fetching, setFetching] = useState(false)
+  const [fetchStatus, setFetchStatus] = useState<FetchStatus | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -114,6 +143,26 @@ function Inbox({ user, onSignedOut }: Props) {
     setListAttempt((n) => n + 1)
   }
 
+  // The list is fetched again without the loading state, so it stays on screen (and the
+  // selection with it) until the new one arrives.
+  async function handleFetchMail() {
+    setFetching(true)
+    setFetchStatus(null)
+    try {
+      const result = await fetchMail()
+      setFetchStatus({ kind: 'ok', message: fetchSummary(result) })
+      setListAttempt((n) => n + 1)
+    } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        onSignedOut()
+        return
+      }
+      setFetchStatus({ kind: 'error', message: fetchErrorMessage(error) })
+    } finally {
+      setFetching(false)
+    }
+  }
+
   async function handleSignOut() {
     setSigningOut(true)
     setSignOutError(null)
@@ -158,7 +207,19 @@ function Inbox({ user, onSignedOut }: Props) {
 
       <div className="inbox__body">
         <section className="card inbox__list" aria-labelledby="inbox-heading">
-          <h2 id="inbox-heading">Inbox</h2>
+          <div className="inbox__list-header">
+            <h2 id="inbox-heading">Inbox</h2>
+            <button type="button" onClick={handleFetchMail} disabled={fetching}>
+              {fetching ? 'Fetching…' : 'Fetch mail'}
+            </button>
+          </div>
+          <div className="inbox__fetch-status" aria-live="polite">
+            {fetchStatus !== null && (
+              <p className={fetchStatus.kind === 'error' ? 'error' : 'muted'}>
+                {fetchStatus.message}
+              </p>
+            )}
+          </div>
           {list.kind === 'loading' && <p className="muted">Loading inquiries…</p>}
           {list.kind === 'error' && (
             <div role="alert">
@@ -201,6 +262,9 @@ function Inbox({ user, onSignedOut }: Props) {
                         {formatDate(inquiry.received_at)}
                       </time>
                       <span className="inquiry__badges">
+                        {inquiry.source === 'mailbox' && (
+                          <span className="badge badge--mailbox">E-mail</span>
+                        )}
                         {inquiry.draft_status === 'awaiting_supervisor' && (
                           <span className="badge badge--awaiting_supervisor">
                             Awaiting supervisor

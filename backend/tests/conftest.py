@@ -15,6 +15,7 @@ from app.auth.passwords import hash_password
 from app.db import build_engine, get_engine
 from app.draft.drafter import Drafter, FakeDrafter, get_drafter
 from app.inquiries.models import Inquiry
+from app.mailbox.client import FakeMailbox, Mailbox, get_mailbox
 from app.main import app
 from app.orchestration.planning import Planner, RuleBasedPlanner, get_planner
 from app.parsing.extractor import (
@@ -85,6 +86,7 @@ ExtractorSetter = Callable[[InquiryExtractor], None]
 PlannerSetter = Callable[[Planner], None]
 RecommenderSetter = Callable[[Recommender], None]
 DrafterSetter = Callable[[Drafter], None]
+MailboxSetter = Callable[[Mailbox], None]
 
 
 @pytest.fixture(scope="session")
@@ -226,6 +228,22 @@ def use_drafter() -> Iterator[DrafterSetter]:
     use(FakeDrafter())
     yield use
     app.dependency_overrides.pop(get_drafter, None)
+
+
+@pytest.fixture(autouse=True)
+def use_mailbox() -> Iterator[MailboxSetter]:
+    """Override `get_mailbox`: an empty fake mailbox until the test sets another one.
+
+    Autouse, so no API test stores the built-in demo messages (`.example` senders, which
+    the test cleanup does not delete) whatever `MAILBOX_PROVIDER` says.
+    """
+
+    def use(mailbox: Mailbox) -> None:
+        app.dependency_overrides[get_mailbox] = lambda: mailbox
+
+    use(FakeMailbox(()))
+    yield use
+    app.dependency_overrides.pop(get_mailbox, None)
 
 
 def _client_with(engine: Engine) -> Iterator[TestClient]:

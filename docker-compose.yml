@@ -27,6 +27,13 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
+      MAILBOX_PROVIDER: ${MAILBOX_PROVIDER:-fake}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_SSL: ${IMAP_SSL:-true}
+      IMAP_USERNAME: ${IMAP_USERNAME:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      IMAP_FOLDER: ${IMAP_FOLDER:-INBOX}
     ports:
       # Host port is configurable (APP_HOST_PORT in .env) for machines where 8000 is taken.
       - "${APP_HOST_PORT:-8000}:8000"
@@ -49,6 +56,13 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
+      MAILBOX_PROVIDER: ${MAILBOX_PROVIDER:-fake}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_SSL: ${IMAP_SSL:-true}
+      IMAP_USERNAME: ${IMAP_USERNAME:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      IMAP_FOLDER: ${IMAP_FOLDER:-INBOX}
       UV_PROJECT_ENVIRONMENT: /opt/venv
       UV_LINK_MODE: copy
       WATCHFILES_FORCE_POLLING: "true"
@@ -66,6 +80,29 @@ services:
              uv run alembic upgrade head &&
              uv run python -m app.auth.demo_accounts &&
              uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  # Local test mailbox (GreenMail, in memory, plain IMAP on 3143); not started by default:
+  #   docker compose --profile mail up -d mail
+  #   docker compose run --rm backend uv run python -m app.mailbox.demo   -> 3 sample mails
+  # To read it from the app, put this in .env and recreate it (docker compose up -d app):
+  #   MAILBOX_PROVIDER=imap
+  #   IMAP_HOST=mail
+  #   IMAP_PORT=3143
+  #   IMAP_SSL=false
+  #   IMAP_USERNAME=sales
+  #   IMAP_PASSWORD=demo
+  # The messages are lost when the container stops.
+  mail:
+    profiles: ["mail"]
+    image: greenmail/standalone:2.1.3
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.users=sales:demo@mail.local
+    ports:
+      # Host port is configurable (MAIL_IMAP_HOST_PORT in .env) for machines where 3143 is taken.
+      - "${MAIL_IMAP_HOST_PORT:-3143}:3143"
 
 volumes:
   db-data:

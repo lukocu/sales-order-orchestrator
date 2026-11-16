@@ -51,7 +51,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-06 | policy-verdict                     | handlowiec widzi werdykt polityki dla każdej reguły                                    | S-05, seeded example policy thresholds | FR-008, US-01, US-02 | done        |
 | S-07 | draft-and-human-decision           | handlowiec zatwierdza, edytuje lub odrzuca szkic odpowiedzi                            | S-06          | FR-010, FR-011, FR-009, US-01    | done |
 | S-08 | supervisor-approval                | przełożony zatwierdza lub odrzuca rekomendację odrzuconą przez politykę               | S-06          | FR-009, US-02                    | done |
-| S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | blocked |
+| S-09 | test-mailbox-ingest                | handlowiec widzi w skrzynce zapytania z testowej skrzynki e-mail                       | S-01, dedicated test mailbox with read access | FR-013 | in-progress |
 | S-10 | workflow-vs-orchestrator-eval      | autor porównuje stały workflow i orchestrator na zestawie testowym                    | S-06, F-02, labelled test inquiry set | FR-012 | done |
 
 ## Streams
@@ -216,7 +216,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy FR-013 jest ostatnim krokiem MVP, czy wchodzi od początku? (Open Roadmap Question 1) — Owner: autor. Block: yes.
 - **Risk:** Zasada autora („najpierw pionowy wycinek, zanim pojawi się prawdziwa poczta”) stoi w napięciu z must-have; ustawione jako niezależny tor, by rozstrzygnięcie nie zmieniało głównej ścieżki.
-- **Status:** blocked
+- **Status:** in-progress
 
 ### S-10: Porównanie stałego workflow z orchestratorem
 

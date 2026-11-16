@@ -10,7 +10,7 @@ import { DELTA_AWAITING, DELTA_SUBMITTED } from '../test/replyDraftFixtures'
 import { SALES, SUPERVISOR } from '../test/userFixtures'
 import Inbox from './Inbox'
 
-type Handler = () => Response
+type Handler = () => Response | Promise<Response>
 type Routes = Record<string, Handler | Handler[]>
 
 function json(status: number, body: unknown): Response {
@@ -45,6 +45,7 @@ const DELTA: InquiryDetail = {
   sender_email: 'zakupy@delta.example.com',
   subject: 'Zamówienie ABC-100',
   received_at: '2026-11-09T11:00:00Z',
+  source: 'sample',
   outcome: 'exception',
   draft_status: 'awaiting_supervisor',
   body: 'Prosimy o 500 szt. ABC-100.',
@@ -56,6 +57,7 @@ const ACME: InquirySummary = {
   sender_email: 'zakupy@acme.example.com',
   subject: 'Zapytanie ofertowe ABC-100',
   received_at: '2026-11-09T10:00:00Z',
+  source: 'sample',
   outcome: 'exception',
   draft_status: 'draft',
 }
@@ -66,6 +68,7 @@ const OMEGA: InquirySummary = {
   sender_email: 'biuro@omega.example.com',
   subject: 'Tonery do drukarek',
   received_at: '2026-11-08T09:00:00Z',
+  source: 'sample',
   outcome: null,
   draft_status: null,
 }
@@ -73,6 +76,18 @@ const OMEGA: InquirySummary = {
 const { body: _body, ...DELTA_SUMMARY } = DELTA
 
 const SUMMARIES: InquirySummary[] = [DELTA_SUMMARY, ACME, OMEGA]
+
+// An inquiry stored from the test mailbox.
+const MAILED: InquirySummary = {
+  id: 4,
+  sender_name: 'Biuro Max',
+  sender_email: 'biuro@max.example.com',
+  subject: 'Zapytanie z poczty',
+  received_at: '2026-11-10T08:00:00Z',
+  source: 'mailbox',
+  outcome: null,
+  draft_status: null,
+}
 
 const FIELDS: ParsedFields = {
   customer: 'Hurtownia Delta',
@@ -165,6 +180,10 @@ function listedSubjects(): string[] {
   return within(list)
     .getAllByRole('listitem')
     .map((item) => item.querySelector('.inquiry__subject')?.textContent ?? '')
+}
+
+function fetchButton(): HTMLElement {
+  return screen.getByRole('button', { name: /^(Fetch mail|Fetching…)$/ })
 }
 
 function filterButton(): HTMLElement {
@@ -269,5 +288,83 @@ describe('Inbox', () => {
     fireEvent.click(filterButton())
     const delta = screen.getByRole('button', { name: /Zamówienie ABC-100/ })
     expect(within(delta).queryByText('Awaiting supervisor')).not.toBeInTheDocument()
+  })
+
+  it('fetches mail, reloads the list and marks the inquiry from the mailbox', async () => {
+    const fetchMock = stubApi({
+      'GET /api/inquiries': [() => json(200, SUMMARIES), () => json(200, [MAILED, ...SUMMARIES])],
+      'POST /api/mailbox/fetch': () =>
+        json(200, { fetched: 5, created: 1, duplicates: 3, skipped: 1 }),
+    })
+
+    renderInbox(SALES)
+    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    expect(screen.queryByText('E-mail')).not.toBeInTheDocument()
+
+    fireEvent.click(fetchButton())
+
+    const mailed = await screen.findByRole('button', { name: /Zapytanie z poczty/ })
+    expect(within(mailed).getByText('E-mail')).toHaveClass('badge', 'badge--mailbox')
+    const acme = screen.getByRole('button', { name: /Zapytanie ofertowe ABC-100/ })
+    expect(within(acme).queryByText('E-mail')).not.toBeInTheDocument()
+    expect(screen.getByText('1 new, 3 already in inbox, 1 skipped')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/mailbox/fetch',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    const listReads = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/inquiries')
+    expect(listReads).toHaveLength(2)
+  })
+
+  it('says when the mailbox has no new mail', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'POST /api/mailbox/fetch': () =>
+        json(200, { fetched: 3, created: 0, duplicates: 3, skipped: 0 }),
+    })
+
+    renderInbox(SALES)
+    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    fireEvent.click(fetchButton())
+
+    expect(await screen.findByText('No new mail')).toBeInTheDocument()
+  })
+
+  it('says when the mailbox is not configured', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'POST /api/mailbox/fetch': () => json(503, { detail: 'Mailbox not configured' }),
+    })
+
+    renderInbox(SALES)
+    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    fireEvent.click(fetchButton())
+
+    expect(await screen.findByText('Mailbox not configured')).toHaveClass('error')
+    expect(listedSubjects()).toHaveLength(3)
+  })
+
+  it('disables the button while the fetch runs', async () => {
+    let answer: (response: Response) => void = () => {}
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'POST /api/mailbox/fetch': () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve
+        }),
+    })
+
+    renderInbox(SALES)
+    await screen.findByRole('button', { name: /Zamówienie ABC-100/ })
+    fireEvent.click(fetchButton())
+
+    expect(fetchButton()).toBeDisabled()
+    expect(fetchButton()).toHaveTextContent('Fetching…')
+
+    answer(json(200, { fetched: 0, created: 0, duplicates: 0, skipped: 0 }))
+
+    expect(await screen.findByText('No new mail')).toBeInTheDocument()
+    expect(fetchButton()).toBeEnabled()
+    expect(fetchButton()).toHaveTextContent('Fetch mail')
   })
 })
