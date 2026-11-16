@@ -67,7 +67,11 @@
     "apiOk": "ok",
     "database": "Database",
     "migration": "Migration",
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "refresh": "Refresh"
+  },
+  "system": {
+    "title": "System"
   },
   "language": {
     "label": "Language",

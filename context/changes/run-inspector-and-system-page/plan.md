@@ -530,29 +530,29 @@ No data or backend migration. Rollback is a revert of the phase commits. Old boo
 
 #### Automated
 
-- [x] 1.1 Lint, typecheck, tests and build pass
-- [x] 1.2 Router tests for deep link, row navigation, not-found, in-place sign-in keeping the URL, and active nav pass
-- [x] 1.3 No router code generator or devtools in the bundle
-- [x] 1.4 AGENTS.md colour scan with the extended list prints nothing
+- [x] 1.1 Lint, typecheck, tests and build pass — ec2e0f7
+- [x] 1.2 Router tests for deep link, row navigation, not-found, in-place sign-in keeping the URL, and active nav pass — ec2e0f7
+- [x] 1.3 No router code generator or devtools in the bundle — ec2e0f7
+- [x] 1.4 AGENTS.md colour scan with the extended list prints nothing — ec2e0f7
 
 #### Manual
 
-- [x] 1.5 Selecting an inquiry changes the URL, reload keeps it, back/forward work
-- [x] 1.6 Signed out deep link shows sign-in, then the same inquiry after sign-in
-- [x] 1.7 Nav links work by keyboard with visible focus, PL/EN, light/dark
+- [x] 1.5 Selecting an inquiry changes the URL, reload keeps it, back/forward work — ec2e0f7
+- [x] 1.6 Signed out deep link shows sign-in, then the same inquiry after sign-in — ec2e0f7
+- [x] 1.7 Nav links work by keyboard with visible focus, PL/EN, light/dark — ec2e0f7
 
 ### Phase 2: System page
 
 #### Automated
 
-- [ ] 2.1 Lint, typecheck, tests and build pass
-- [ ] 2.2 No reference to the old footer or its CSS remains
-- [ ] 2.3 AGENTS.md colour scan with SystemPage prints nothing
+- [x] 2.1 Lint, typecheck, tests and build pass
+- [x] 2.2 No reference to the old footer or its CSS remains
+- [x] 2.3 AGENTS.md colour scan with SystemPage prints nothing
 
 #### Manual
 
-- [ ] 2.4 /system readable in PL/EN, light/dark, 1440 and 375 px, Refresh by keyboard
-- [ ] 2.5 Sign-in screen and inbox show no system status or migration number
+- [x] 2.4 /system readable in PL/EN, light/dark, 1440 and 375 px, Refresh by keyboard
+- [x] 2.5 Sign-in screen and inbox show no system status or migration number
 
 ### Phase 3: Run inspector
 

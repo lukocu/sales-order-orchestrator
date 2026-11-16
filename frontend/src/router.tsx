@@ -7,6 +7,7 @@ import {
 import App from './App'
 import InboxRoute from './components/InboxRoute'
 import NotFound from './components/NotFound'
+import SystemPage from './components/SystemPage'
 
 // Code-based tree: no route generator. No path starts with /api (the server keeps those).
 const rootRoute = createRootRoute({
@@ -40,8 +41,7 @@ const inquiryRunRoute = createRoute({
 const systemRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/system',
-  // The system page arrives in Phase 2.
-  component: () => null,
+  component: SystemPage,
 })
 
 const routeTree = rootRoute.addChildren([

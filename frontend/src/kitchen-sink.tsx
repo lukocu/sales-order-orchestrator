@@ -14,6 +14,7 @@ import AppShell from './components/AppShell'
 import Inbox from './components/Inbox'
 import LanguageSwitch from './components/LanguageSwitch'
 import LoginForm from './components/LoginForm'
+import SystemPage from './components/SystemPage'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -209,6 +210,11 @@ const LIST_ERROR: Replies = { 'GET /api/inquiries': { status: 500, body: { detai
 const LIST_PENDING: Replies = { 'GET /api/inquiries': 'pending' }
 const NO_INQUIRIES: Replies = { 'GET /api/inquiries': { status: 200, body: [] } }
 const NONE_AWAITING_LIST: Replies = { 'GET /api/inquiries': { status: 200, body: NONE_AWAITING } }
+const HEALTH_DEGRADED: Replies = {
+  'GET /api/health': { status: 503, body: { status: 'degraded', database: 'error', migration: null } },
+}
+const HEALTH_ERROR: Replies = { 'GET /api/health': { status: 502 } }
+const HEALTH_PENDING: Replies = { 'GET /api/health': 'pending' }
 
 // --- Layout -----------------------------------------------------------------------------
 
@@ -319,6 +325,9 @@ function KitchenSink() {
               </AppShell>
             </Routed>
           </Cell>
+          <Cell label="System page (/system): ok, with Refresh">
+            <SystemPage />
+          </Cell>
         </Section>
 
         <Section state="hover" caption="Forced hover look (static classes matching each hover: rule). Hover the real controls in “default” to compare.">
@@ -426,6 +435,16 @@ function KitchenSink() {
               <RoutedApp replies={SIGNED_IN} />
             </Driven>
           </Cell>
+          <Cell label="System page: degraded (health 503, database error)">
+            <Stub replies={HEALTH_DEGRADED}>
+              <SystemPage />
+            </Stub>
+          </Cell>
+          <Cell label="System page: unavailable (health 502)">
+            <Stub replies={HEALTH_ERROR}>
+              <SystemPage />
+            </Stub>
+          </Cell>
           <NotApplicable items={[['Language switch', 'bundled resources, nothing to fail']]} />
         </Section>
 
@@ -458,6 +477,11 @@ function KitchenSink() {
               <Routed>
                 <Inbox />
               </Routed>
+            </Stub>
+          </Cell>
+          <Cell label="System page: checking">
+            <Stub replies={HEALTH_PENDING}>
+              <SystemPage />
             </Stub>
           </Cell>
           <NotApplicable

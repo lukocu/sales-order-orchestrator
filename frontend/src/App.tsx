@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { fetchMe, logout, UnauthorizedError, type User } from './api/auth'
 import AppNav from './components/AppNav'
 import AppShell from './components/AppShell'
-import HealthFooter from './components/HealthFooter'
 import LoginForm from './components/LoginForm'
 import { SessionContext, type Session } from './session'
 import { Button } from '@/components/ui/button'
@@ -112,7 +111,6 @@ function App() {
           <Outlet />
         </SessionContext.Provider>
       )}
-      {state.kind === 'authenticated' && <HealthFooter />}
     </AppShell>
   )
 }

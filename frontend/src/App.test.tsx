@@ -120,7 +120,7 @@ function summary({ body: _body, ...rest }: InquiryDetail) {
 }
 
 // Routes are keyed "METHOD /path"; an array answers with its items in order (the
-// last one repeats). Health is always answered so the footer has data.
+// last one repeats). Health is always answered so the system page has data.
 function stubApi(routes: Routes) {
   const queues = new Map(Object.entries(routes))
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -288,22 +288,33 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
-  it('shows the health footer when signed in', async () => {
-    stubApi(SIGNED_IN_INBOX)
+  it('shows the system status on /system when signed in', async () => {
+    stubApi({ 'GET /api/auth/me': () => json(200, SALES) })
 
-    await renderWithRouter('/')
+    await renderWithRouter('/system')
 
     expect(await screen.findByText('All systems operational')).toBeInTheDocument()
     expect(screen.getByText('0003_users_inquiries')).toBeInTheDocument()
   })
 
-  it('hides the health footer on the sign-in screen', async () => {
+  it('shows sign-in on /system while anonymous and does not check health', async () => {
     const fetchMock = stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
 
-    await renderWithRouter('/')
+    await renderWithRouter('/system')
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'System status' })).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/health', expect.anything())
+  })
+
+  it('shows no system status in the inbox', async () => {
+    const fetchMock = stubApi(SIGNED_IN_INBOX)
+
+    await renderWithRouter('/')
+
+    expect(await screen.findByRole('link', { name: /Tonery do drukarek/ })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'System status' })).not.toBeInTheDocument()
+    expect(screen.queryByText('0003_users_inquiries')).not.toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalledWith('/api/health', expect.anything())
   })
 

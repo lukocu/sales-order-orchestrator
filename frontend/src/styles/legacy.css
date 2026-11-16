@@ -50,62 +50,6 @@ body {
   overflow-wrap: anywhere;
 }
 
-.status {
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--muted);
-  border-radius: 8px;
-  background: var(--card);
-}
-
-.status--ok {
-  border-left-color: var(--ok);
-}
-
-.status--degraded {
-  border-left-color: var(--warn);
-}
-
-.status--error {
-  border-left-color: var(--error);
-}
-
-.status h2 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.status__summary {
-  margin: 0.25rem 0 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.status__detail {
-  margin: 0.5rem 0 0;
-  color: var(--muted);
-}
-
-.status__list {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1.5rem;
-  margin: 1rem 0 0;
-}
-
-.status__list dt {
-  color: var(--muted);
-}
-
-.status__list dd {
-  margin: 0;
-  font-family: ui-monospace, Consolas, monospace;
-}
-
 /* Analysis */
 
 .analysis {
