@@ -24,6 +24,7 @@ import {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { ApiError, UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
 import { formatDate } from './format'
 import { DecisionHistory } from './ReplyDraftSection'
@@ -226,6 +227,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
           <label className="field__check">
             <input
               type="checkbox"
+              className="m-1"
               checked={reviewed.includes(name)}
               onChange={(event) => onReviewed(name, event.target.checked)}
             />
@@ -574,23 +576,32 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
           )}
 
           <div className="analysis__actions">
-            <button type="submit" disabled={busy !== null || !(dirty || reviewed.length > 0)}>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={busy !== null || !(dirty || reviewed.length > 0)}
+            >
               {busy === 'saving' ? 'Saving…' : 'Save corrections'}
-            </button>
-            <button type="button" onClick={requestReanalysis} disabled={busy !== null}>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={requestReanalysis}
+              disabled={busy !== null}
+            >
               {busy === 'analyzing' ? 'Analyzing…' : 'Re-analyze'}
-            </button>
+            </Button>
           </div>
           {confirming && (
             <div className="analysis__confirm">
               <p>Corrections will be lost.</p>
               <div className="analysis__actions">
-                <button type="button" onClick={runAnalysis} disabled={busy !== null}>
+                <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
                   Re-analyze anyway
-                </button>
-                <button type="button" onClick={() => setConfirming(false)}>
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -629,7 +640,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
   return (
     <section className="analysis" aria-labelledby={id('heading')}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 id={id('heading')} className="analysis__heading">
+        <h3 id={id('heading')} className="analysis__heading font-bold">
           Analysis
         </h3>
         {analysis !== null && (
@@ -648,9 +659,9 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       {load.kind === 'error' && (
         <div role="alert" className="analysis__problem">
           <p className="error">{load.message}</p>
-          <button type="button" onClick={reload}>
+          <Button type="button" variant="outline" onClick={reload}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
       {notice && (
@@ -661,17 +672,22 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       {analyzeError && (
         <div role="alert" className="analysis__problem">
           <p className="error">{analyzeError}</p>
-          <button type="button" onClick={requestReanalysis} disabled={busy !== null}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={requestReanalysis}
+            disabled={busy !== null}
+          >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
       {load.kind === 'ok' && analysis === null && (
         <div className="analysis__actions">
-          <button type="button" onClick={runAnalysis} disabled={busy !== null}>
+          <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
             {busy === 'analyzing' ? 'Analyzing…' : 'Analyze request'}
-          </button>
+          </Button>
         </div>
       )}
 

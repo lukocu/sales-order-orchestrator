@@ -8,6 +8,7 @@ import type {
   RuleVerdict,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import { formatDate, formatPercent, formatPln } from './format'
 
 type Props = {
@@ -127,17 +128,17 @@ function PolicySection({
       )}
       {offerRerun && (
         <div className="analysis__actions">
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             {running ? 'Running policy…' : 'Re-run policy'}
-          </button>
+          </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
           <p className="error">Re-running the policy failed: {error}</p>
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
 

@@ -18,6 +18,7 @@ import type {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import { formatDate, formatPercent, formatPln } from './format'
 
 type Decision = 'approve' | 'reject'
@@ -191,17 +192,17 @@ function ReplyDraftSection({
       )}
       {offerRegenerate && (
         <div className="analysis__actions">
-          <button type="button" onClick={regenerate} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={regenerate} disabled={disabled}>
             {drafting ? 'Drafting…' : 'Regenerate draft'}
-          </button>
+          </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
           <p className="error">Regenerating the draft failed: {error}</p>
-          <button type="button" onClick={regenerate} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={regenerate} disabled={disabled}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
@@ -209,15 +210,30 @@ function ReplyDraftSection({
 
       {draft !== null && canDecide && mode === null && (
         <div className="analysis__actions" role="group" aria-label="Decision">
-          <button type="button" onClick={() => setMode('approve')} disabled={disabled}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setMode('approve')}
+            disabled={disabled}
+          >
             Approve
-          </button>
-          <button type="button" onClick={() => setMode('edit')} disabled={disabled}>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setMode('edit')}
+            disabled={disabled}
+          >
             Edit offer
-          </button>
-          <button type="button" onClick={() => setMode('reject')} disabled={disabled}>
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setMode('reject')}
+            disabled={disabled}
+          >
             Reject
-          </button>
+          </Button>
         </div>
       )}
       {draft !== null && canDecide && (mode === 'approve' || mode === 'reject') && (
@@ -261,17 +277,23 @@ function ReplyDraftSection({
       {draft !== null && asSupervisor.length > 0 && supervisorMode === null && (
         <div className="analysis__actions" role="group" aria-label="Supervisor decision">
           {asSupervisor.includes('approve') && (
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setMode('supervisor-approve')}
               disabled={disabled}
             >
               Approve
-            </button>
+            </Button>
           )}
-          <button type="button" onClick={() => setMode('supervisor-reject')} disabled={disabled}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setMode('supervisor-reject')}
+            disabled={disabled}
+          >
             Reject
-          </button>
+          </Button>
         </div>
       )}
       {draft !== null && supervisorMode !== null && asSupervisor.includes(supervisorMode) && (
@@ -457,6 +479,7 @@ function DecisionForm(
     >
       <label htmlFor={id}>{required ? 'Reason (required)' : 'Comment (optional)'}</label>
       <textarea
+        className="resize-y"
         id={id}
         rows={2}
         value={reason}
@@ -468,12 +491,12 @@ function DecisionForm(
         </p>
       )}
       <div className="analysis__actions">
-        <button type="submit" disabled={disabled}>
+        <Button type="submit" disabled={disabled}>
           {saving ? 'Saving…' : approve ? 'Confirm approval' : 'Confirm rejection'}
-        </button>
-        <button type="button" onClick={onDone} disabled={saving}>
+        </Button>
+        <Button type="button" variant="outline" onClick={onDone} disabled={saving}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -624,6 +647,7 @@ function EditForm(props: EditProps) {
 
       <label htmlFor={id('reason')}>Reason (required)</label>
       <textarea
+        className="resize-y"
         id={id('reason')}
         rows={2}
         value={reason}
@@ -635,12 +659,12 @@ function EditForm(props: EditProps) {
         </p>
       )}
       <div className="analysis__actions">
-        <button type="submit" disabled={disabled}>
+        <Button type="submit" disabled={disabled}>
           {saving ? 'Saving…' : 'Save edit'}
-        </button>
-        <button type="button" onClick={onDone} disabled={saving}>
+        </Button>
+        <Button type="button" variant="outline" onClick={onDone} disabled={saving}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )

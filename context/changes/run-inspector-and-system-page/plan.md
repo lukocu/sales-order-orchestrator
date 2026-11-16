@@ -574,27 +574,27 @@ No data or backend migration. Rollback is a revert of the phase commits. Old boo
 
 #### Automated
 
-- [x] 4.1 Lint, typecheck, tests and build pass
-- [x] 4.2 No metrics component or dead metrics CSS remains
-- [x] 4.3 Sections no longer render agent, planner or recommender fields
-- [x] 4.4 Section negative assertions pass
+- [x] 4.1 Lint, typecheck, tests and build pass — aebfe0a
+- [x] 4.2 No metrics component or dead metrics CSS remains — aebfe0a
+- [x] 4.3 Sections no longer render agent, planner or recommender fields — aebfe0a
+- [x] 4.4 Section negative assertions pass — aebfe0a
 
 #### Manual
 
-- [x] 4.5 Inquiry page shows no diagnostics while the inspector shows all of them
-- [x] 4.6 Page height at 1440 px recorded against the audit's 10 031 px
-- [x] 4.7 Edit form option select is understandable without ids
+- [x] 4.5 Inquiry page shows no diagnostics while the inspector shows all of them — aebfe0a
+- [x] 4.6 Page height at 1440 px recorded against the audit's 10 031 px — aebfe0a
+- [x] 4.7 Edit form option select is understandable without ids — aebfe0a
 
 ### Phase 5: Remove the compatibility block
 
 #### Automated
 
-- [ ] 5.1 Lint, typecheck, tests and build pass
-- [ ] 5.2 The compat block is gone
-- [ ] 5.3 No raw buttons remain in the inquiry view
-- [ ] 5.4 Docs updated
+- [x] 5.1 Lint, typecheck, tests and build pass
+- [x] 5.2 The compat block is gone
+- [x] 5.3 No raw buttons remain in the inquiry view
+- [x] 5.4 Docs updated
 
 #### Manual
 
-- [ ] 5.5 Visual check of the full inquiry flow in light/dark at 1440 and 375 px
-- [ ] 5.6 Screenshots of the inquiry view and inspector saved
+- [x] 5.5 Visual check of the full inquiry flow in light/dark at 1440 and 375 px
+- [x] 5.6 Screenshots of the inquiry view and inspector saved

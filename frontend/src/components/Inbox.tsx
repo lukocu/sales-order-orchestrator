@@ -293,7 +293,7 @@ function Inbox({ selectedId = null }: Props) {
       </Card>
 
       <section
-        className="card inbox__detail md:col-span-3"
+        className="card md:col-span-3"
         aria-live="polite"
         aria-label={t('inbox.detailLabel')}
       >
@@ -308,7 +308,7 @@ function Inbox({ selectedId = null }: Props) {
         )}
         {currentDetail?.kind === 'ok' && (
           <article>
-            <h3 className="detail__subject">{currentDetail.inquiry.subject}</h3>
+            <h3 className="detail__subject font-bold">{currentDetail.inquiry.subject}</h3>
             <p className="detail__meta">
               {currentDetail.inquiry.sender_name} &lt;{currentDetail.inquiry.sender_email}&gt;
               {' · '}

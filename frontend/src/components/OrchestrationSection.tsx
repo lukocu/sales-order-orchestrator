@@ -12,6 +12,7 @@ import type {
   TaskOutcome,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import { formatDate } from './format'
 
 type Props = {
@@ -186,17 +187,17 @@ function OrchestrationSection({
       )}
       {offerRerun && (
         <div className="analysis__actions">
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             {running ? 'Running orchestrator…' : 'Re-run orchestrator'}
-          </button>
+          </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
           <p className="error">Re-running the orchestrator failed: {error}</p>
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
 

@@ -14,6 +14,7 @@ import {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
+import { Button } from '@/components/ui/button'
 import { formatDate, formatPercent, formatPln } from './format'
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
@@ -135,7 +136,7 @@ function Banner({ checks, analysis }: { checks: ChecksView; analysis: Analysis }
   return (
     <div className="checks__banner checks__banner--needs-input">
       <p className="checks__outcome">Needs input</p>
-      <ul className="checks__reasons">
+      <ul className="checks__reasons list-disc ps-5">
         {checks.reasons.map((reason) => (
           <li key={reason}>{reasonText(reason, checks)}</li>
         ))}
@@ -332,18 +333,18 @@ function ChecksSection({
               : 'The analysis changed after these checks ran; the result may be out of date.'}
           </p>
           <div className="analysis__actions">
-            <button type="button" onClick={rerun} disabled={disabled}>
+            <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
               {running ? 'Running checks…' : 'Re-run checks'}
-            </button>
+            </Button>
           </div>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
           <p className="error">Re-running the checks failed: {error}</p>
-          <button type="button" onClick={rerun} disabled={disabled}>
+          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
