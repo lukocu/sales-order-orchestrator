@@ -82,7 +82,88 @@
     "editedOriginally": "edited · originally: {{value}}"
   },
   "checks": {
-    "standard": "Standard inquiry — no additional checks needed"
+    "standard": "Standard inquiry — no additional checks needed",
+    "heading": "Checks",
+    "noResult": "No check result for this analysis yet.",
+    "stale": "The analysis changed after these checks ran; the result may be out of date.",
+    "rerun": "Re-run checks",
+    "running": "Running checks…",
+    "rerunFailed": "Re-running the checks failed: {{message}}",
+    "exception": "Exception: insufficient stock — requested {{requested}}, available {{available}} (short {{shortage}})",
+    "needsInput": "Needs input",
+    "uncertainBasis": "Based on uncertain fields: {{fields}}",
+    "checked": "Checked {{date}}",
+    "listLabel": "Individual checks",
+    "reason": {
+      "customer_missing": "Customer missing — no name in the inquiry and the sender’s e-mail domain is not in records",
+      "customer_not_found": "Customer not found in records",
+      "customer_ambiguous": "Customer matches several records: {{candidates}}",
+      "product_missing": "Product code missing",
+      "product_not_found": "Product not found in the catalogue",
+      "product_not_found_code": "Product {{code}} not found in the catalogue",
+      "quantity_missing": "Quantity missing"
+    },
+    "substitute": {
+      "unknown": "Substitute: not stated in the inquiry",
+      "yes": "Substitute: the customer accepts one",
+      "no": "Substitute: the customer does not accept one"
+    },
+    "input": {
+      "customer": "Customer",
+      "product_code": "Product",
+      "quantity": "Quantity"
+    },
+    "customer": {
+      "name": "Customer",
+      "matched": "Matched",
+      "ambiguous": "Ambiguous",
+      "notFound": "Not found",
+      "missing": "Missing",
+      "nameField": "Name",
+      "matchedBy": "Matched by",
+      "byEmail": "e-mail",
+      "byName": "name",
+      "candidates": "Candidates"
+    },
+    "stock": {
+      "name": "Stock",
+      "inStock": "In stock",
+      "insufficient": "Insufficient",
+      "product": "Product",
+      "requested": "Requested",
+      "available": "Available",
+      "short": "Short"
+    },
+    "price": {
+      "name": "Price",
+      "calculated": "Calculated",
+      "listPrice": "List price",
+      "discount": "Discount",
+      "unitPrice": "Unit price",
+      "value": "Value",
+      "noQuantity": "— (no quantity)"
+    },
+    "discount": {
+      "name": "Discount",
+      "above": "Above standard",
+      "within": "Within standard",
+      "standard": "Standard",
+      "requested": "Requested",
+      "aDiscount": "a discount",
+      "aTargetPrice": "a target price",
+      "targetPrice": "target price {{value}}",
+      "bestPrice": "best price (no value)",
+      "notStated": "not stated"
+    },
+    "credit": {
+      "name": "Credit",
+      "within": "Within limit",
+      "over": "Over limit",
+      "blocked": "Blocked",
+      "limit": "Limit",
+      "balance": "Balance",
+      "orderValue": "Order value"
+    }
   },
   "orchestration": {
     "status": {
@@ -105,7 +186,48 @@
     },
     "findings": "Findings of the additional checks",
     "failed": "The additional checks could not be prepared, so their results are unavailable.",
-    "details": "Technical details"
+    "details": "Technical details",
+    "heading": "Orchestration",
+    "notRun": "Orchestration not run yet",
+    "stale": "The analysis changed after this orchestration ran; the result may be out of date.",
+    "rerun": "Re-run orchestrator",
+    "running": "Running orchestrator…",
+    "rerunFailed": "Re-running the orchestrator failed: {{message}}",
+    "consent": {
+      "confirmed": "Substitute consent: confirmed",
+      "refused": "Substitute consent: refused",
+      "unconfirmed": "Substitute consent: not confirmed"
+    },
+    "consentWarning": "Customer consent to a substitute not confirmed",
+    "orchestrated": "Orchestrated {{date}}",
+    "result": "Result",
+    "signal": {
+      "accepted_before": "accepted substitutes before",
+      "declined_before": "declined substitutes before",
+      "mixed": "mixed substitute history",
+      "no_substitute_history": "no substitute history"
+    },
+    "days_one": "{{count}} day",
+    "days_few": "{{count}} days",
+    "days_many": "{{count}} days",
+    "days_other": "{{count}} days",
+    "orders_one": "{{count}} order",
+    "orders_few": "{{count}} orders",
+    "orders_many": "{{count}} orders",
+    "orders_other": "{{count}} orders",
+    "covers": "covers the shortage",
+    "coversNot": "does not cover the shortage",
+    "delivery": "{{supplier}}: {{quantity}} pcs on {{date}} ({{lead}}), {{deadline}}, {{covers}}",
+    "noSubstitute": "No substitute in the catalogue",
+    "substituteCompat": "{{code}} {{name}} — {{compatibility}} compatibility",
+    "compatibility": {
+      "full": "full",
+      "partial": "partial"
+    },
+    "noSubstituteToCheck": "No substitute to check",
+    "substituteStock": "{{code}}: {{stock}} in stock, {{covers}}",
+    "noSupplierOffer": "No supplier offer",
+    "history": "{{orders}}, substitutes accepted {{accepted}} of {{offered}} offered — {{signal}}"
   },
   "recommendation": {
     "band": {
@@ -113,7 +235,40 @@
       "MEDIUM": "Medium confidence",
       "LOW": "Low confidence"
     },
-    "failed": "No option could be recommended this time."
+    "failed": "No option could be recommended this time.",
+    "heading": "Recommendation",
+    "blocked": {
+      "notOrchestrated": "No recommendation: the exception is not orchestrated yet.",
+      "orchestrationFailed": "No recommendation: the orchestration failed.",
+      "orchestrationStale": "No recommendation: the orchestration is out of date; re-run the orchestrator first."
+    },
+    "notRun": "Recommendation not run yet",
+    "stale": "The analysis, checks or orchestration changed after this recommendation ran; the result may be out of date.",
+    "rerun": "Re-run recommendation",
+    "running": "Running recommendation…",
+    "rerunFailed": "Re-running the recommendation failed: {{message}}",
+    "polarity": {
+      "positive": "Positive",
+      "risk": "Risks",
+      "info": "Information"
+    },
+    "cited": "cited",
+    "line": "{{quantity}} × {{code}} {{name}} — {{source}}, available {{date}}, {{price}} PLN/pc",
+    "lines": "Lines",
+    "coverage": "Coverage",
+    "fulfilled": "Fulfilled",
+    "fulfilledOn": "{{date}}, {{deadline}}",
+    "value": "Value",
+    "cost": "Cost",
+    "margin": "Margin",
+    "why": "Why this recommendation?",
+    "resultCompleted": "Recommendation: Completed",
+    "resultFailed": "Recommendation: Failed — no option chosen",
+    "recommended": "Recommended {{date}}",
+    "chosen": "Recommended option",
+    "options": "Options",
+    "otherOptions": "Other options",
+    "noOptions": "No option could be built from the orchestration results."
   },
   "optionKind": {
     "partial_delivery": "Partial delivery from stock",
@@ -123,7 +278,68 @@
   },
   "draft": {
     "fallback": "The tailored paragraphs were unavailable; the draft uses the fixed fallback text.",
-    "optionLabel": "{{kind}} · {{value}}"
+    "optionLabel": "{{kind}} · {{value}}",
+    "heading": "Reply draft",
+    "blocked": {
+      "noRecommendation": "No draft: there is no recommendation yet.",
+      "noChoice": "No draft: the recommendation has no chosen option.",
+      "recommendationStale": "No draft: the recommendation is out of date; re-run the recommendation first."
+    },
+    "notGenerated": "Draft not generated yet",
+    "stale": "The recommendation or its policy verdict changed after this draft was made; the draft may be out of date.",
+    "regenerate": "Regenerate draft",
+    "drafting": "Drafting…",
+    "regenerateFailed": "Regenerating the draft failed: {{message}}",
+    "decisionGroup": "Decision",
+    "supervisorGroup": "Supervisor decision",
+    "editOffer": "Edit offer",
+    "staleAwaiting": "No supervisor decision is possible on this draft; re-run the recommendation to continue.",
+    "waiting": "Waiting for a supervisor decision.",
+    "submittedBySelf": "You submitted this draft; another supervisor must approve it. You can reject it to start over.",
+    "status": {
+      "draft": "Draft",
+      "ready_to_send": "Ready to send (sending is simulated)",
+      "awaiting_supervisor": "Awaiting supervisor approval",
+      "rejected": "Rejected"
+    },
+    "statusLabel": "Status:",
+    "drafted": "Drafted {{date}}",
+    "editedOffer": "edited offer",
+    "emailPreview": "E-mail preview",
+    "subject": "Subject:",
+    "offerValue": "Offer value",
+    "margin": "Margin",
+    "coverage": "Coverage",
+    "verdictTitle": "Policy verdict in force",
+    "verdictTitleEdited": "Policy verdict in force (edited offer)",
+    "verdictLabel": "{{title}}:",
+    "verdictNone": "{{title}}: none — approval needs a current policy verdict.",
+    "form": {
+      "approveDraft": "Approve draft",
+      "rejectDraft": "Reject draft",
+      "approveSupervisor": "Approve as supervisor",
+      "rejectSupervisor": "Reject as supervisor",
+      "reasonRequired": "Reason (required)",
+      "commentOptional": "Comment (optional)",
+      "approvalReasonRequired": "Enter a reason for the approval.",
+      "rejectionReasonRequired": "Enter a reason for the rejection.",
+      "confirmApproval": "Confirm approval",
+      "confirmRejection": "Confirm rejection",
+      "option": "Option",
+      "offerLines": "Offer lines",
+      "product": "Product",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price (PLN)",
+      "listPrice": "list {{price}}",
+      "quantityOf": "Quantity of {{name}}",
+      "unitPriceOf": "Unit price of {{name}}",
+      "quantityWhole": "Quantity must be a whole number.",
+      "unitPriceInvalid": "Unit price must be a number with at most two decimal places.",
+      "editReasonRequired": "Enter a reason for the edit.",
+      "saveEdit": "Save edit"
+    },
+    "chosenVariant": "Chosen variant",
+    "showEmail": "Show the full e-mail"
   },
   "inspector": {
     "open": "How was this calculated?",
@@ -208,5 +424,167 @@
       "choice_rejected": "Choice rejected"
     },
     "errorCode": "{{kind}}: {{code}}"
+  },
+  "common": {
+    "genericError": "Something went wrong",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "approve": "Approve",
+    "reject": "Reject",
+    "coverage": "{{covered}} / {{requested}} pcs",
+    "deadline": {
+      "none": "no deadline",
+      "meets": "meets the deadline",
+      "misses": "misses the deadline"
+    },
+    "source": {
+      "stock": "own stock",
+      "substituteStock": "substitute from stock",
+      "supplier": "supplier {{name}}"
+    }
+  },
+  "analysis": {
+    "heading": "Analysis",
+    "loading": "Loading analysis…",
+    "analyze": "Analyze request",
+    "analyzing": "Analyzing…",
+    "save": "Save corrections",
+    "reanalyze": "Re-analyze",
+    "reanalyzeAnyway": "Re-analyze anyway",
+    "correctionsLost": "Corrections will be lost.",
+    "saved": "Corrections saved",
+    "reloaded": "Analysis changed by a re-analysis — reloaded, your unsaved edits were discarded.",
+    "draftReloaded": "The draft changed since it was opened — reloaded, your decision was not saved.",
+    "meta": {
+      "analyzed": "Analyzed {{date}}",
+      "analyzedBy": "Analyzed {{date}} by {{name}}",
+      "corrected": "corrected {{date}}",
+      "correctedBy": "corrected {{date}} by {{name}}"
+    },
+    "field": {
+      "customer": "Customer",
+      "product": "Product",
+      "quantity": "Quantity",
+      "deadline": "Deadline",
+      "substituteAllowed": "Substitute allowed",
+      "priceExpectation": "Price expectation"
+    },
+    "uncertain": "Uncertain: {{reason}}",
+    "looksRight": "Looks right",
+    "empty": "(empty)",
+    "priceKind": {
+      "none": "Not stated",
+      "best_price": "Best price",
+      "discount_percent": "Discount (%)",
+      "target_price": "Target price"
+    },
+    "substitute": {
+      "yes": "Yes",
+      "no": "No",
+      "unknown": "Not stated"
+    },
+    "discountValue": "Discount {{value}}%",
+    "targetValue": "Target price {{value}}",
+    "priceValueLabel": {
+      "discount_percent": "Discount percent",
+      "target_price": "Target price"
+    },
+    "error": {
+      "quantityWhole": "Quantity must be a whole number.",
+      "priceValueRequired": "Enter a value for the price expectation.",
+      "priceValueNumber": "Price value must be a number."
+    }
+  },
+  "policy": {
+    "heading": "Policy",
+    "blocked": {
+      "noRecommendation": "No policy verdict: there is no recommendation yet.",
+      "recommendationFailed": "No policy verdict: the recommendation failed.",
+      "recommendationStale": "No policy verdict: the recommendation is out of date; re-run the recommendation first."
+    },
+    "notEvaluated": "Policy not evaluated yet",
+    "stale": "The recommendation changed after this verdict was evaluated; the result may be out of date.",
+    "rerun": "Re-run policy",
+    "running": "Running policy…",
+    "rerunFailed": "Re-running the policy failed: {{message}}",
+    "exampleThresholds": "Example thresholds",
+    "evaluated": "Evaluated {{date}}",
+    "caption": "Policy rules",
+    "column": {
+      "rule": "Rule",
+      "actual": "Actual",
+      "threshold": "Threshold",
+      "verdict": "Verdict",
+      "reason": "Reason"
+    },
+    "creditThreshold": "{{threshold}} (credit limit)",
+    "outcome": {
+      "no_approval_needed": "No approval needed",
+      "requires_supervisor": "Requires supervisor approval"
+    },
+    "rule": {
+      "margin": "Margin",
+      "discount": "Discount",
+      "order_value": "Order value",
+      "credit": "Credit"
+    },
+    "verdict": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "not_evaluated": "Not evaluated"
+    }
+  },
+  "decisionHistory": {
+    "heading": "Decision history",
+    "action": {
+      "edit": "Edited",
+      "approve": "Approved",
+      "reject": "Rejected",
+      "supervisor_approve": "Approved by supervisor",
+      "supervisor_reject": "Rejected by supervisor"
+    },
+    "earlier": "earlier version",
+    "by": "By",
+    "when": "When",
+    "reason": "Reason",
+    "offer": "Offer",
+    "policy": "Policy",
+    "unknownUser": "Unknown user",
+    "unavailable": "Details unavailable",
+    "noVerdict": "no verdict",
+    "failing": "failing: {{rules}}",
+    "notEvaluated": "not evaluated: {{rules}}"
+  },
+  "steps": {
+    "label": "Inquiry steps",
+    "names": {
+      "inquiry": "Inquiry",
+      "variants": "Variants",
+      "approval": "Approval",
+      "reply": "Reply"
+    },
+    "state": {
+      "done": "done",
+      "active": "active",
+      "locked": "locked",
+      "not_needed": "not needed"
+    },
+    "backMessage": "Back to {{step}}: {{reason}}.",
+    "back": {
+      "draftRejected": "the draft was rejected",
+      "analysisReplaced": "the request was analysed again",
+      "outdated": "the results are out of date"
+    },
+    "showMail": "Show e-mail",
+    "mail": "E-mail",
+    "actions": "Actions",
+    "nextVariants": "Next: Variants",
+    "nextApproval": "Next: Approval",
+    "findings": "Findings"
+  },
+  "reply": {
+    "heading": "Reply to the customer",
+    "decision": "Decision"
   }
 }

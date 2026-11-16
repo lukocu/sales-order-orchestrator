@@ -7,10 +7,12 @@ import {
   type ParsedFields,
   type PolicyView,
   type RecommendationView,
+  type ReplyDraftView,
 } from '../api/analysis'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import { ACME_POLICY, CREDIT_NOT_EVALUATED, DELTA_POLICY } from '../test/policyFixtures'
 import { ACME_RECOMMENDATION, DELTA_RECOMMENDATION } from '../test/recommendationFixtures'
+import { ACME_DRAFT, ACME_EDITED_DRAFT } from '../test/replyDraftFixtures'
 import PolicySection from './PolicySection'
 
 const POLICY_PATH = '/api/inquiries/7/policy'
@@ -70,10 +72,14 @@ function analysis(policy: PolicyView | null): Analysis {
 function Harness({
   initial,
   recommendation,
+  draft,
+  primary,
   onUnauthorized,
 }: {
   initial: PolicyView | null
   recommendation: RecommendationView | null
+  draft: ReplyDraftView | null
+  primary: boolean
   onUnauthorized: () => void
 }) {
   const [current, setCurrent] = useState(initial)
@@ -93,6 +99,8 @@ function Harness({
       inquiryId={7}
       policy={current}
       recommendation={recommendation}
+      draft={draft}
+      primary={primary}
       disabled={running}
       running={running}
       onRerun={rerun}
@@ -105,9 +113,17 @@ function renderSection(
   initial: PolicyView | null,
   recommendation: RecommendationView | null = ACME_RECOMMENDATION,
   onUnauthorized = vi.fn(),
+  draft: ReplyDraftView | null = null,
+  primary = false,
 ) {
   render(
-    <Harness initial={initial} recommendation={recommendation} onUnauthorized={onUnauthorized} />,
+    <Harness
+      initial={initial}
+      recommendation={recommendation}
+      draft={draft}
+      primary={primary}
+      onUnauthorized={onUnauthorized}
+    />,
   )
   return onUnauthorized
 }
@@ -218,7 +234,9 @@ describe('PolicySection', () => {
   it('keeps a stale verdict visible without a re-run while the recommendation is stale', () => {
     renderSection({ ...ACME_POLICY, stale: true }, { ...ACME_RECOMMENDATION, stale: true })
 
-    expect(screen.getByText(/^No policy verdict: the recommendation is out of date/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/^No policy verdict: the recommendation is out of date/),
+    ).toBeInTheDocument()
     expect(screen.getByText('No approval needed')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Re-run policy' })).not.toBeInTheDocument()
   })
@@ -246,5 +264,62 @@ describe('PolicySection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Re-run policy' }))
 
     await vi.waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+
+  it('makes Re-run policy primary only when asked to', () => {
+    const { unmount } = render(
+      <Harness
+        initial={null}
+        recommendation={ACME_RECOMMENDATION}
+        draft={null}
+        primary
+        onUnauthorized={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Re-run policy' })).toHaveAttribute(
+      'data-variant',
+      'default',
+    )
+    unmount()
+
+    renderSection(null)
+    expect(screen.getByRole('button', { name: 'Re-run policy' })).toHaveAttribute(
+      'data-variant',
+      'outline',
+    )
+  })
+})
+
+describe('PolicySection with a draft', () => {
+  it('shows the draft verdict in force as the only table', () => {
+    renderSection(ACME_POLICY, ACME_RECOMMENDATION, vi.fn(), ACME_DRAFT)
+
+    expect(screen.getAllByRole('table')).toHaveLength(1)
+    expect(screen.queryByRole('table', { name: 'Policy rules' })).not.toBeInTheDocument()
+    const table = screen.getByRole('table', { name: /^Policy verdict in force:/ })
+    expect(table).toHaveTextContent('No approval needed')
+    expect(table).toHaveTextContent('Margin at or above the minimum')
+  })
+
+  it('labels the verdict of an edited offer', () => {
+    renderSection(ACME_POLICY, ACME_RECOMMENDATION, vi.fn(), ACME_EDITED_DRAFT)
+
+    expect(screen.getAllByRole('table')).toHaveLength(1)
+    const table = screen.getByRole('table', { name: /^Policy verdict in force \(edited offer\)/ })
+    expect(table).toHaveTextContent('Requires supervisor approval')
+    expect(table).toHaveTextContent('Offered discount above the maximum')
+  })
+
+  it('says so when the draft has no verdict', () => {
+    renderSection(ACME_POLICY, ACME_RECOMMENDATION, vi.fn(), { ...ACME_DRAFT, policy: null })
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText(/^Policy verdict in force: none/)).toBeInTheDocument()
+  })
+
+  it('keeps offering a re-run while the evaluation is missing', () => {
+    renderSection(null, ACME_RECOMMENDATION, vi.fn(), ACME_DRAFT)
+
+    expect(screen.getByRole('button', { name: 'Re-run policy' })).toBeEnabled()
   })
 })

@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type {
   ConfidenceBand,
-  OptionKind,
   OptionLine,
   OrchestrationView,
   RecommendationOption,
@@ -12,7 +12,14 @@ import type {
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
-import { formatDate, formatPercent, formatPln } from './format'
+import {
+  deadlineText,
+  errorMessage,
+  formatDate,
+  formatPercent,
+  formatPln,
+  sourceText,
+} from './format'
 
 type Props = {
   inquiryId: number
@@ -27,15 +34,10 @@ type Props = {
   running: boolean
   // Re-runs the recommendation and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
+  // True when re-running the recommendation is the step's primary action (outline otherwise).
+  primary?: boolean
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
-}
-
-const KIND: Record<OptionKind, string> = {
-  partial_delivery: 'Partial delivery from stock',
-  substitute: 'Stock + substitute',
-  other_source: 'Stock + supplier',
-  combined: 'Stock + substitute + supplier',
 }
 
 const BAND: Record<ConfidenceBand, string> = {
@@ -44,54 +46,38 @@ const BAND: Record<ConfidenceBand, string> = {
   LOW: 'low',
 }
 
-// Signal lists in this order; labels come from the backend, in Polish.
-const POLARITIES: [SignalPolarity, string, string][] = [
-  ['positive', 'Positive', '✓'],
-  ['risk', 'Risks', '⚠'],
-  ['info', 'Information', 'ℹ'],
+// Signal lists in this order; the signal texts come from the backend, in Polish.
+const POLARITIES: [SignalPolarity, string][] = [
+  ['positive', '✓'],
+  ['risk', '⚠'],
+  ['info', 'ℹ'],
 ]
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
-
 // Why there cannot be a (current) recommendation; null when the orchestration allows one.
-function blockedReason(orchestration: OrchestrationView | null): string | null {
-  if (orchestration === null) return 'No recommendation: the exception is not orchestrated yet.'
-  if (orchestration.status === 'failed') return 'No recommendation: the orchestration failed.'
-  if (orchestration.stale) {
-    return 'No recommendation: the orchestration is out of date; re-run the orchestrator first.'
-  }
+function blockedReason(orchestration: OrchestrationView | null, t: TFunction): string | null {
+  if (orchestration === null) return t('recommendation.blocked.notOrchestrated')
+  if (orchestration.status === 'failed') return t('recommendation.blocked.orchestrationFailed')
+  if (orchestration.stale) return t('recommendation.blocked.orchestrationStale')
   return null
 }
 
-function sourceText(line: OptionLine): string {
-  switch (line.source) {
-    case 'stock':
-      return 'own stock'
-    case 'substitute_stock':
-      return 'substitute from stock'
-    case 'supplier':
-      return `supplier ${line.supplier ?? '—'}`
-  }
-}
-
-function lineText(line: OptionLine): string {
-  return (
-    `${line.quantity} × ${line.product_code} ${line.product_name} — ${sourceText(line)}, ` +
-    `available ${line.available_on}, ${line.unit_price} PLN/pc`
-  )
-}
-
-function deadlineText(meets: boolean | null): string {
-  if (meets === null) return 'no deadline'
-  return meets ? 'meets the deadline' : 'misses the deadline'
+function lineText(line: OptionLine, t: TFunction): string {
+  return t('recommendation.line', {
+    quantity: line.quantity,
+    code: line.product_code,
+    name: line.product_name,
+    source: sourceText(line, t),
+    date: line.available_on,
+    price: line.unit_price,
+  })
 }
 
 function SignalLists({ signals, cited }: { signals: Signal[]; cited: readonly string[] }) {
+  const { t } = useTranslation()
   return (
     <>
-      {POLARITIES.map(([polarity, title, mark]) => {
+      {POLARITIES.map(([polarity, mark]) => {
+        const title = t(`recommendation.polarity.${polarity}`)
         const items = signals.filter((signal) => signal.polarity === polarity)
         if (items.length === 0) return null
         return (
@@ -107,7 +93,12 @@ function SignalLists({ signals, cited }: { signals: Signal[]; cited: readonly st
                   <li key={signal.code} className={isCited ? 'recommendation__cited' : undefined}>
                     <span aria-hidden="true">{mark} </span>
                     {signal.label}
-                    {isCited && <span className="recommendation__cited-tag"> · cited</span>}
+                    {isCited && (
+                      <span className="recommendation__cited-tag">
+                        {' · '}
+                        {t('recommendation.cited')}
+                      </span>
+                    )}
                   </li>
                 )
               })}
@@ -131,38 +122,44 @@ function OptionCard({ option, cited = [], justification }: OptionCardProps) {
   return (
     <>
       <p className="check__head">
-        <span className="check__name">{KIND[option.kind]}</span>
+        <span className="check__name">{t(`optionKind.${option.kind}`)}</span>
         <span className={`recommendation__band recommendation__band--${BAND[option.band]}`}>
           {t(`recommendation.band.${option.band}`)}
         </span>
       </p>
       <dl className="metrics__list">
-        <dt>Lines</dt>
+        <dt>{t('recommendation.lines')}</dt>
         <dd>
           {option.lines.map((line) => (
             <span key={`${line.source}-${line.product_code}`} className="orchestration__result">
-              {lineText(line)}
+              {lineText(line, t)}
             </span>
           ))}
         </dd>
-        <dt>Coverage</dt>
+        <dt>{t('recommendation.coverage')}</dt>
         <dd>
-          {option.covered_quantity} / {option.requested_quantity} pcs
+          {t('common.coverage', {
+            covered: option.covered_quantity,
+            requested: option.requested_quantity,
+          })}
         </dd>
-        <dt>Fulfilled</dt>
+        <dt>{t('recommendation.fulfilled')}</dt>
         <dd>
-          {option.fulfilled_on}, {deadlineText(option.meets_deadline)}
+          {t('recommendation.fulfilledOn', {
+            date: option.fulfilled_on,
+            deadline: deadlineText(option.meets_deadline, t),
+          })}
         </dd>
-        <dt>Value</dt>
+        <dt>{t('recommendation.value')}</dt>
         <dd>{formatPln(option.value)}</dd>
-        <dt>Cost</dt>
+        <dt>{t('recommendation.cost')}</dt>
         <dd>{formatPln(option.cost)}</dd>
-        <dt>Margin</dt>
+        <dt>{t('recommendation.margin')}</dt>
         <dd>{formatPercent(option.margin_percent)}</dd>
       </dl>
       {justification !== undefined && (
         <>
-          <p className="recommendation__why">Why this recommendation?</p>
+          <p className="recommendation__why">{t('recommendation.why')}</p>
           <p className="checks__line">{justification}</p>
         </>
       )}
@@ -180,8 +177,10 @@ function RecommendationSection({
   disabled,
   running,
   onRerun,
+  primary = false,
   onUnauthorized,
 }: Props) {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const headingId = `recommendation-${inquiryId}-heading`
 
@@ -191,11 +190,11 @@ function RecommendationSection({
       await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure))
+      else setError(errorMessage(failure, t))
     }
   }
 
-  const blocked = blockedReason(orchestration)
+  const blocked = blockedReason(orchestration, t)
   const outdated =
     recommendation === null || recommendation.stale || recommendation.status === 'failed'
   const offerRerun = blocked === null && outdated
@@ -203,33 +202,33 @@ function RecommendationSection({
   return (
     <section className="orchestration recommendation" aria-labelledby={headingId}>
       <h4 id={headingId} className="analysis__subheading">
-        Recommendation
+        {t('recommendation.heading')}
       </h4>
 
       {blocked !== null && (recommendation === null || recommendation.stale) && (
         <p className="checks__line">{blocked}</p>
       )}
       {blocked === null && recommendation === null && (
-        <p className="checks__line">Recommendation not run yet</p>
+        <p className="checks__line">{t('recommendation.notRun')}</p>
       )}
-      {recommendation?.stale && (
-        <p className="checks__line">
-          The analysis, checks or orchestration changed after this recommendation ran; the
-          result may be out of date.
-        </p>
-      )}
+      {recommendation?.stale && <p className="checks__line">{t('recommendation.stale')}</p>}
       {offerRerun && (
         <div className="analysis__actions">
-          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            {running ? 'Running recommendation…' : 'Re-run recommendation'}
+          <Button
+            type="button"
+            variant={primary ? 'default' : 'outline'}
+            onClick={rerun}
+            disabled={disabled}
+          >
+            {running ? t('recommendation.running') : t('recommendation.rerun')}
           </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">Re-running the recommendation failed: {error}</p>
+          <p className="error">{t('recommendation.rerunFailed', { message: error })}</p>
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
@@ -247,27 +246,30 @@ function RecommendationResult({ recommendation }: { recommendation: Recommendati
       ? (recommendation.options.find((option) => option.id === choice.option_id) ?? null)
       : null
   const others = recommendation.options.filter((option) => option !== chosen)
-  const othersTitle = chosen === null ? 'Options' : 'Other options'
+  const othersTitle =
+    chosen === null ? t('recommendation.options') : t('recommendation.otherOptions')
   const completed = recommendation.status === 'completed'
 
   return (
     <>
-      <div
-        className={`checks__banner orchestration__banner--${completed ? 'ok' : 'error'}`}
-      >
+      <div className={`checks__banner orchestration__banner--${completed ? 'ok' : 'error'}`}>
         <p className="checks__outcome">
-          Recommendation: {completed ? 'Completed' : 'Failed — no option chosen'}
+          {completed ? t('recommendation.resultCompleted') : t('recommendation.resultFailed')}
         </p>
       </div>
-      <p className="analysis__meta">Recommended {formatDate(recommendation.recommended_at)}</p>
+      <p className="analysis__meta">
+        {t('recommendation.recommended', {
+          date: formatDate(recommendation.recommended_at),
+        })}
+      </p>
 
       {recommendation.error !== null && (
         <p className="orchestration__error checks__line">{t('recommendation.failed')}</p>
       )}
 
       {chosen !== null && choice !== null && (
-        <section className="check recommendation__chosen" aria-label="Recommended option">
-          <p className="orchestration__stage-title">Recommended option</p>
+        <section className="check recommendation__chosen" aria-label={t('recommendation.chosen')}>
+          <p className="orchestration__stage-title">{t('recommendation.chosen')}</p>
           <OptionCard
             option={chosen}
             cited={choice.cited_signals}
@@ -289,7 +291,7 @@ function RecommendationResult({ recommendation }: { recommendation: Recommendati
         </div>
       )}
       {recommendation.options.length === 0 && (
-        <p className="checks__line">No option could be built from the orchestration results.</p>
+        <p className="checks__line">{t('recommendation.noOptions')}</p>
       )}
     </>
   )

@@ -1,15 +1,18 @@
-import { useState } from 'react'
-import type {
-  PolicyOutcome,
-  PolicyView,
-  RecommendationView,
-  RuleCode,
-  RuleResult,
-  RuleVerdict,
-} from '../api/analysis'
+import { useState, type ReactNode } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
+import type { PolicyResult, PolicyView, RecommendationView, ReplyDraftView } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
-import { formatDate, formatPercent, formatPln } from './format'
+import { errorMessage, formatDate } from './format'
+import {
+  OUTCOME_LABEL,
+  policyRerunOffered,
+  RULE_LABEL,
+  ruleAmount,
+  thresholdText,
+  VERDICT_LABEL,
+} from './policyLabels'
 
 type Props = {
   inquiryId: number
@@ -17,6 +20,11 @@ type Props = {
   policy: PolicyView | null
   // The recommendation the verdict is evaluated on; tells why there is none.
   recommendation: RecommendationView | null
+  // The reply draft, when there is one: its stored verdict is the one in force (the offer may
+  // have been edited), so that one is shown instead of the evaluation.
+  draft?: ReplyDraftView | null
+  // True when re-running the policy is the step's primary action (outline otherwise).
+  primary?: boolean
   // True while the panel analyzes, saves or re-runs the checks, the orchestrator, the
   // recommendation or the policy.
   disabled: boolean
@@ -28,58 +36,12 @@ type Props = {
   onUnauthorized: () => void
 }
 
-// Every verdict is shown as text; the tone only adds the colour.
-type Tone = 'ok' | 'warn' | 'error'
-
-const OUTCOME: Record<PolicyOutcome, [string, Tone]> = {
-  no_approval_needed: ['No approval needed', 'ok'],
-  requires_supervisor: ['Requires supervisor approval', 'warn'],
-}
-
-const RULE: Record<RuleCode, string> = {
-  margin: 'Margin',
-  discount: 'Discount',
-  order_value: 'Order value',
-  credit: 'Credit',
-}
-
-// How the actual value must compare with the threshold to pass.
-const COMPARATOR: Record<RuleCode, string> = {
-  margin: '≥',
-  discount: '≤',
-  order_value: '≤',
-  credit: '≤',
-}
-
-const VERDICT: Record<RuleVerdict, [string, Tone]> = {
-  pass: ['Pass', 'ok'],
-  fail: ['Fail', 'error'],
-  not_evaluated: ['Not evaluated', 'warn'],
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
-
 // Why there cannot be a (current) verdict; null when the recommendation allows one.
-function blockedReason(recommendation: RecommendationView | null): string | null {
-  if (recommendation === null) return 'No policy verdict: there is no recommendation yet.'
-  if (recommendation.status === 'failed') return 'No policy verdict: the recommendation failed.'
-  if (recommendation.stale) {
-    return 'No policy verdict: the recommendation is out of date; re-run the recommendation first.'
-  }
+function blockedReason(recommendation: RecommendationView | null, t: TFunction): string | null {
+  if (recommendation === null) return t('policy.blocked.noRecommendation')
+  if (recommendation.status === 'failed') return t('policy.blocked.recommendationFailed')
+  if (recommendation.stale) return t('policy.blocked.recommendationStale')
   return null
-}
-
-function amount(rule: RuleResult, value: string | null): string {
-  if (value === null) return '—'
-  return rule.unit === 'percent' ? formatPercent(value) : formatPln(value)
-}
-
-function thresholdText(rule: RuleResult): string {
-  if (rule.threshold === null) return '—'
-  const text = `${COMPARATOR[rule.code]} ${amount(rule, rule.threshold)}`
-  return rule.code === 'credit' ? `${text} (credit limit)` : text
 }
 
 // The policy verdict on the recommended option: each rule against its threshold and the overall
@@ -88,11 +50,14 @@ function PolicySection({
   inquiryId,
   policy,
   recommendation,
+  draft = null,
+  primary = false,
   disabled,
   running,
   onRerun,
   onUnauthorized,
 }: Props) {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const headingId = `policy-${inquiryId}-heading`
 
@@ -102,97 +67,139 @@ function PolicySection({
       await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure))
+      else setError(errorMessage(failure, t))
     }
   }
 
-  const blocked = blockedReason(recommendation)
+  const blocked = blockedReason(recommendation, t)
   const outdated = policy === null || policy.stale
-  const offerRerun = blocked === null && outdated
+  const offerRerun = policyRerunOffered(policy, recommendation)
 
   return (
     <section className="orchestration policy" aria-labelledby={headingId}>
       <h4 id={headingId} className="analysis__subheading">
-        Policy
+        {t('policy.heading')}
       </h4>
 
       {blocked !== null && outdated && <p className="checks__line">{blocked}</p>}
       {blocked === null && policy === null && (
-        <p className="checks__line">Policy not evaluated yet</p>
+        <p className="checks__line">{t('policy.notEvaluated')}</p>
       )}
-      {policy?.stale && (
-        <p className="checks__line">
-          The recommendation changed after this verdict was evaluated; the result may be out of
-          date.
-        </p>
-      )}
+      {policy?.stale && <p className="checks__line">{t('policy.stale')}</p>}
       {offerRerun && (
         <div className="analysis__actions">
-          <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            {running ? 'Running policy…' : 'Re-run policy'}
+          <Button
+            type="button"
+            variant={primary ? 'default' : 'outline'}
+            onClick={rerun}
+            disabled={disabled}
+          >
+            {running ? t('policy.running') : t('policy.rerun')}
           </Button>
         </div>
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">Re-running the policy failed: {error}</p>
+          <p className="error">{t('policy.rerunFailed', { message: error })}</p>
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
 
-      {policy !== null && <PolicyResult policy={policy} />}
+      {draft !== null ? (
+        <VerdictOfDraft policy={draft.policy} edited={draft.offer.edited} />
+      ) : (
+        policy !== null && <Evaluation policy={policy} />
+      )}
     </section>
   )
 }
 
-function PolicyResult({ policy }: { policy: PolicyView }) {
-  const [outcome, tone] = OUTCOME[policy.outcome]
+// Each rule against its threshold.
+function RulesTable({ rules, caption }: { rules: PolicyResult['rules']; caption: ReactNode }) {
+  const { t } = useTranslation()
+  return (
+    <div className="policy__table-wrap">
+      <table className="policy__table">
+        <caption className="orchestration__stage-title">{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('policy.column.rule')}</th>
+            <th scope="col">{t('policy.column.actual')}</th>
+            <th scope="col">{t('policy.column.threshold')}</th>
+            <th scope="col">{t('policy.column.verdict')}</th>
+            <th scope="col">{t('policy.column.reason')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rules.map((rule) => {
+            const { key: verdictKey, tone: verdictTone } = VERDICT_LABEL[rule.verdict]
+            return (
+              <tr key={rule.code}>
+                <th scope="row">{t(RULE_LABEL[rule.code])}</th>
+                <td>{ruleAmount(rule, rule.actual)}</td>
+                <td>{thresholdText(rule, t)}</td>
+                <td>
+                  <span className={`check__status check__status--${verdictTone}`}>
+                    {t(verdictKey)}
+                  </span>
+                </td>
+                <td>{rule.reason}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// The policy stage's own evaluation of the recommended option.
+function Evaluation({ policy }: { policy: PolicyView }) {
+  const { t } = useTranslation()
+  const { key: outcomeKey, tone } = OUTCOME_LABEL[policy.outcome]
   return (
     <>
       <div className={`checks__banner orchestration__banner--${tone}`}>
         <p className="check__head">
-          <span className="checks__outcome">{outcome}</span>
+          <span className="checks__outcome">{t(outcomeKey)}</span>
           {policy.thresholds_are_examples && (
-            <span className="policy__example">Example thresholds</span>
+            <span className="policy__example">{t('policy.exampleThresholds')}</span>
           )}
         </p>
       </div>
-      <p className="analysis__meta">Evaluated {formatDate(policy.evaluated_at)}</p>
+      <p className="analysis__meta">
+        {t('policy.evaluated', { date: formatDate(policy.evaluated_at) })}
+      </p>
+      <RulesTable rules={policy.rules} caption={t('policy.caption')} />
+    </>
+  )
+}
 
-      <div className="policy__table-wrap">
-        <table className="policy__table">
-          <caption className="orchestration__stage-title">Policy rules</caption>
-          <thead>
-            <tr>
-              <th scope="col">Rule</th>
-              <th scope="col">Actual</th>
-              <th scope="col">Threshold</th>
-              <th scope="col">Verdict</th>
-              <th scope="col">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            {policy.rules.map((rule) => {
-              const [verdict, verdictTone] = VERDICT[rule.verdict]
-              return (
-                <tr key={rule.code}>
-                  <th scope="row">{RULE[rule.code]}</th>
-                  <td>{amount(rule, rule.actual)}</td>
-                  <td>{thresholdText(rule)}</td>
-                  <td>
-                    <span className={`check__status check__status--${verdictTone}`}>
-                      {verdict}
-                    </span>
-                  </td>
-                  <td>{rule.reason}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+// The verdict stored with the draft: the edit's own for an edited offer, the evaluation's
+// otherwise.
+function VerdictOfDraft({ policy, edited }: { policy: PolicyResult | null; edited: boolean }) {
+  const { t } = useTranslation()
+  const title = edited ? t('draft.verdictTitleEdited') : t('draft.verdictTitle')
+  if (policy === null) {
+    return <p className="checks__line">{t('draft.verdictNone', { title })}</p>
+  }
+  const { key: outcomeKey, tone } = OUTCOME_LABEL[policy.outcome]
+  return (
+    <>
+      {policy.thresholds_are_examples && (
+        <p className="policy__example">{t('policy.exampleThresholds')}</p>
+      )}
+      <RulesTable
+        rules={policy.rules}
+        caption={
+          <>
+            {t('draft.verdictLabel', { title })}{' '}
+            <span className={`check__status check__status--${tone}`}>{t(outcomeKey)}</span>
+          </>
+        }
+      />
     </>
   )
 }

@@ -292,11 +292,7 @@ function Inbox({ selectedId = null }: Props) {
         </CardContent>
       </Card>
 
-      <section
-        className="card md:col-span-3"
-        aria-live="polite"
-        aria-label={t('inbox.detailLabel')}
-      >
+      <section className="card md:col-span-3" aria-label={t('inbox.detailLabel')}>
         {selectedId === null && <p className="muted">{t('inbox.selectPrompt')}</p>}
         {selectedId !== null && currentDetail === null && (
           <p className="muted">{t('inbox.loadingDetail')}</p>
@@ -316,13 +312,13 @@ function Inbox({ selectedId = null }: Props) {
                 {formatDate(currentDetail.inquiry.received_at)}
               </time>
             </p>
-            <div className="detail__body">{currentDetail.inquiry.body}</div>
           </article>
         )}
         {currentDetail?.kind === 'ok' && (
           <AnalysisPanel
             key={currentDetail.inquiry.id}
             inquiryId={currentDetail.inquiry.id}
+            body={currentDetail.inquiry.body}
             user={user}
             onUnauthorized={onUnauthorized}
             onOutcome={handleOutcome}

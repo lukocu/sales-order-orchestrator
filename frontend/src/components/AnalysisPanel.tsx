@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import type { TFunction } from 'i18next'
 import { Link, useMatch, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
@@ -26,12 +27,21 @@ import type { User } from '../api/auth'
 import { ApiError, UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
-import { formatDate } from './format'
-import { DecisionHistory } from './ReplyDraftSection'
+import { errorMessage, formatDate } from './format'
+import { inquirySteps, stepBackReason, type StepBackKey, type StepId } from './inquirySteps'
+import InquiryStepper from './InquiryStepper'
+import OrchestrationSection from './OrchestrationSection'
+import PolicySection from './PolicySection'
+import { policyRerunOffered } from './policyLabels'
+import RecommendationSection from './RecommendationSection'
+import ReplyDraftSection, { DecisionHistory } from './ReplyDraftSection'
+import ReplyStep from './ReplyStep'
 import RunInspector from './RunInspector'
 
 type Props = {
   inquiryId: number
+  // The e-mail text: shown in the inquiry step, as a disclosure in the others.
+  body: string
   // The signed-in user: a supervisor decides on drafts awaiting the supervisor.
   user: User
   // Called whenever the API answers 401 (session gone).
@@ -47,7 +57,8 @@ type Props = {
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'ok'; analysis: Analysis | null }
-  | { kind: 'error'; message: string }
+  // null: the error had no message of its own; shown as the generic one.
+  | { kind: 'error'; message: string | null }
 
 type Substitute = 'yes' | 'no' | 'unknown'
 
@@ -72,30 +83,23 @@ const DRAFT_KEYS: readonly (keyof Draft)[] = [
   'price_value',
 ]
 
-const PRICE_KIND_LABEL: Record<PriceKind, string> = {
-  none: 'Not stated',
-  best_price: 'Best price',
-  discount_percent: 'Discount (%)',
-  target_price: 'Target price',
-}
+const PRICE_KIND_KEY = {
+  none: 'analysis.priceKind.none',
+  best_price: 'analysis.priceKind.best_price',
+  discount_percent: 'analysis.priceKind.discount_percent',
+  target_price: 'analysis.priceKind.target_price',
+} as const satisfies Record<PriceKind, string>
 
 const VALUED_PRICE_KINDS: readonly PriceKind[] = ['discount_percent', 'target_price']
 
-const SUBSTITUTE_LABEL: Record<Substitute, string> = {
-  yes: 'Yes',
-  no: 'No',
-  unknown: 'Not stated',
-}
+const SUBSTITUTE_KEY = {
+  yes: 'analysis.substitute.yes',
+  no: 'analysis.substitute.no',
+  unknown: 'analysis.substitute.unknown',
+} as const satisfies Record<Substitute, string>
 
-const RELOADED_NOTICE =
-  'Analysis changed by a re-analysis — reloaded, your unsaved edits were discarded.'
-
-const DRAFT_RELOADED_NOTICE =
-  'The draft changed since it was opened — reloaded, your decision was not saved.'
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong'
-}
+// Notices are kept as keys and translated at render time, so they follow a language switch.
+type NoticeKey = 'analysis.saved' | 'analysis.reloaded' | 'analysis.draftReloaded'
 
 // The draft was written since it was read (another decision, a regenerated draft or a new
 // recommendation); every other 409 of a decision is shown at its form.
@@ -140,16 +144,17 @@ function sameDraft(a: Draft, b: Draft): boolean {
 function buildFields(
   draft: Draft,
   current: ParsedFields,
+  t: TFunction,
 ): { fields: ParsedFields } | { error: string } {
   const quantity = draft.quantity.trim()
   if (quantity !== '' && !/^\d+$/.test(quantity)) {
-    return { error: 'Quantity must be a whole number.' }
+    return { error: t('analysis.error.quantityWhole') }
   }
   let priceValue: string | null = null
   if (VALUED_PRICE_KINDS.includes(draft.price_kind)) {
     priceValue = draft.price_value.trim().replace(',', '.')
-    if (priceValue === '') return { error: 'Enter a value for the price expectation.' }
-    if (!/^\d+(\.\d+)?$/.test(priceValue)) return { error: 'Price value must be a number.' }
+    if (priceValue === '') return { error: t('analysis.error.priceValueRequired') }
+    if (!/^\d+(\.\d+)?$/.test(priceValue)) return { error: t('analysis.error.priceValueNumber') }
   }
   return {
     fields: {
@@ -166,31 +171,31 @@ function buildFields(
   }
 }
 
-function emptyOr(value: string | null): string {
-  return value === null || value === '' ? '(empty)' : value
+function emptyOr(value: string | null, t: TFunction): string {
+  return value === null || value === '' ? t('analysis.empty') : value
 }
 
-function formatPrice(kind: PriceKind, value: string | null): string {
-  if (kind === 'discount_percent' && value !== null) return `Discount ${value}%`
-  if (kind === 'target_price' && value !== null) return `Target price ${value}`
-  return PRICE_KIND_LABEL[kind]
+function formatPrice(kind: PriceKind, value: string | null, t: TFunction): string {
+  if (kind === 'discount_percent' && value !== null) return t('analysis.discountValue', { value })
+  if (kind === 'target_price' && value !== null) return t('analysis.targetValue', { value })
+  return t(PRICE_KIND_KEY[kind])
 }
 
 // How the original (parsed) value of a field reads next to the "edited" mark.
-function modelValue(field: FieldName, fields: ParsedFields): string {
+function modelValue(field: FieldName, fields: ParsedFields, t: TFunction): string {
   switch (field) {
     case 'customer':
-      return emptyOr(fields.customer)
+      return emptyOr(fields.customer, t)
     case 'product_code':
-      return emptyOr(fields.product_code)
+      return emptyOr(fields.product_code, t)
     case 'quantity':
-      return fields.quantity === null ? '(empty)' : String(fields.quantity)
+      return fields.quantity === null ? t('analysis.empty') : String(fields.quantity)
     case 'deadline':
-      return emptyOr(fields.deadline)
+      return emptyOr(fields.deadline, t)
     case 'substitute_allowed':
-      return SUBSTITUTE_LABEL[substituteOf(fields.substitute_allowed)]
+      return t(SUBSTITUTE_KEY[substituteOf(fields.substitute_allowed)])
     case 'price':
-      return formatPrice(fields.price_kind, fields.price_value)
+      return formatPrice(fields.price_kind, fields.price_value, t)
   }
 }
 
@@ -215,7 +220,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
         {edited && (
           <span className="field__edited">
             {t('analysisFields.editedOriginally', {
-              value: modelValue(name, analysis.model_fields),
+              value: modelValue(name, analysis.model_fields, t),
             })}
           </span>
         )}
@@ -223,7 +228,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
       {children}
       {reason !== undefined && (
         <div className="field__uncertain">
-          <p className="field__reason">Uncertain: {reason}</p>
+          <p className="field__reason">{t('analysis.uncertain', { reason })}</p>
           <label className="field__check">
             <input
               type="checkbox"
@@ -231,7 +236,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
               checked={reviewed.includes(name)}
               onChange={(event) => onReviewed(name, event.target.checked)}
             />
-            Looks right
+            {t('analysis.looksRight')}
           </label>
         </div>
       )}
@@ -239,12 +244,22 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
   )
 }
 
-function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
+// Why the flow moved back to an earlier step: announced next to the notice, in one status.
+type StepMessage = { step: StepId; reason: StepBackKey }
+
+function MailBody({ body }: { body: string }) {
+  return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
+}
+
+function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
   // this panel holds, so it never refetches.
-  const inspecting = useMatch({ from: '/inbox/inquiries/$inquiryId/run', shouldThrow: false })
+  const inspecting = useMatch({
+    from: '/inbox/inquiries/$inquiryId/run',
+    shouldThrow: false,
+  })
   const inspectorLink = useRef<HTMLAnchorElement>(null)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -263,8 +278,29 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
   >(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<NoticeKey | null>(null)
   const [confirming, setConfirming] = useState(false)
+  // The step whose panel is shown; it follows the active step unless the user opens a done one.
+  const [viewed, setViewed] = useState<StepId>('inquiry')
+  const [stepMessage, setStepMessage] = useState<StepMessage | null>(null)
+  // The analysis last shown, to tell where the flow moved when the next one arrives.
+  const lastAnalysis = useRef<Analysis | null>(null)
+
+  // Moving forward selects the new active step; moving back selects it and says why.
+  const follow = useCallback((next: Analysis | null) => {
+    const prev = lastAnalysis.current
+    lastAnalysis.current = next
+    const before = inquirySteps(prev).active
+    const after = inquirySteps(next).active
+    const reason = stepBackReason(prev, next)
+    if (reason !== null) {
+      setStepMessage({ step: after, reason })
+      setViewed(after)
+    } else {
+      setStepMessage(null)
+      if (after !== before) setViewed(after)
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -273,22 +309,28 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
         setLoad({ kind: 'ok', analysis })
         setDraft(analysis === null ? null : toDraft(analysis.fields))
         setReviewed([])
+        follow(analysis)
         onOutcome?.(inquiryId, outcomeOf(analysis))
         onDraftStatus?.(inquiryId, draftStatusOf(analysis))
       },
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else setLoad({ kind: 'error', message: errorMessage(error) })
+        else
+          setLoad({
+            kind: 'error',
+            message: error instanceof Error ? error.message : null,
+          })
       },
     )
     return () => controller.abort()
-  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus])
+  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus, follow])
 
   function show(analysis: Analysis) {
     setLoad({ kind: 'ok', analysis })
     setDraft(toDraft(analysis.fields))
     setReviewed([])
+    follow(analysis)
     onOutcome?.(inquiryId, outcomeOf(analysis))
     onDraftStatus?.(inquiryId, draftStatusOf(analysis))
   }
@@ -315,6 +357,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       return
     }
     setLoad({ kind: 'ok', analysis: next })
+    follow(next)
     onOutcome?.(inquiryId, outcomeOf(next))
     onDraftStatus?.(inquiryId, draftStatusOf(next))
   }
@@ -378,7 +421,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       showChecked(await send())
     } catch (error) {
       if (!draftChanged(error)) throw error
-      setNotice(DRAFT_RELOADED_NOTICE)
+      setNotice('analysis.draftReloaded')
       reload()
     } finally {
       setBusy(null)
@@ -415,7 +458,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       show(await analyzeInquiry(inquiryId))
     } catch (error) {
       if (error instanceof UnauthorizedError) onUnauthorized()
-      else setAnalyzeError(errorMessage(error))
+      else setAnalyzeError(errorMessage(error, t))
     } finally {
       setBusy(null)
     }
@@ -428,7 +471,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
 
   async function save() {
     if (analysis === null || draft === null) return
-    const built = buildFields(draft, analysis.fields)
+    const built = buildFields(draft, analysis.fields, t)
     if ('error' in built) {
       setFormError(built.error)
       return
@@ -439,13 +482,13 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     setConfirming(false)
     try {
       show(await saveCorrections(inquiryId, built.fields, reviewed, analysis.analyzed_at))
-      setNotice('Corrections saved')
+      setNotice('analysis.saved')
     } catch (error) {
       if (error instanceof UnauthorizedError) onUnauthorized()
       else if (error instanceof ApiError && error.status === 409) {
-        setNotice(RELOADED_NOTICE)
+        setNotice('analysis.reloaded')
         reload()
-      } else setFormError(errorMessage(error))
+      } else setFormError(errorMessage(error, t))
     } finally {
       setBusy(null)
     }
@@ -461,24 +504,52 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
     )
   }
 
+  function showStep(step: StepId) {
+    setViewed(step)
+    setStepMessage(null)
+  }
+
   const id = (name: string) => `analysis-${inquiryId}-${name}`
 
-  function renderResult(analysis: Analysis, draft: Draft) {
+  // The corrections form and the check results: the inquiry step.
+  function renderFormAndChecks(analysis: Analysis, draft: Draft) {
     const fieldProps = { analysis, reviewed, onReviewed: setFieldReviewed }
+    // One primary action: saving first, then the stale checks, then moving on to Variants;
+    // a standard inquiry has none.
+    const unsaved = dirty || reviewed.length > 0
+    const checks = analysis.checks
+    const checksCurrent = checks !== null && !checks.stale
+    const checksPrimary = !unsaved && !checksCurrent
+    const nextToVariants = checksCurrent && checks.outcome === 'exception'
+    const nextPrimary = !unsaved && nextToVariants
     return (
       <>
         <p className="analysis__meta">
-          Analyzed {formatDate(analysis.analyzed_at)}
-          {analysis.analyzed_by_name && ` by ${analysis.analyzed_by_name}`}
+          {analysis.analyzed_by_name
+            ? t('analysis.meta.analyzedBy', {
+                date: formatDate(analysis.analyzed_at),
+                name: analysis.analyzed_by_name,
+              })
+            : t('analysis.meta.analyzed', {
+                date: formatDate(analysis.analyzed_at),
+              })}
           {analysis.corrected_at && (
             <>
-              {' · '}corrected {formatDate(analysis.corrected_at)}
-              {analysis.corrected_by_name && ` by ${analysis.corrected_by_name}`}
+              {' · '}
+              {analysis.corrected_by_name
+                ? t('analysis.meta.correctedBy', {
+                    date: formatDate(analysis.corrected_at),
+                    name: analysis.corrected_by_name,
+                  })
+                : t('analysis.meta.corrected', {
+                    date: formatDate(analysis.corrected_at),
+                  })}
             </>
           )}
         </p>
 
         <form
+          id={id('form')}
           className="analysis__form"
           noValidate
           onSubmit={(event) => {
@@ -486,21 +557,36 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
             void save()
           }}
         >
-          <Field name="customer" label="Customer" inputId={id('customer')} {...fieldProps}>
+          <Field
+            name="customer"
+            label={t('analysis.field.customer')}
+            inputId={id('customer')}
+            {...fieldProps}
+          >
             <input
               id={id('customer')}
               value={draft.customer}
               onChange={(event) => update('customer', event.target.value)}
             />
           </Field>
-          <Field name="product_code" label="Product" inputId={id('product')} {...fieldProps}>
+          <Field
+            name="product_code"
+            label={t('analysis.field.product')}
+            inputId={id('product')}
+            {...fieldProps}
+          >
             <input
               id={id('product')}
               value={draft.product_code}
               onChange={(event) => update('product_code', event.target.value)}
             />
           </Field>
-          <Field name="quantity" label="Quantity" inputId={id('quantity')} {...fieldProps}>
+          <Field
+            name="quantity"
+            label={t('analysis.field.quantity')}
+            inputId={id('quantity')}
+            {...fieldProps}
+          >
             <input
               id={id('quantity')}
               inputMode="numeric"
@@ -508,7 +594,12 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               onChange={(event) => update('quantity', event.target.value)}
             />
           </Field>
-          <Field name="deadline" label="Deadline" inputId={id('deadline')} {...fieldProps}>
+          <Field
+            name="deadline"
+            label={t('analysis.field.deadline')}
+            inputId={id('deadline')}
+            {...fieldProps}
+          >
             <div className="field__row">
               <input
                 id={id('deadline')}
@@ -523,7 +614,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
           </Field>
           <Field
             name="substitute_allowed"
-            label="Substitute allowed"
+            label={t('analysis.field.substituteAllowed')}
             inputId={id('substitute')}
             {...fieldProps}
           >
@@ -532,30 +623,37 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               value={draft.substitute}
               onChange={(event) => update('substitute', event.target.value as Substitute)}
             >
-              {(Object.keys(SUBSTITUTE_LABEL) as Substitute[]).map((value) => (
+              {(Object.keys(SUBSTITUTE_KEY) as Substitute[]).map((value) => (
                 <option key={value} value={value}>
-                  {SUBSTITUTE_LABEL[value]}
+                  {t(SUBSTITUTE_KEY[value])}
                 </option>
               ))}
             </select>
           </Field>
-          <Field name="price" label="Price expectation" inputId={id('price-kind')} {...fieldProps}>
+          <Field
+            name="price"
+            label={t('analysis.field.priceExpectation')}
+            inputId={id('price-kind')}
+            {...fieldProps}
+          >
             <div className="field__row">
               <select
                 id={id('price-kind')}
                 value={draft.price_kind}
                 onChange={(event) => update('price_kind', event.target.value as PriceKind)}
               >
-                {(Object.keys(PRICE_KIND_LABEL) as PriceKind[]).map((kind) => (
+                {(Object.keys(PRICE_KIND_KEY) as PriceKind[]).map((kind) => (
                   <option key={kind} value={kind}>
-                    {PRICE_KIND_LABEL[kind]}
+                    {t(PRICE_KIND_KEY[kind])}
                   </option>
                 ))}
               </select>
               {VALUED_PRICE_KINDS.includes(draft.price_kind) && (
                 <input
                   aria-label={
-                    draft.price_kind === 'discount_percent' ? 'Discount percent' : 'Target price'
+                    draft.price_kind === 'discount_percent'
+                      ? t('analysis.priceValueLabel.discount_percent')
+                      : t('analysis.priceValueLabel.target_price')
                   }
                   inputMode="decimal"
                   className="field__value"
@@ -568,80 +666,228 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
               <span className="field__phrase">“{analysis.fields.price_text}”</span>
             )}
           </Field>
+        </form>
 
+        <ChecksSection
+          inquiryId={inquiryId}
+          analysis={analysis}
+          disabled={busy !== null}
+          running={busy === 'checking'}
+          onRerun={rerun}
+          primary={checksPrimary}
+          onUnauthorized={onUnauthorized}
+        />
+
+        <div role="group" aria-label={t('steps.actions')} className="sticky bottom-0 z-10 border-t border-border bg-background py-3 grid gap-2">
           {formError && (
             <p className="error" role="alert">
               {formError}
             </p>
           )}
-
           <div className="analysis__actions">
             <Button
               type="submit"
-              variant="outline"
-              disabled={busy !== null || !(dirty || reviewed.length > 0)}
+              form={id('form')}
+              variant={unsaved ? 'default' : 'outline'}
+              disabled={busy !== null || !unsaved}
             >
-              {busy === 'saving' ? 'Saving…' : 'Save corrections'}
+              {busy === 'saving' ? t('common.saving') : t('analysis.save')}
             </Button>
+            {nextToVariants && (
+              <Button
+                type="button"
+                variant={nextPrimary ? 'default' : 'outline'}
+                onClick={() => showStep('variants')}
+                disabled={busy !== null}
+              >
+                {t('steps.nextVariants')}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
               onClick={requestReanalysis}
               disabled={busy !== null}
             >
-              {busy === 'analyzing' ? 'Analyzing…' : 'Re-analyze'}
+              {busy === 'analyzing' ? t('analysis.analyzing') : t('analysis.reanalyze')}
             </Button>
           </div>
           {confirming && (
             <div className="analysis__confirm">
-              <p>Corrections will be lost.</p>
+              <p>{t('analysis.correctionsLost')}</p>
               <div className="analysis__actions">
-                <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
-                  Re-analyze anyway
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={runAnalysis}
+                  disabled={busy !== null}
+                >
+                  {t('analysis.reanalyzeAnyway')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </div>
           )}
-        </form>
-
-        <ChecksSection
-          inquiryId={inquiryId}
-          user={user}
-          analysis={analysis}
-          disabled={busy !== null}
-          running={busy === 'checking'}
-          orchestrating={busy === 'orchestrating'}
-          recommending={busy === 'recommending'}
-          evaluating={busy === 'evaluating'}
-          drafting={busy === 'drafting'}
-          deciding={busy === 'deciding'}
-          onRerun={rerun}
-          onRerunOrchestration={rerunOrchestrator}
-          onRerunRecommendation={rerunRecommender}
-          onRerunPolicy={reevaluatePolicy}
-          onRegenerateDraft={regenerateReplyDraft}
-          onEditDraft={editReplyDraft}
-          onDecideDraft={decideReplyDraft}
-          onSupervisorDecideDraft={decideReplyDraftAsSupervisor}
-          onUnauthorized={onUnauthorized}
-        />
-
-        {/* Outside the exception: decisions stay visible after a correction removes it. */}
-        {(analysis.decisions ?? []).length > 0 && (
-          <DecisionHistory inquiryId={inquiryId} decisions={analysis.decisions ?? []} />
-        )}
+        </div>
       </>
     )
+  }
+
+  function renderPanels(analysis: Analysis, draft: Draft, steps: ReturnType<typeof inquirySteps>) {
+    const exception = analysis.checks !== null && analysis.checks.outcome === 'exception'
+    // The orchestrator's re-run is offered (and primary) until it has a current, complete result.
+    const orchestration = analysis.orchestration
+    const orchestrationRerun =
+      orchestration === null || orchestration.stale || orchestration.status !== 'completed'
+    const decisions = analysis.decisions ?? []
+    // Outside the exception: decisions stay visible after a correction removes it.
+    const historyInInquiry =
+      decisions.length > 0 && steps.states.approval !== 'done' && steps.states.approval !== 'active'
+    const mail = (
+      <details className="rounded-md border bg-card px-3 py-2">
+        <summary className="cursor-pointer text-sm font-medium">{t('steps.showMail')}</summary>
+        <div className="mt-2">
+          <MailBody body={body} />
+        </div>
+      </details>
+    )
+    // One primary action in the approval step: re-running the policy comes before the draft's.
+    const policyRerun = policyRerunOffered(analysis.policy ?? null, analysis.recommendation ?? null)
+    const replyDraft = (
+      <ReplyDraftSection
+        inquiryId={inquiryId}
+        user={user}
+        draft={analysis.draft ?? null}
+        recommendation={analysis.recommendation ?? null}
+        verdict={
+          <PolicySection
+            inquiryId={inquiryId}
+            policy={analysis.policy ?? null}
+            recommendation={analysis.recommendation ?? null}
+            draft={analysis.draft ?? null}
+            primary={policyRerun}
+            disabled={busy !== null}
+            running={busy === 'evaluating'}
+            onRerun={reevaluatePolicy}
+            onUnauthorized={onUnauthorized}
+          />
+        }
+        primary={!policyRerun}
+        disabled={busy !== null}
+        drafting={busy === 'drafting'}
+        deciding={busy === 'deciding'}
+        onRegenerate={regenerateReplyDraft}
+        onEdit={editReplyDraft}
+        onDecide={decideReplyDraft}
+        onSupervisorDecide={decideReplyDraftAsSupervisor}
+        onUnauthorized={onUnauthorized}
+      />
+    )
+    return {
+      inquiry: (
+        <>
+          <section aria-label={t('steps.mail')}>
+            <MailBody body={body} />
+          </section>
+          {renderFormAndChecks(analysis, draft)}
+          {historyInInquiry && <DecisionHistory inquiryId={inquiryId} decisions={decisions} />}
+        </>
+      ),
+      variants: (
+        <>
+          {mail}
+          {exception && (
+            <RecommendationSection
+              inquiryId={inquiryId}
+              recommendation={analysis.recommendation ?? null}
+              orchestration={analysis.orchestration}
+              disabled={busy !== null}
+              running={busy === 'recommending'}
+              onRerun={rerunRecommender}
+              primary={!orchestrationRerun}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+          {exception && (
+            <details open={orchestrationRerun} className="rounded-md border bg-card px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium">
+                {t('steps.findings')}
+              </summary>
+              <div className="mt-2">
+                <OrchestrationSection
+                  inquiryId={inquiryId}
+                  orchestration={analysis.orchestration}
+                  disabled={busy !== null}
+                  running={busy === 'orchestrating'}
+                  onRerun={rerunOrchestrator}
+                  primary={orchestrationRerun}
+                  onUnauthorized={onUnauthorized}
+                />
+              </div>
+            </details>
+          )}
+          {exception && !orchestrationRerun && steps.states.variants === 'done' && (
+            <div role="group" aria-label={t('steps.actions')} className="sticky bottom-0 z-10 border-t border-border bg-background py-3 analysis__actions">
+              <Button type="button" onClick={() => showStep('approval')} disabled={busy !== null}>
+                {t('steps.nextApproval')}
+              </Button>
+            </div>
+          )}
+        </>
+      ),
+      approval: (
+        <>
+          {mail}
+          {exception && replyDraft}
+          {decisions.length > 0 && <DecisionHistory inquiryId={inquiryId} decisions={decisions} />}
+        </>
+      ),
+      reply: (
+        <>
+          {exception && (
+            <ReplyStep inquiryId={inquiryId} draft={analysis.draft ?? null} decisions={decisions} />
+          )}
+          {mail}
+        </>
+      ),
+    } satisfies Record<StepId, ReactNode>
+  }
+
+  function renderSteps() {
+    const steps = inquirySteps(analysis)
+    // A locked or not needed step cannot be viewed; the active step stands in for it.
+    const state = steps.states[viewed]
+    const shown = state === 'locked' || state === 'not_needed' ? steps.active : viewed
+    const panels =
+      analysis !== null && draft !== null
+        ? renderPanels(analysis, draft, steps)
+        : {
+            inquiry: (
+              <>
+                <section aria-label={t('steps.mail')}>
+                  <MailBody body={body} />
+                </section>
+                <div className="analysis__actions">
+                  <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
+                    {busy === 'analyzing' ? t('analysis.analyzing') : t('analysis.analyze')}
+                  </Button>
+                </div>
+              </>
+            ),
+            variants: null,
+            approval: null,
+            reply: null,
+          }
+    return <InquiryStepper steps={steps} viewed={shown} onView={showStep} panels={panels} />
   }
 
   return (
     <section className="analysis" aria-labelledby={id('heading')}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h3 id={id('heading')} className="analysis__heading font-bold">
-          Analysis
+          {t('analysis.heading')}
         </h3>
         {analysis !== null && (
           <Link
@@ -655,19 +901,27 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
         )}
       </div>
 
-      {load.kind === 'loading' && <p className="muted">Loading analysis…</p>}
+      {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
       {load.kind === 'error' && (
         <div role="alert" className="analysis__problem">
-          <p className="error">{load.message}</p>
+          <p className="error">{load.message ?? t('common.genericError')}</p>
           <Button type="button" variant="outline" onClick={reload}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
-      {notice && (
-        <p className="analysis__notice" role="status">
-          {notice}
-        </p>
+      {(notice || stepMessage) && (
+        <div className="analysis__notice" role="status">
+          {notice && <p>{t(notice)}</p>}
+          {stepMessage && (
+            <p>
+              {t('steps.backMessage', {
+                step: t(`steps.names.${stepMessage.step}`),
+                reason: t(stepMessage.reason),
+              })}
+            </p>
+          )}
+        </div>
       )}
       {analyzeError && (
         <div role="alert" className="analysis__problem">
@@ -678,27 +932,22 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
             onClick={requestReanalysis}
             disabled={busy !== null}
           >
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
 
-      {load.kind === 'ok' && analysis === null && (
-        <div className="analysis__actions">
-          <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
-            {busy === 'analyzing' ? 'Analyzing…' : 'Analyze request'}
-          </Button>
-        </div>
-      )}
-
-      {analysis !== null && draft !== null && renderResult(analysis, draft)}
+      {load.kind === 'ok' && renderSteps()}
 
       <RunInspector
         analysis={analysis}
         loading={load.kind === 'loading'}
         open={inspecting !== undefined}
         onClose={() =>
-          void navigate({ to: '/inquiries/$inquiryId', params: { inquiryId: String(inquiryId) } })
+          void navigate({
+            to: '/inquiries/$inquiryId',
+            params: { inquiryId: String(inquiryId) },
+          })
         }
         returnFocusTo={inspectorLink}
       />

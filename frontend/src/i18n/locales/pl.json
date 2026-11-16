@@ -82,7 +82,88 @@
     "editedOriginally": "edytowano · pierwotnie: {{value}}"
   },
   "checks": {
-    "standard": "Zapytanie standardowe — dodatkowe sprawdzenia nie są potrzebne"
+    "standard": "Zapytanie standardowe — dodatkowe sprawdzenia nie są potrzebne",
+    "heading": "Weryfikacja",
+    "noResult": "Dla tej analizy nie ma jeszcze wyniku weryfikacji.",
+    "stale": "Analiza zmieniła się po wykonaniu tej weryfikacji; wynik może być nieaktualny.",
+    "rerun": "Uruchom weryfikację ponownie",
+    "running": "Uruchamianie weryfikacji…",
+    "rerunFailed": "Nie udało się ponownie uruchomić weryfikacji: {{message}}",
+    "exception": "Wyjątek: za mało towaru na stanie — zamówiono {{requested}}, dostępne {{available}} (brakuje {{shortage}})",
+    "needsInput": "Wymaga uzupełnienia",
+    "uncertainBasis": "Na podstawie niepewnych pól: {{fields}}",
+    "checked": "Zweryfikowano {{date}}",
+    "listLabel": "Poszczególne kontrole",
+    "reason": {
+      "customer_missing": "Brak klienta — w zapytaniu nie ma nazwy, a domeny e-mail nadawcy nie ma w rejestrze",
+      "customer_not_found": "Nie znaleziono klienta w rejestrze",
+      "customer_ambiguous": "Klient pasuje do kilku wpisów: {{candidates}}",
+      "product_missing": "Brak kodu produktu",
+      "product_not_found": "Nie znaleziono produktu w katalogu",
+      "product_not_found_code": "Nie znaleziono produktu {{code}} w katalogu",
+      "quantity_missing": "Brak ilości"
+    },
+    "substitute": {
+      "unknown": "Zamiennik: nie podano w zapytaniu",
+      "yes": "Zamiennik: klient go akceptuje",
+      "no": "Zamiennik: klient go nie akceptuje"
+    },
+    "input": {
+      "customer": "Klient",
+      "product_code": "Produkt",
+      "quantity": "Ilość"
+    },
+    "customer": {
+      "name": "Klient",
+      "matched": "Dopasowano",
+      "ambiguous": "Niejednoznaczny",
+      "notFound": "Nie znaleziono",
+      "missing": "Brak",
+      "nameField": "Nazwa",
+      "matchedBy": "Dopasowano po",
+      "byEmail": "adresie e-mail",
+      "byName": "nazwie",
+      "candidates": "Kandydaci"
+    },
+    "stock": {
+      "name": "Stan magazynowy",
+      "inStock": "Na stanie",
+      "insufficient": "Niewystarczający",
+      "product": "Produkt",
+      "requested": "Zamówiono",
+      "available": "Dostępne",
+      "short": "Brakuje"
+    },
+    "price": {
+      "name": "Cena",
+      "calculated": "Wyliczona",
+      "listPrice": "Cena katalogowa",
+      "discount": "Rabat",
+      "unitPrice": "Cena jednostkowa",
+      "value": "Wartość",
+      "noQuantity": "— (brak ilości)"
+    },
+    "discount": {
+      "name": "Rabat",
+      "above": "Powyżej standardu",
+      "within": "W ramach standardu",
+      "standard": "Standard",
+      "requested": "Żądany",
+      "aDiscount": "rabat",
+      "aTargetPrice": "cena docelowa",
+      "targetPrice": "cena docelowa {{value}}",
+      "bestPrice": "najlepsza cena (bez wartości)",
+      "notStated": "nie podano"
+    },
+    "credit": {
+      "name": "Kredyt",
+      "within": "W limicie",
+      "over": "Powyżej limitu",
+      "blocked": "Zablokowany",
+      "limit": "Limit",
+      "balance": "Saldo",
+      "orderValue": "Wartość zamówienia"
+    }
   },
   "orchestration": {
     "status": {
@@ -105,7 +186,48 @@
     },
     "findings": "Wyniki dodatkowych sprawdzeń",
     "failed": "Nie udało się przygotować dodatkowych sprawdzeń, więc ich wyniki są niedostępne.",
-    "details": "Szczegóły techniczne"
+    "details": "Szczegóły techniczne",
+    "heading": "Orkiestracja",
+    "notRun": "Orkiestracja nie była jeszcze uruchomiona",
+    "stale": "Analiza zmieniła się po wykonaniu tej orkiestracji; wynik może być nieaktualny.",
+    "rerun": "Uruchom orkiestrator ponownie",
+    "running": "Uruchamianie orkiestratora…",
+    "rerunFailed": "Nie udało się ponownie uruchomić orkiestratora: {{message}}",
+    "consent": {
+      "confirmed": "Zgoda na zamiennik: potwierdzona",
+      "refused": "Zgoda na zamiennik: odmowa",
+      "unconfirmed": "Zgoda na zamiennik: niepotwierdzona"
+    },
+    "consentWarning": "Zgoda klienta na zamiennik nie została potwierdzona",
+    "orchestrated": "Orkiestrację wykonano {{date}}",
+    "result": "Wynik",
+    "signal": {
+      "accepted_before": "wcześniej akceptował zamienniki",
+      "declined_before": "wcześniej odrzucał zamienniki",
+      "mixed": "mieszana historia zamienników",
+      "no_substitute_history": "brak historii zamienników"
+    },
+    "days_one": "{{count}} dzień",
+    "days_few": "{{count}} dni",
+    "days_many": "{{count}} dni",
+    "days_other": "{{count}} dnia",
+    "orders_one": "{{count}} zamówienie",
+    "orders_few": "{{count}} zamówienia",
+    "orders_many": "{{count}} zamówień",
+    "orders_other": "{{count}} zamówienia",
+    "covers": "pokrywa niedobór",
+    "coversNot": "nie pokrywa niedoboru",
+    "delivery": "{{supplier}}: {{quantity}} szt., dostępne {{date}} ({{lead}}), {{deadline}}, {{covers}}",
+    "noSubstitute": "Brak zamiennika w katalogu",
+    "substituteCompat": "{{code}} {{name}} — zgodność: {{compatibility}}",
+    "compatibility": {
+      "full": "pełna",
+      "partial": "częściowa"
+    },
+    "noSubstituteToCheck": "Brak zamiennika do sprawdzenia",
+    "substituteStock": "{{code}}: {{stock}} na stanie, {{covers}}",
+    "noSupplierOffer": "Brak oferty dostawcy",
+    "history": "{{orders}}, zamienniki zaakceptowane: {{accepted}} z {{offered}} zaproponowanych — {{signal}}"
   },
   "recommendation": {
     "band": {
@@ -113,7 +235,40 @@
       "MEDIUM": "Średnia pewność",
       "LOW": "Niska pewność"
     },
-    "failed": "Tym razem nie udało się zarekomendować żadnej opcji."
+    "failed": "Tym razem nie udało się zarekomendować żadnej opcji.",
+    "heading": "Rekomendacja",
+    "blocked": {
+      "notOrchestrated": "Brak rekomendacji: wyjątek nie został jeszcze zorkiestrowany.",
+      "orchestrationFailed": "Brak rekomendacji: orkiestracja zakończyła się błędem.",
+      "orchestrationStale": "Brak rekomendacji: orkiestracja jest nieaktualna; najpierw uruchom orkiestrator ponownie."
+    },
+    "notRun": "Rekomendacja nie była jeszcze uruchomiona",
+    "stale": "Analiza, weryfikacja lub orkiestracja zmieniły się po wykonaniu tej rekomendacji; wynik może być nieaktualny.",
+    "rerun": "Uruchom rekomendację ponownie",
+    "running": "Uruchamianie rekomendacji…",
+    "rerunFailed": "Nie udało się ponownie uruchomić rekomendacji: {{message}}",
+    "polarity": {
+      "positive": "Pozytywne",
+      "risk": "Ryzyka",
+      "info": "Informacje"
+    },
+    "cited": "przywołany",
+    "line": "{{quantity}} × {{code}} {{name}} — {{source}}, dostępne {{date}}, {{price}} PLN/szt.",
+    "lines": "Pozycje",
+    "coverage": "Pokrycie",
+    "fulfilled": "Realizacja",
+    "fulfilledOn": "{{date}}, {{deadline}}",
+    "value": "Wartość",
+    "cost": "Koszt",
+    "margin": "Marża",
+    "why": "Dlaczego ta rekomendacja?",
+    "resultCompleted": "Rekomendacja: gotowa",
+    "resultFailed": "Rekomendacja: błąd — nie wybrano żadnej opcji",
+    "recommended": "Rekomendację wykonano {{date}}",
+    "chosen": "Rekomendowana opcja",
+    "options": "Opcje",
+    "otherOptions": "Pozostałe opcje",
+    "noOptions": "Z wyników orkiestracji nie udało się zbudować żadnej opcji."
   },
   "optionKind": {
     "partial_delivery": "Częściowa dostawa z magazynu",
@@ -123,7 +278,68 @@
   },
   "draft": {
     "fallback": "Dopasowane akapity były niedostępne; szkic używa stałego tekstu zastępczego.",
-    "optionLabel": "{{kind}} · {{value}}"
+    "optionLabel": "{{kind}} · {{value}}",
+    "heading": "Szkic odpowiedzi",
+    "blocked": {
+      "noRecommendation": "Brak szkicu: nie ma jeszcze rekomendacji.",
+      "noChoice": "Brak szkicu: rekomendacja nie ma wybranej opcji.",
+      "recommendationStale": "Brak szkicu: rekomendacja jest nieaktualna; najpierw uruchom rekomendację ponownie."
+    },
+    "notGenerated": "Szkic nie został jeszcze wygenerowany",
+    "stale": "Rekomendacja lub jej werdykt polityki zmieniły się po utworzeniu tego szkicu; szkic może być nieaktualny.",
+    "regenerate": "Wygeneruj szkic ponownie",
+    "drafting": "Tworzenie szkicu…",
+    "regenerateFailed": "Nie udało się ponownie wygenerować szkicu: {{message}}",
+    "decisionGroup": "Decyzja",
+    "supervisorGroup": "Decyzja przełożonego",
+    "editOffer": "Edytuj ofertę",
+    "staleAwaiting": "Przełożony nie może podjąć decyzji w sprawie tego szkicu; uruchom rekomendację ponownie, aby kontynuować.",
+    "waiting": "Czekamy na decyzję przełożonego.",
+    "submittedBySelf": "Ten szkic został przekazany przez Ciebie; zatwierdzić go musi inny przełożony. Możesz go odrzucić, aby zacząć od nowa.",
+    "status": {
+      "draft": "Szkic",
+      "ready_to_send": "Gotowy do wysłania (wysyłka jest symulowana)",
+      "awaiting_supervisor": "Czeka na zatwierdzenie przełożonego",
+      "rejected": "Odrzucony"
+    },
+    "statusLabel": "Status:",
+    "drafted": "Szkic utworzono {{date}}",
+    "editedOffer": "oferta edytowana",
+    "emailPreview": "Podgląd e-maila",
+    "subject": "Temat:",
+    "offerValue": "Wartość oferty",
+    "margin": "Marża",
+    "coverage": "Pokrycie",
+    "verdictTitle": "Obowiązujący werdykt polityki",
+    "verdictTitleEdited": "Obowiązujący werdykt polityki (oferta edytowana)",
+    "verdictLabel": "{{title}}:",
+    "verdictNone": "{{title}}: brak — zatwierdzenie wymaga aktualnego werdyktu polityki.",
+    "form": {
+      "approveDraft": "Zatwierdź szkic",
+      "rejectDraft": "Odrzuć szkic",
+      "approveSupervisor": "Zatwierdź jako przełożony",
+      "rejectSupervisor": "Odrzuć jako przełożony",
+      "reasonRequired": "Uzasadnienie (wymagane)",
+      "commentOptional": "Komentarz (opcjonalny)",
+      "approvalReasonRequired": "Podaj uzasadnienie zatwierdzenia.",
+      "rejectionReasonRequired": "Podaj uzasadnienie odrzucenia.",
+      "confirmApproval": "Potwierdź zatwierdzenie",
+      "confirmRejection": "Potwierdź odrzucenie",
+      "option": "Opcja",
+      "offerLines": "Pozycje oferty",
+      "product": "Produkt",
+      "quantity": "Ilość",
+      "unitPrice": "Cena jednostkowa (PLN)",
+      "listPrice": "katalogowa {{price}}",
+      "quantityOf": "Ilość: {{name}}",
+      "unitPriceOf": "Cena jednostkowa: {{name}}",
+      "quantityWhole": "Ilość musi być liczbą całkowitą.",
+      "unitPriceInvalid": "Cena jednostkowa musi być liczbą z co najwyżej dwoma miejscami po przecinku.",
+      "editReasonRequired": "Podaj uzasadnienie edycji.",
+      "saveEdit": "Zapisz edycję"
+    },
+    "chosenVariant": "Wybrany wariant",
+    "showEmail": "Pokaż całą wiadomość"
   },
   "inspector": {
     "open": "Jak to policzono?",
@@ -208,5 +424,167 @@
       "choice_rejected": "Wybór odrzucony"
     },
     "errorCode": "{{kind}}: {{code}}"
+  },
+  "common": {
+    "genericError": "Coś poszło nie tak",
+    "retry": "Spróbuj ponownie",
+    "cancel": "Anuluj",
+    "saving": "Zapisywanie…",
+    "approve": "Zatwierdź",
+    "reject": "Odrzuć",
+    "coverage": "{{covered}} / {{requested}} szt.",
+    "deadline": {
+      "none": "brak terminu",
+      "meets": "mieści się w terminie",
+      "misses": "przekracza termin"
+    },
+    "source": {
+      "stock": "własny magazyn",
+      "substituteStock": "zamiennik z magazynu",
+      "supplier": "dostawca {{name}}"
+    }
+  },
+  "analysis": {
+    "heading": "Analiza",
+    "loading": "Wczytywanie analizy…",
+    "analyze": "Analizuj zapytanie",
+    "analyzing": "Analizowanie…",
+    "save": "Zapisz poprawki",
+    "reanalyze": "Analizuj ponownie",
+    "reanalyzeAnyway": "Analizuj ponownie mimo to",
+    "correctionsLost": "Poprawki zostaną utracone.",
+    "saved": "Poprawki zapisane",
+    "reloaded": "Analiza zmieniła się po ponownej analizie — wczytano ją na nowo, a niezapisane zmiany odrzucono.",
+    "draftReloaded": "Szkic zmienił się od chwili otwarcia — wczytano go na nowo, a Twoja decyzja nie została zapisana.",
+    "meta": {
+      "analyzed": "Przeanalizowano {{date}}",
+      "analyzedBy": "Przeanalizowano {{date}} przez {{name}}",
+      "corrected": "poprawiono {{date}}",
+      "correctedBy": "poprawiono {{date}} przez {{name}}"
+    },
+    "field": {
+      "customer": "Klient",
+      "product": "Produkt",
+      "quantity": "Ilość",
+      "deadline": "Termin",
+      "substituteAllowed": "Zamiennik dozwolony",
+      "priceExpectation": "Oczekiwana cena"
+    },
+    "uncertain": "Niepewne: {{reason}}",
+    "looksRight": "Wygląda poprawnie",
+    "empty": "(puste)",
+    "priceKind": {
+      "none": "Nie podano",
+      "best_price": "Najlepsza cena",
+      "discount_percent": "Rabat (%)",
+      "target_price": "Cena docelowa"
+    },
+    "substitute": {
+      "yes": "Tak",
+      "no": "Nie",
+      "unknown": "Nie podano"
+    },
+    "discountValue": "Rabat {{value}}%",
+    "targetValue": "Cena docelowa {{value}}",
+    "priceValueLabel": {
+      "discount_percent": "Rabat w procentach",
+      "target_price": "Cena docelowa"
+    },
+    "error": {
+      "quantityWhole": "Ilość musi być liczbą całkowitą.",
+      "priceValueRequired": "Podaj wartość oczekiwanej ceny.",
+      "priceValueNumber": "Wartość ceny musi być liczbą."
+    }
+  },
+  "policy": {
+    "heading": "Polityka",
+    "blocked": {
+      "noRecommendation": "Brak werdyktu polityki: nie ma jeszcze rekomendacji.",
+      "recommendationFailed": "Brak werdyktu polityki: rekomendacja zakończyła się błędem.",
+      "recommendationStale": "Brak werdyktu polityki: rekomendacja jest nieaktualna; najpierw uruchom rekomendację ponownie."
+    },
+    "notEvaluated": "Polityka nie była jeszcze oceniana",
+    "stale": "Rekomendacja zmieniła się po wydaniu tego werdyktu; wynik może być nieaktualny.",
+    "rerun": "Oceń politykę ponownie",
+    "running": "Ocenianie polityki…",
+    "rerunFailed": "Nie udało się ponownie ocenić polityki: {{message}}",
+    "exampleThresholds": "Progi przykładowe",
+    "evaluated": "Oceniono {{date}}",
+    "caption": "Reguły polityki",
+    "column": {
+      "rule": "Reguła",
+      "actual": "Wartość",
+      "threshold": "Próg",
+      "verdict": "Werdykt",
+      "reason": "Uzasadnienie"
+    },
+    "creditThreshold": "{{threshold}} (limit kredytowy)",
+    "outcome": {
+      "no_approval_needed": "Zatwierdzenie niepotrzebne",
+      "requires_supervisor": "Wymaga zatwierdzenia przełożonego"
+    },
+    "rule": {
+      "margin": "Marża",
+      "discount": "Rabat",
+      "order_value": "Wartość zamówienia",
+      "credit": "Kredyt"
+    },
+    "verdict": {
+      "pass": "Spełnione",
+      "fail": "Niespełnione",
+      "not_evaluated": "Nie oceniono"
+    }
+  },
+  "decisionHistory": {
+    "heading": "Historia decyzji",
+    "action": {
+      "edit": "Edytowano",
+      "approve": "Zatwierdzono",
+      "reject": "Odrzucono",
+      "supervisor_approve": "Zatwierdzone przez przełożonego",
+      "supervisor_reject": "Odrzucone przez przełożonego"
+    },
+    "earlier": "wcześniejsza wersja",
+    "by": "Przez",
+    "when": "Kiedy",
+    "reason": "Uzasadnienie",
+    "offer": "Oferta",
+    "policy": "Polityka",
+    "unknownUser": "Nieznany użytkownik",
+    "unavailable": "Szczegóły niedostępne",
+    "noVerdict": "brak werdyktu",
+    "failing": "niespełnione: {{rules}}",
+    "notEvaluated": "nie oceniono: {{rules}}"
+  },
+  "steps": {
+    "label": "Etapy zapytania",
+    "names": {
+      "inquiry": "Zapytanie",
+      "variants": "Warianty",
+      "approval": "Akceptacja",
+      "reply": "Odpowiedź"
+    },
+    "state": {
+      "done": "gotowy",
+      "active": "aktywny",
+      "locked": "zablokowany",
+      "not_needed": "niepotrzebny"
+    },
+    "backMessage": "Wracamy do kroku „{{step}}”: {{reason}}.",
+    "back": {
+      "draftRejected": "szkic odpowiedzi został odrzucony",
+      "analysisReplaced": "zapytanie przeanalizowano ponownie",
+      "outdated": "wyniki są nieaktualne"
+    },
+    "showMail": "Pokaż mail",
+    "mail": "Mail",
+    "actions": "Akcje",
+    "nextVariants": "Dalej: Warianty",
+    "nextApproval": "Dalej: Akceptacja",
+    "findings": "Ustalenia"
+  },
+  "reply": {
+    "heading": "Odpowiedź dla klienta",
+    "decision": "Decyzja"
   }
 }
