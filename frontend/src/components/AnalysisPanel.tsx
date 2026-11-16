@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TFunction } from 'i18next'
 import { Link, useMatch, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -28,11 +28,18 @@ import { ApiError, UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
 import { errorMessage, formatDate } from './format'
-import { DecisionHistory } from './ReplyDraftSection'
+import { inquirySteps, stepBackReason, type StepBackKey, type StepId } from './inquirySteps'
+import InquiryStepper from './InquiryStepper'
+import OrchestrationSection from './OrchestrationSection'
+import PolicySection from './PolicySection'
+import RecommendationSection from './RecommendationSection'
+import ReplyDraftSection, { DecisionHistory } from './ReplyDraftSection'
 import RunInspector from './RunInspector'
 
 type Props = {
   inquiryId: number
+  // The e-mail text: shown in the inquiry step, as a disclosure in the others.
+  body: string
   // The signed-in user: a supervisor decides on drafts awaiting the supervisor.
   user: User
   // Called whenever the API answers 401 (session gone).
@@ -235,7 +242,21 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
   )
 }
 
-function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
+// Why the flow moved back to an earlier step: announced next to the notice, in one status.
+type StepMessage = { step: StepId; reason: StepBackKey }
+
+function MailBody({ body }: { body: string }) {
+  return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
+}
+
+function AnalysisPanel({
+  inquiryId,
+  body,
+  user,
+  onUnauthorized,
+  onOutcome,
+  onDraftStatus,
+}: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
@@ -264,6 +285,27 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
   const [formError, setFormError] = useState<string | null>(null)
   const [notice, setNotice] = useState<NoticeKey | null>(null)
   const [confirming, setConfirming] = useState(false)
+  // The step whose panel is shown; it follows the active step unless the user opens a done one.
+  const [viewed, setViewed] = useState<StepId>('inquiry')
+  const [stepMessage, setStepMessage] = useState<StepMessage | null>(null)
+  // The analysis last shown, to tell where the flow moved when the next one arrives.
+  const lastAnalysis = useRef<Analysis | null>(null)
+
+  // Moving forward selects the new active step; moving back selects it and says why.
+  const follow = useCallback((next: Analysis | null) => {
+    const prev = lastAnalysis.current
+    lastAnalysis.current = next
+    const before = inquirySteps(prev).active
+    const after = inquirySteps(next).active
+    const reason = stepBackReason(prev, next)
+    if (reason !== null) {
+      setStepMessage({ step: after, reason })
+      setViewed(after)
+    } else {
+      setStepMessage(null)
+      if (after !== before) setViewed(after)
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -272,6 +314,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
         setLoad({ kind: 'ok', analysis })
         setDraft(analysis === null ? null : toDraft(analysis.fields))
         setReviewed([])
+        follow(analysis)
         onOutcome?.(inquiryId, outcomeOf(analysis))
         onDraftStatus?.(inquiryId, draftStatusOf(analysis))
       },
@@ -286,12 +329,13 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       },
     )
     return () => controller.abort()
-  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus])
+  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus, follow])
 
   function show(analysis: Analysis) {
     setLoad({ kind: 'ok', analysis })
     setDraft(toDraft(analysis.fields))
     setReviewed([])
+    follow(analysis)
     onOutcome?.(inquiryId, outcomeOf(analysis))
     onDraftStatus?.(inquiryId, draftStatusOf(analysis))
   }
@@ -318,6 +362,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
       return
     }
     setLoad({ kind: 'ok', analysis: next })
+    follow(next)
     onOutcome?.(inquiryId, outcomeOf(next))
     onDraftStatus?.(inquiryId, draftStatusOf(next))
   }
@@ -466,7 +511,8 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
 
   const id = (name: string) => `analysis-${inquiryId}-${name}`
 
-  function renderResult(analysis: Analysis, draft: Draft) {
+  // The corrections form and the check results: the inquiry step.
+  function renderFormAndChecks(analysis: Analysis, draft: Draft) {
     const fieldProps = { analysis, reviewed, onReviewed: setFieldReviewed }
     return (
       <>
@@ -652,31 +698,144 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
 
         <ChecksSection
           inquiryId={inquiryId}
-          user={user}
           analysis={analysis}
           disabled={busy !== null}
           running={busy === 'checking'}
-          orchestrating={busy === 'orchestrating'}
-          recommending={busy === 'recommending'}
-          evaluating={busy === 'evaluating'}
-          drafting={busy === 'drafting'}
-          deciding={busy === 'deciding'}
           onRerun={rerun}
-          onRerunOrchestration={rerunOrchestrator}
-          onRerunRecommendation={rerunRecommender}
-          onRerunPolicy={reevaluatePolicy}
-          onRegenerateDraft={regenerateReplyDraft}
-          onEditDraft={editReplyDraft}
-          onDecideDraft={decideReplyDraft}
-          onSupervisorDecideDraft={decideReplyDraftAsSupervisor}
           onUnauthorized={onUnauthorized}
         />
-
-        {/* Outside the exception: decisions stay visible after a correction removes it. */}
-        {(analysis.decisions ?? []).length > 0 && (
-          <DecisionHistory inquiryId={inquiryId} decisions={analysis.decisions ?? []} />
-        )}
       </>
+    )
+  }
+
+  function renderPanels(analysis: Analysis, draft: Draft, steps: ReturnType<typeof inquirySteps>) {
+    const exception = analysis.checks !== null && analysis.checks.outcome === 'exception'
+    const decisions = analysis.decisions ?? []
+    // Outside the exception: decisions stay visible after a correction removes it.
+    const historyInInquiry =
+      decisions.length > 0 && steps.states.approval !== 'done' && steps.states.approval !== 'active'
+    const mail = (
+      <details className="rounded-md border bg-card px-3 py-2">
+        <summary className="cursor-pointer text-sm font-medium">{t('steps.showMail')}</summary>
+        <div className="mt-2">
+          <MailBody body={body} />
+        </div>
+      </details>
+    )
+    const replyDraft = (
+      <ReplyDraftSection
+        inquiryId={inquiryId}
+        user={user}
+        draft={analysis.draft ?? null}
+        recommendation={analysis.recommendation ?? null}
+        disabled={busy !== null}
+        drafting={busy === 'drafting'}
+        deciding={busy === 'deciding'}
+        onRegenerate={regenerateReplyDraft}
+        onEdit={editReplyDraft}
+        onDecide={decideReplyDraft}
+        onSupervisorDecide={decideReplyDraftAsSupervisor}
+        onUnauthorized={onUnauthorized}
+      />
+    )
+    return {
+      inquiry: (
+        <>
+          <section aria-label={t('steps.mail')}>
+            <MailBody body={body} />
+          </section>
+          {renderFormAndChecks(analysis, draft)}
+          {historyInInquiry && <DecisionHistory inquiryId={inquiryId} decisions={decisions} />}
+        </>
+      ),
+      variants: (
+        <>
+          {mail}
+          {exception && (
+            <OrchestrationSection
+              inquiryId={inquiryId}
+              orchestration={analysis.orchestration}
+              disabled={busy !== null}
+              running={busy === 'orchestrating'}
+              onRerun={rerunOrchestrator}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+          {exception && (
+            <RecommendationSection
+              inquiryId={inquiryId}
+              recommendation={analysis.recommendation ?? null}
+              orchestration={analysis.orchestration}
+              disabled={busy !== null}
+              running={busy === 'recommending'}
+              onRerun={rerunRecommender}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+        </>
+      ),
+      approval: (
+        <>
+          {mail}
+          {exception && (
+            <PolicySection
+              inquiryId={inquiryId}
+              policy={analysis.policy ?? null}
+              recommendation={analysis.recommendation ?? null}
+              disabled={busy !== null}
+              running={busy === 'evaluating'}
+              onRerun={reevaluatePolicy}
+              onUnauthorized={onUnauthorized}
+            />
+          )}
+          {exception && replyDraft}
+          {decisions.length > 0 && <DecisionHistory inquiryId={inquiryId} decisions={decisions} />}
+        </>
+      ),
+      reply: (
+        <>
+          {mail}
+          {exception && replyDraft}
+        </>
+      ),
+    } satisfies Record<StepId, ReactNode>
+  }
+
+  function renderSteps() {
+    const steps = inquirySteps(analysis)
+    // A locked or not needed step cannot be viewed; the active step stands in for it.
+    const state = steps.states[viewed]
+    const shown = state === 'locked' || state === 'not_needed' ? steps.active : viewed
+    const panels =
+      analysis !== null && draft !== null
+        ? renderPanels(analysis, draft, steps)
+        : {
+            inquiry: (
+              <>
+                <section aria-label={t('steps.mail')}>
+                  <MailBody body={body} />
+                </section>
+                <div className="analysis__actions">
+                  <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
+                    {busy === 'analyzing' ? t('analysis.analyzing') : t('analysis.analyze')}
+                  </Button>
+                </div>
+              </>
+            ),
+            variants: null,
+            approval: null,
+            reply: null,
+          }
+    return (
+      <InquiryStepper
+        steps={steps}
+        viewed={shown}
+        onView={(step) => {
+          setViewed(step)
+          setStepMessage(null)
+        }}
+        panels={panels}
+      />
     )
   }
 
@@ -707,10 +866,18 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
           </Button>
         </div>
       )}
-      {notice && (
-        <p className="analysis__notice" role="status">
-          {t(notice)}
-        </p>
+      {(notice || stepMessage) && (
+        <div className="analysis__notice" role="status">
+          {notice && <p>{t(notice)}</p>}
+          {stepMessage && (
+            <p>
+              {t('steps.backMessage', {
+                step: t(`steps.names.${stepMessage.step}`),
+                reason: t(stepMessage.reason),
+              })}
+            </p>
+          )}
+        </div>
       )}
       {analyzeError && (
         <div role="alert" className="analysis__problem">
@@ -726,15 +893,7 @@ function AnalysisPanel({ inquiryId, user, onUnauthorized, onOutcome, onDraftStat
         </div>
       )}
 
-      {load.kind === 'ok' && analysis === null && (
-        <div className="analysis__actions">
-          <Button type="button" onClick={runAnalysis} disabled={busy !== null}>
-            {busy === 'analyzing' ? t('analysis.analyzing') : t('analysis.analyze')}
-          </Button>
-        </div>
-      )}
-
-      {analysis !== null && draft !== null && renderResult(analysis, draft)}
+      {load.kind === 'ok' && renderSteps()}
 
       <RunInspector
         analysis={analysis}

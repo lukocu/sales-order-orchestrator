@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   rerunChecks,
-  rerunOrchestration,
   type Analysis,
   type ChecksView,
   type ParsedFields,
@@ -11,7 +10,6 @@ import {
   type StepSummary,
 } from '../api/analysis'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
-import { SALES } from '../test/userFixtures'
 import ChecksSection from './ChecksSection'
 
 const CHECKS_PATH = '/api/inquiries/7/checks'
@@ -199,37 +197,24 @@ function analysis(checks: ChecksView | null, fields: Partial<ParsedFields> = {})
 // Holds the analysis and the re-run state like AnalysisPanel does, so a re-run result is shown.
 function Harness({ initial, onUnauthorized }: { initial: Analysis; onUnauthorized: () => void }) {
   const [current, setCurrent] = useState(initial)
-  const [busy, setBusy] = useState<'checking' | 'orchestrating' | null>(null)
+  const [running, setRunning] = useState(false)
 
-  async function rerun(kind: 'checking' | 'orchestrating') {
-    setBusy(kind)
+  async function rerun() {
+    setRunning(true)
     try {
-      setCurrent(await (kind === 'checking' ? rerunChecks(7) : rerunOrchestration(7)))
+      setCurrent(await rerunChecks(7))
     } finally {
-      setBusy(null)
+      setRunning(false)
     }
   }
 
   return (
     <ChecksSection
       inquiryId={7}
-      user={SALES}
       analysis={current}
-      disabled={busy !== null}
-      running={busy === 'checking'}
-      orchestrating={busy === 'orchestrating'}
-      recommending={false}
-      evaluating={false}
-      drafting={false}
-      deciding={false}
-      onRerun={() => rerun('checking')}
-      onRerunOrchestration={() => rerun('orchestrating')}
-      onRerunRecommendation={async () => {}}
-      onRerunPolicy={async () => {}}
-      onRegenerateDraft={async () => {}}
-      onEditDraft={async () => {}}
-      onDecideDraft={async () => {}}
-      onSupervisorDecideDraft={async () => {}}
+      disabled={running}
+      running={running}
+      onRerun={rerun}
       onUnauthorized={onUnauthorized}
     />
   )
@@ -263,35 +248,15 @@ describe('ChecksSection', () => {
     expect(screen.queryByRole('region', { name: 'Orchestration' })).not.toBeInTheDocument()
   })
 
-  it('shows the orchestration of an exception below its banner', () => {
+  it('renders only the checks of an exception, not the sections of the later steps', () => {
     renderSection({ ...analysis(EXCEPTION), orchestration: ACME_ORCHESTRATION })
 
-    const orchestration = screen.getByRole('region', { name: 'Orchestration' })
-    expect(within(orchestration).getByText('Additional checks: completed')).toBeInTheDocument()
-    expect(within(orchestration).getByText('Compatible substitutes')).toBeInTheDocument()
-    expect(within(orchestration).queryByText(/Stage \d/)).not.toBeInTheDocument()
-    expect(within(orchestration).queryByText(/-agent\b/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Orchestration not run yet')).not.toBeInTheDocument()
-  })
-
-  it('blocks every button while the orchestrator re-runs', async () => {
-    let answer: (response: Response) => void = () => {}
-    const fetchMock = vi.fn(async () => new Promise<Response>((resolve) => (answer = resolve)))
-    vi.stubGlobal('fetch', fetchMock)
-    renderSection(analysis({ ...EXCEPTION, stale: true }))
-
-    fireEvent.click(screen.getByRole('button', { name: 'Re-run orchestrator' }))
-
-    expect(await screen.findByRole('button', { name: 'Running orchestrator…' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Re-run checks' })).toBeDisabled()
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/inquiries/7/orchestration',
-      expect.objectContaining({ method: 'POST' }),
-    )
-    answer(json(200, { ...analysis(EXCEPTION), orchestration: ACME_ORCHESTRATION }))
-
-    expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Re-run checks' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Checks' })).toBeInTheDocument()
+    for (const name of ['Orchestration', 'Recommendation', 'Policy', 'Reply draft']) {
+      expect(screen.queryByRole('region', { name })).not.toBeInTheDocument()
+    }
+    expect(screen.queryByRole('button', { name: 'Re-run orchestrator' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Additional checks: completed')).not.toBeInTheDocument()
   })
 
   it('shows an insufficient-stock exception with the substitute consent', () => {
@@ -300,11 +265,6 @@ describe('ChecksSection', () => {
     expect(
       screen.getByText('Exception: insufficient stock — requested 80, available 50 (short 30)'),
     ).toBeInTheDocument()
-    const orchestration = screen.getByRole('region', { name: 'Orchestration' })
-    expect(within(orchestration).getByText('Orchestration not run yet')).toBeInTheDocument()
-    expect(
-      within(orchestration).getByRole('button', { name: 'Re-run orchestrator' }),
-    ).toBeEnabled()
     expect(screen.getByText('Substitute: the customer accepts one')).toBeInTheDocument()
     expect(checkItem('Customer')).toHaveTextContent('Matched')
     expect(checkItem('Customer')).toHaveTextContent('ACME')

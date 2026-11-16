@@ -555,5 +555,28 @@
     "noVerdict": "brak werdyktu",
     "failing": "niespełnione: {{rules}}",
     "notEvaluated": "nie oceniono: {{rules}}"
+  },
+  "steps": {
+    "label": "Etapy zapytania",
+    "names": {
+      "inquiry": "Zapytanie",
+      "variants": "Warianty",
+      "approval": "Akceptacja",
+      "reply": "Odpowiedź"
+    },
+    "state": {
+      "done": "gotowy",
+      "active": "aktywny",
+      "locked": "zablokowany",
+      "not_needed": "niepotrzebny"
+    },
+    "backMessage": "Wracamy do kroku „{{step}}”: {{reason}}.",
+    "back": {
+      "draftRejected": "szkic odpowiedzi został odrzucony",
+      "analysisReplaced": "zapytanie przeanalizowano ponownie",
+      "outdated": "wyniki są nieaktualne"
+    },
+    "showMail": "Pokaż mail",
+    "mail": "Mail"
   }
 }

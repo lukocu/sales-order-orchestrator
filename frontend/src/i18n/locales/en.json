@@ -555,5 +555,28 @@
     "noVerdict": "no verdict",
     "failing": "failing: {{rules}}",
     "notEvaluated": "not evaluated: {{rules}}"
+  },
+  "steps": {
+    "label": "Inquiry steps",
+    "names": {
+      "inquiry": "Inquiry",
+      "variants": "Variants",
+      "approval": "Approval",
+      "reply": "Reply"
+    },
+    "state": {
+      "done": "done",
+      "active": "active",
+      "locked": "locked",
+      "not_needed": "not needed"
+    },
+    "backMessage": "Back to {{step}}: {{reason}}.",
+    "back": {
+      "draftRejected": "the draft was rejected",
+      "analysisReplaced": "the request was analysed again",
+      "outdated": "the results are out of date"
+    },
+    "showMail": "Show e-mail",
+    "mail": "E-mail"
   }
 }

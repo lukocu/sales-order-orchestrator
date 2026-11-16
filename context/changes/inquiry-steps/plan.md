@@ -336,28 +336,28 @@ No data or API change. Users with an open inquiry get the stepper on reload.
 
 #### Automated
 
-- [x] 1.1 Lint, typecheck, tests and build pass
-- [x] 1.2 Locale key parity and non-empty values pass
-- [x] 1.3 No duplicated policy maps remain
-- [x] 1.4 PolicySection.tsx uses translations
+- [x] 1.1 Lint, typecheck, tests and build pass — 01f103f
+- [x] 1.2 Locale key parity and non-empty values pass — 01f103f
+- [x] 1.3 No duplicated policy maps remain — 01f103f
+- [x] 1.4 PolicySection.tsx uses translations — 01f103f
 
 #### Manual
 
-- [x] 1.5 Inquiry view reads fully in Polish on PL and as before on EN
+- [x] 1.5 Inquiry view reads fully in Polish on PL and as before on EN — 01f103f
 
 ### Phase 2: Model kroków i stepper
 
 #### Automated
 
-- [ ] 2.1 Lint, typecheck, tests and build pass
-- [ ] 2.2 Step derivation tests pass
-- [ ] 2.3 Panel tests cover active step, locked steps, done-step click, step-back message
-- [ ] 2.4 ChecksSection no longer imports the exception sections
+- [x] 2.1 Lint, typecheck, tests and build pass
+- [x] 2.2 Step derivation tests pass
+- [x] 2.3 Panel tests cover active step, locked steps, done-step click, step-back message
+- [x] 2.4 ChecksSection no longer imports the exception sections
 
 #### Manual
 
-- [ ] 2.5 Arrow-key navigation skips disabled steps with visible focus
-- [ ] 2.6 Rejecting a draft returns to Akceptacja with a role=status message
+- [x] 2.5 Arrow-key navigation skips disabled steps with visible focus
+- [x] 2.6 Rejecting a draft returns to Akceptacja with a role=status message
 
 ### Phase 3: Kroki Zapytanie i Warianty
 

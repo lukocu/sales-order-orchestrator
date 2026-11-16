@@ -10,63 +10,21 @@ import {
   type DiscountCheck,
   type NeedsInputReason,
   type PriceCheck,
-  type ReplyDraftEdit,
   type StockCheck,
 } from '../api/analysis'
-import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
 import { Button } from '@/components/ui/button'
 import { errorMessage, formatDate, formatPercent, formatPln } from './format'
-import OrchestrationSection from './OrchestrationSection'
-import PolicySection from './PolicySection'
-import RecommendationSection from './RecommendationSection'
-import ReplyDraftSection from './ReplyDraftSection'
 
 type Props = {
   inquiryId: number
-  // The signed-in user, for the supervisor's decision on the reply draft.
-  user: User
   analysis: Analysis
-  // True while the panel analyzes, saves or re-runs the checks, the orchestrator, the
-  // recommendation or the policy, regenerates the draft or saves a decision on it.
+  // True while the panel analyzes, saves or re-runs anything.
   disabled: boolean
   // True while the panel re-runs the checks.
   running: boolean
-  // True while the panel re-runs the orchestrator.
-  orchestrating: boolean
-  // True while the panel re-runs the recommendation.
-  recommending: boolean
-  // True while the panel re-runs the policy.
-  evaluating: boolean
-  // True while the panel regenerates the reply draft.
-  drafting: boolean
-  // True while the panel saves an edit of the reply draft or a decision on it.
-  deciding: boolean
   // Re-runs the checks and shows the result; rejects when the re-run failed.
   onRerun: () => Promise<void>
-  // Re-runs the orchestrator and shows the result; rejects when the re-run failed.
-  onRerunOrchestration: () => Promise<void>
-  // Re-runs the recommendation and shows the result; rejects when the re-run failed.
-  onRerunRecommendation: () => Promise<void>
-  // Re-runs the policy and shows the result; rejects when the re-run failed.
-  onRerunPolicy: () => Promise<void>
-  // Regenerates the reply draft and shows the result; rejects when it failed.
-  onRegenerateDraft: () => Promise<void>
-  // Saves an edit of the reply draft read at `updatedAt`; rejects when it failed.
-  onEditDraft: (updatedAt: string, edit: ReplyDraftEdit) => Promise<void>
-  // Approves or rejects the reply draft read at `updatedAt`; rejects when it failed.
-  onDecideDraft: (
-    updatedAt: string,
-    action: 'approve' | 'reject',
-    reason: string | null,
-  ) => Promise<void>
-  // Approves or rejects, as the supervisor, the reply draft read at `updatedAt`; rejects when
-  // it failed.
-  onSupervisorDecideDraft: (
-    updatedAt: string,
-    action: 'approve' | 'reject',
-    reason: string,
-  ) => Promise<void>
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
 }
@@ -306,23 +264,10 @@ function CreditItem({ check }: { check: CreditCheck }) {
 
 function ChecksSection({
   inquiryId,
-  user,
   analysis,
   disabled,
   running,
-  orchestrating,
-  recommending,
-  evaluating,
-  drafting,
-  deciding,
   onRerun,
-  onRerunOrchestration,
-  onRerunRecommendation,
-  onRerunPolicy,
-  onRegenerateDraft,
-  onEditDraft,
-  onDecideDraft,
-  onSupervisorDecideDraft,
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
@@ -368,54 +313,6 @@ function ChecksSection({
       {checks !== null && (
         <>
           <Banner checks={checks} analysis={analysis} />
-          {checks.outcome === 'exception' && (
-            <OrchestrationSection
-              inquiryId={inquiryId}
-              orchestration={analysis.orchestration}
-              disabled={disabled}
-              running={orchestrating}
-              onRerun={onRerunOrchestration}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
-          {checks.outcome === 'exception' && (
-            <RecommendationSection
-              inquiryId={inquiryId}
-              recommendation={analysis.recommendation ?? null}
-              orchestration={analysis.orchestration}
-              disabled={disabled}
-              running={recommending}
-              onRerun={onRerunRecommendation}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
-          {checks.outcome === 'exception' && (
-            <PolicySection
-              inquiryId={inquiryId}
-              policy={analysis.policy ?? null}
-              recommendation={analysis.recommendation ?? null}
-              disabled={disabled}
-              running={evaluating}
-              onRerun={onRerunPolicy}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
-          {checks.outcome === 'exception' && (
-            <ReplyDraftSection
-              inquiryId={inquiryId}
-              user={user}
-              draft={analysis.draft ?? null}
-              recommendation={analysis.recommendation ?? null}
-              disabled={disabled}
-              drafting={drafting}
-              deciding={deciding}
-              onRegenerate={onRegenerateDraft}
-              onEdit={onEditDraft}
-              onDecide={onDecideDraft}
-              onSupervisorDecide={onSupervisorDecideDraft}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
           {checks.uncertain_inputs.length > 0 && (
             <p className="checks__uncertain">
               {t('checks.uncertainBasis', {

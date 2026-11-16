@@ -435,4 +435,21 @@ describe('Inbox', () => {
       await screen.findByRole('link', { name: /Zamówienie ABC-100/ }),
     ).toHaveAttribute('aria-current', 'page')
   })
+
+  it('keeps the e-mail in the inquiry step and the detail area out of a live region', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'GET /api/inquiries/3': () => json(200, DELTA),
+      'GET /api/inquiries/3/analysis': () => json(200, null),
+    })
+
+    await renderInbox(SUPERVISOR, '/inquiries/3')
+
+    const detail = await screen.findByRole('region', { name: 'Inquiry' })
+    const body = await within(detail).findByText('Prosimy o 500 szt. ABC-100.')
+    expect(detail).not.toHaveAttribute('aria-live')
+    expect(within(detail).getByRole('heading', { name: 'Zamówienie ABC-100' })).toBeInTheDocument()
+    expect(within(detail).getByRole('tabpanel')).toContainElement(body)
+    expect(within(detail).getAllByText('Prosimy o 500 szt. ABC-100.')).toHaveLength(1)
+  })
 })
