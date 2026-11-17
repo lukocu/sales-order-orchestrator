@@ -98,7 +98,14 @@ const SUBSTITUTE_KEY = {
 } as const satisfies Record<Substitute, string>
 
 // Notices are kept as keys and translated at render time, so they follow a language switch.
-type NoticeKey = 'analysis.saved' | 'analysis.reloaded' | 'analysis.draftReloaded'
+type NoticeKey =
+  | 'analysis.saved'
+  | 'analysis.reloaded'
+  | 'analysis.draftReloaded'
+  | 'decision.sentToSupervisor'
+  | 'decision.approved'
+  | 'decision.edited'
+  | 'decision.supervisorApproved'
 
 // The draft was written since it was read (another decision, a regenerated draft or a new
 // recommendation); every other 409 of a decision is shown at its form.
@@ -419,11 +426,19 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
 
   // A draft written meanwhile reloads the analysis, like a replaced analysis on save; other
   // errors are left to ReplyDraftSection, which shows them at its form.
-  async function decideOnReplyDraft(send: () => Promise<Analysis>) {
+  // After a decision the notice says what happened, unless the step-back message already
+  // announces the transition (a rejection).
+  async function decideOnReplyDraft(
+    send: () => Promise<Analysis>,
+    noticeFor: (next: Analysis) => NoticeKey | null,
+  ) {
     setBusy('deciding')
     setNotice(null)
     try {
-      showChecked(await send())
+      const next = await send()
+      const announced = stepBackReason(lastAnalysis.current, next) !== null
+      showChecked(next)
+      if (!announced) setNotice(noticeFor(next))
     } catch (error) {
       if (!draftChanged(error)) throw error
       setNotice('analysis.draftReloaded')
@@ -434,7 +449,10 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
   }
 
   function editReplyDraft(updatedAt: string, edit: ReplyDraftEdit) {
-    return decideOnReplyDraft(() => editDraft(inquiryId, updatedAt, edit))
+    return decideOnReplyDraft(
+      () => editDraft(inquiryId, updatedAt, edit),
+      () => 'decision.edited',
+    )
   }
 
   function decideReplyDraft(
@@ -442,7 +460,15 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
     action: 'approve' | 'reject',
     reason: string | null,
   ) {
-    return decideOnReplyDraft(() => decideDraft(inquiryId, updatedAt, action, reason))
+    return decideOnReplyDraft(
+      () => decideDraft(inquiryId, updatedAt, action, reason),
+      (next) => {
+        if (action !== 'approve') return null
+        const status = next.draft?.status
+        if (status === 'awaiting_supervisor') return 'decision.sentToSupervisor'
+        return status === 'ready_to_send' ? 'decision.approved' : null
+      },
+    )
   }
 
   function decideReplyDraftAsSupervisor(
@@ -450,7 +476,13 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
     action: 'approve' | 'reject',
     reason: string,
   ) {
-    return decideOnReplyDraft(() => decideAsSupervisor(inquiryId, updatedAt, action, reason))
+    return decideOnReplyDraft(
+      () => decideAsSupervisor(inquiryId, updatedAt, action, reason),
+      (next) =>
+        action === 'approve' && next.draft?.status === 'ready_to_send'
+          ? 'decision.supervisorApproved'
+          : null,
+    )
   }
 
   async function runAnalysis() {
@@ -916,19 +948,18 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
           </Button>
         </div>
       )}
-      {(notice || stepMessage) && (
-        <div className="analysis__notice" role="status">
-          {notice && <p>{t(notice)}</p>}
-          {stepMessage && (
-            <p>
-              {t('steps.backMessage', {
-                step: t(`steps.names.${stepMessage.step}`),
-                reason: t(stepMessage.reason),
-              })}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Always mounted, so a message that is set later is announced; empty it takes no room. */}
+      <div className="analysis__notice empty:sr-only" role="status">
+        {notice && <p>{t(notice)}</p>}
+        {stepMessage && (
+          <p>
+            {t('steps.backMessage', {
+              step: t(`steps.names.${stepMessage.step}`),
+              reason: t(stepMessage.reason),
+            })}
+          </p>
+        )}
+      </div>
       {analyzeError && (
         <div role="alert" className="analysis__problem">
           <p className="error">{analyzeError}</p>

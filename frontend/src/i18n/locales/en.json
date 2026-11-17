@@ -323,6 +323,8 @@
     "decisionGroup": "Decision",
     "supervisorGroup": "Supervisor decision",
     "editOffer": "Edit offer",
+    "sendToSupervisor": "Send to supervisor",
+    "sendToSupervisorHint": "The policy requires supervisor approval — the offer goes to the supervisor for approval.",
     "staleAwaiting": "No supervisor decision is possible on this draft; re-run the recommendation to continue.",
     "waiting": "Waiting for a supervisor decision.",
     "submittedBySelf": "You submitted this draft; another supervisor must approve it. You can reject it to start over.",
@@ -346,6 +348,8 @@
     "verdictNone": "{{title}}: none — approval needs a current policy verdict.",
     "form": {
       "approveDraft": "Approve draft",
+      "sendToSupervisorDraft": "Send draft to supervisor",
+      "confirmSendToSupervisor": "Confirm sending to supervisor",
       "rejectDraft": "Reject draft",
       "approveSupervisor": "Approve as supervisor",
       "rejectSupervisor": "Reject as supervisor",
@@ -473,6 +477,12 @@
       "substituteStock": "substitute from stock",
       "supplier": "supplier {{name}}"
     }
+  },
+  "decision": {
+    "sentToSupervisor": "Sent to supervisor.",
+    "approved": "Approved — ready to send (sending is simulated).",
+    "edited": "Offer changes saved.",
+    "supervisorApproved": "Approved by the supervisor — ready to send."
   },
   "analysis": {
     "heading": "Analysis",

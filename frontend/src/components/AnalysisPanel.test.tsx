@@ -9,8 +9,11 @@ import { ACME_RECOMMENDATION } from '../test/recommendationFixtures'
 import {
   ACME_APPROVED,
   ACME_DRAFT,
+  ACME_EDITED,
+  ACME_EDITED_DRAFT,
   ACME_REJECTED_EARLIER,
   DELTA_AWAITING,
+  DELTA_DRAFT,
   DELTA_SUBMITTED,
 } from '../test/replyDraftFixtures'
 import { renderWithRouter } from '../test/renderWithRouter'
@@ -674,12 +677,74 @@ describe('AnalysisPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'The draft changed since it was opened — reloaded, your decision was not saved.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'The draft changed since it was opened — reloaded, your decision was not saved.',
+      ),
     )
     expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(fetchMock.mock.calls.filter(([path]) => path === PATH)).toHaveLength(2)
+  })
+
+  it('keeps the status region mounted and empty until a decision is made', async () => {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)) })
+
+    renderPanel()
+    await screen.findByRole('region', { name: 'Reply draft' })
+
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  it.each<[string, Partial<Analysis>, string, string]>([
+    [
+      'sending to the supervisor',
+      { draft: { ...DELTA_DRAFT, status: 'awaiting_supervisor' } },
+      'Send to supervisor',
+      'Sent to supervisor.',
+    ],
+    [
+      'approving',
+      { draft: { ...ACME_DRAFT, status: 'ready_to_send' } },
+      'Approve',
+      'Approved — ready to send (sending is simulated).',
+    ],
+  ])('announces %s after the decision', async (_name, after, open, message) => {
+    const before = open === 'Approve' ? DRAFTED : { ...DRAFTED, draft: DELTA_DRAFT }
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(before)),
+      [`POST ${DECISION_PATH}`]: () => json(200, analysis({ ...before, ...after })),
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: open }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: open === 'Approve' ? 'Confirm approval' : 'Confirm sending to supervisor',
+      }),
+    )
+
+    await vi.waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(message))
+    expect(screen.getByRole('status').querySelectorAll('p')).toHaveLength(1)
+  })
+
+  it('announces the saved offer after an edit', async () => {
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)),
+      [`PUT /api/inquiries/7/draft`]: () =>
+        json(200, analysis({ ...DRAFTED, draft: ACME_EDITED_DRAFT, decisions: [ACME_EDITED] })),
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit offer' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), {
+      target: { value: 'Negocjacje cenowe' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save edit' }))
+
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Offer changes saved.'),
+    )
   })
 
   it('keeps the decision history visible after a correction removes the exception', async () => {
@@ -772,6 +837,9 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
     expect(await screen.findByText('Ready to send (sending is simulated)')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Approved by the supervisor — ready to send.',
+    )
     await openStep(/Approval/)
     expect(await screen.findAllByText('Ready to send (sending is simulated)')).toHaveLength(2)
     expect(screen.getByRole('region', { name: 'Decision history' })).toHaveTextContent(
@@ -806,8 +874,10 @@ describe('AnalysisPanel', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'The draft changed since it was opened — reloaded, your decision was not saved.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'The draft changed since it was opened — reloaded, your decision was not saved.',
+      ),
     )
     expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
     expect(fetchMock.mock.calls.filter(([path]) => path === PATH)).toHaveLength(2)
@@ -988,7 +1058,7 @@ describe('AnalysisPanel steps', () => {
     )
     expect(screen.getByRole('region', { name: 'Recommendation' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Reply draft' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('does not open a locked step', async () => {
@@ -1020,7 +1090,7 @@ describe('AnalysisPanel steps', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Re-run orchestrator' }))
 
     expect(await screen.findByRole('tab', { name: /Approval/, selected: true })).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('returns to Approval with one status message after the draft is rejected', async () => {
@@ -1042,17 +1112,20 @@ describe('AnalysisPanel steps', () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Za drogo' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Back to Approval: the draft was rejected.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Back to Approval: the draft was rejected.',
+      ),
     )
     expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getByRole('status').querySelectorAll('p')).toHaveLength(1)
     expect(tab(/Approval/)).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
 
     // The user's own click on a done step shows no further message.
     await openStep(/Variants/)
     await screen.findByRole('region', { name: 'Recommendation' })
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('goes back to Inquiry with a message when the request is analysed again', async () => {
@@ -1066,8 +1139,10 @@ describe('AnalysisPanel steps', () => {
     await openStep(/Inquiry/)
     fireEvent.click(await screen.findByRole('button', { name: 'Re-analyze' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Back to Inquiry: the request was analysed again.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Back to Inquiry: the request was analysed again.',
+      ),
     )
     expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(tab(/Inquiry/)).toHaveAttribute('aria-selected', 'true')

@@ -323,6 +323,8 @@
     "decisionGroup": "Decyzja",
     "supervisorGroup": "Decyzja przełożonego",
     "editOffer": "Edytuj ofertę",
+    "sendToSupervisor": "Wyślij do przełożonego",
+    "sendToSupervisorHint": "Polityka wymaga akceptacji przełożonego — oferta trafi do niego do zatwierdzenia.",
     "staleAwaiting": "Przełożony nie może podjąć decyzji w sprawie tego szkicu; uruchom rekomendację ponownie, aby kontynuować.",
     "waiting": "Czekamy na decyzję przełożonego.",
     "submittedBySelf": "Ten szkic został przekazany przez Ciebie; zatwierdzić go musi inny przełożony. Możesz go odrzucić, aby zacząć od nowa.",
@@ -346,6 +348,8 @@
     "verdictNone": "{{title}}: brak — zatwierdzenie wymaga aktualnego werdyktu polityki.",
     "form": {
       "approveDraft": "Zatwierdź szkic",
+      "sendToSupervisorDraft": "Wyślij szkic do przełożonego",
+      "confirmSendToSupervisor": "Potwierdź wysłanie do przełożonego",
       "rejectDraft": "Odrzuć szkic",
       "approveSupervisor": "Zatwierdź jako przełożony",
       "rejectSupervisor": "Odrzuć jako przełożony",
@@ -473,6 +477,12 @@
       "substituteStock": "zamiennik z magazynu",
       "supplier": "dostawca {{name}}"
     }
+  },
+  "decision": {
+    "sentToSupervisor": "Wysłano do przełożonego.",
+    "approved": "Zatwierdzono — gotowe do wysłania (wysyłka jest symulowana).",
+    "edited": "Zapisano zmiany oferty.",
+    "supervisorApproved": "Przełożony zatwierdził — gotowe do wysłania."
   },
   "analysis": {
     "heading": "Analiza",

@@ -261,31 +261,31 @@ None. No schema or JSONB change; `analyzed` is derived at read time (lessons.md 
 
 #### Automated
 
-- [x] 1.1 Backend list API tests pass
-- [x] 1.2 Backend lint, format and types pass
-- [x] 1.3 Status rule tests pass
-- [x] 1.4 Frontend tests pass
-- [x] 1.5 Type checking passes
-- [x] 1.6 Lint passes
-- [x] 1.7 AGENTS.md colour scan prints nothing
+- [x] 1.1 Backend list API tests pass — 1391cf8
+- [x] 1.2 Backend lint, format and types pass — 1391cf8
+- [x] 1.3 Status rule tests pass — 1391cf8
+- [x] 1.4 Frontend tests pass — 1391cf8
+- [x] 1.5 Type checking passes — 1391cf8
+- [x] 1.6 Lint passes — 1391cf8
+- [x] 1.7 AGENTS.md colour scan prints nothing — 1391cf8
 
 #### Manual
 
-- [x] 1.8 Kitchen sink PL/EN: one status badge per row, matching header badge, legible in light and dark
+- [x] 1.8 Kitchen sink PL/EN: one status badge per row, matching header badge, legible in light and dark — 1391cf8
 
 ### Phase 2: Honest decision label and a message after every decision
 
 #### Automated
 
-- [ ] 2.1 Decision tests pass
-- [ ] 2.2 Frontend tests pass
-- [ ] 2.3 Type checking passes
-- [ ] 2.4 Lint passes
-- [ ] 2.5 AGENTS.md colour scan prints nothing
+- [x] 2.1 Decision tests pass
+- [x] 2.2 Frontend tests pass
+- [x] 2.3 Type checking passes
+- [x] 2.4 Lint passes
+- [x] 2.5 AGENTS.md colour scan prints nothing
 
 #### Manual
 
-- [ ] 2.6 Kitchen sink PL/EN: "Wyślij do przełożonego" with hint for requires_supervisor, "Zatwierdź" otherwise
+- [x] 2.6 Kitchen sink PL/EN: "Wyślij do przełożonego" with hint for requires_supervisor, "Zatwierdź" otherwise
 - [ ] 2.7 Real app: approving a requires_supervisor draft shows the message and updates the badge on list and header
 
 ### Phase 3: Focus while signing out (F6)

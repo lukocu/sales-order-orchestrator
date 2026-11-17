@@ -119,6 +119,9 @@ function ReplyDraftSection({
   const asSupervisor = supervisorActions(draft, user)
   const supervisorMode =
     mode === 'supervisor-approve' ? 'approve' : mode === 'supervisor-reject' ? 'reject' : null
+  // The salesperson's approval goes to the supervisor when the verdict in force requires one;
+  // without a verdict the label stays "Approve" (the API refuses it).
+  const toSupervisor = draft?.policy?.outcome === 'requires_supervisor'
   // The e-mail is the result of the reply step once the draft is ready to send.
   const showEmail = draft !== null && (draft.status !== 'ready_to_send' || draft.stale)
 
@@ -162,6 +165,9 @@ function ReplyDraftSection({
         </div>
       )}
 
+      {draft !== null && canDecide && mode === null && toSupervisor && (
+        <p className="checks__line">{t('draft.sendToSupervisorHint')}</p>
+      )}
       {draft !== null && canDecide && mode === null && (
         <div className="sticky bottom-0 z-10 border-t border-border bg-background py-3 analysis__actions" role="group" aria-label={t('draft.decisionGroup')}>
           <Button
@@ -170,7 +176,7 @@ function ReplyDraftSection({
             onClick={() => setMode('approve')}
             disabled={disabled}
           >
-            {t('common.approve')}
+            {toSupervisor ? t('draft.sendToSupervisor') : t('common.approve')}
           </Button>
           <Button
             type="button"
@@ -194,6 +200,7 @@ function ReplyDraftSection({
         <DecisionForm
           key={`${mode}-${draft.updated_at}`}
           action={mode}
+          toSupervisor={toSupervisor}
           disabled={disabled}
           saving={deciding}
           onSubmit={(reason) => onDecide(draft.updated_at, mode, reason)}
@@ -357,10 +364,15 @@ async function send<T>(
 // Approve with an optional comment, or reject with a required reason; the supervisor needs a
 // reason for both.
 function DecisionForm(
-  props: FormProps<string | null> & { action: Decision; supervisor?: boolean },
+  props: FormProps<string | null> & {
+    action: Decision
+    supervisor?: boolean
+    // The salesperson's approval names the supervisor as the one who decides next.
+    toSupervisor?: boolean
+  },
 ) {
   const { t } = useTranslation()
-  const { action, supervisor = false, disabled, saving, onDone } = props
+  const { action, supervisor = false, toSupervisor = false, disabled, saving, onDone } = props
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const approve = action === 'approve'
@@ -388,7 +400,9 @@ function DecisionForm(
             ? t('draft.form.approveSupervisor')
             : t('draft.form.rejectSupervisor')
           : approve
-            ? t('draft.form.approveDraft')
+            ? toSupervisor
+              ? t('draft.form.sendToSupervisorDraft')
+              : t('draft.form.approveDraft')
             : t('draft.form.rejectDraft')
       }
       onSubmit={(event) => {
@@ -416,7 +430,9 @@ function DecisionForm(
           {saving
             ? t('common.saving')
             : approve
-              ? t('draft.form.confirmApproval')
+              ? toSupervisor && !supervisor
+                ? t('draft.form.confirmSendToSupervisor')
+                : t('draft.form.confirmApproval')
               : t('draft.form.confirmRejection')}
         </Button>
         <Button type="button" variant="outline" onClick={onDone} disabled={saving}>

@@ -273,6 +273,11 @@ const PANEL_CASES = {
     id: 15, anchor: 'step-approval-draft', label: 'Step view: Approval, current draft (salesperson)',
     user: SALES, analysis: AT_APPROVAL,
   },
+  approvalSupervisor: {
+    id: 23, anchor: 'step-approval-requires-supervisor',
+    label: 'Step view: Approval, verdict requires a supervisor (Send to supervisor, with the hint)',
+    user: SALES, analysis: { ...DELTA_BASE, draft: DELTA_DRAFT, decisions: [] },
+  },
   awaitingSales: {
     id: 16, anchor: 'step-awaiting-sales', label: 'Step view: awaiting supervisor, as the salesperson who submitted it',
     user: SALES, analysis: { ...DELTA_BASE, draft: DELTA_AWAITING, decisions: [DELTA_SUBMITTED] },
@@ -646,6 +651,7 @@ function KitchenSink() {
           <PanelCell panel={PANEL_CASES.noDeadline} />
           <PanelCell panel={PANEL_CASES.lateRecommended} />
           <PanelCell panel={PANEL_CASES.approval} />
+          <PanelCell panel={PANEL_CASES.approvalSupervisor} />
           <PanelCell panel={PANEL_CASES.awaitingSales} />
           <PanelCell panel={PANEL_CASES.awaitingSupervisor} />
           <PanelCell panel={PANEL_CASES.ready} />

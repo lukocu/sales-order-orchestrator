@@ -352,17 +352,60 @@ describe('ReplyDraftSection', () => {
     })
     renderSection(DELTA_DRAFT)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send to supervisor' }))
     fireEvent.change(screen.getByLabelText('Comment (optional)'), {
       target: { value: '  Ważny klient ' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm sending to supervisor' }))
 
     expect(await screen.findByText('Awaiting supervisor approval')).toBeInTheDocument()
     expect(sentBody(fetchMock, 'POST')).toMatchObject({
       action: 'approve',
       reason: 'Ważny klient',
     })
+  })
+
+  it('names the approval after the supervisor when the verdict requires one', () => {
+    renderSection(DELTA_DRAFT)
+
+    expect(decisionButtons()).toEqual(['Send to supervisor', 'Edit offer', 'Reject'])
+    expect(
+      screen.getByText(
+        'The policy requires supervisor approval — the offer goes to the supervisor for approval.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send to supervisor' }))
+
+    expect(screen.getByRole('form', { name: 'Send draft to supervisor' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirm sending to supervisor' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Confirm approval' })).not.toBeInTheDocument()
+  })
+
+  it('keeps Approve, without the hint, when no approval is needed or there is no verdict', () => {
+    const { unmount } = render(
+      <Harness
+        initial={ACME_DRAFT}
+        recommendation={ACME_RECOMMENDATION}
+        user={SALES}
+        onUnauthorized={vi.fn()}
+      />,
+    )
+    expect(decisionButtons()).toEqual(['Approve', 'Edit offer', 'Reject'])
+    expect(screen.queryByText(/The policy requires supervisor approval/)).not.toBeInTheDocument()
+    unmount()
+
+    renderSection({ ...ACME_DRAFT, policy: null })
+    expect(decisionButtons()).toEqual(['Approve', 'Edit offer', 'Reject'])
+    expect(screen.queryByText(/The policy requires supervisor approval/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(screen.getByRole('form', { name: 'Approve draft' })).toBeInTheDocument()
+  })
+
+  it('keeps the supervisor Approve label on a draft awaiting the supervisor', () => {
+    renderAs(SUPERVISOR, DELTA_AWAITING)
+
+    expect(decisionButtons('Supervisor decision')).toEqual(['Approve', 'Reject'])
   })
 
   it('requires a reason to reject', async () => {
