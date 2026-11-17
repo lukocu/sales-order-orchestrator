@@ -277,26 +277,26 @@ None. No schema or JSONB change; `analyzed` is derived at read time (lessons.md 
 
 #### Automated
 
-- [x] 2.1 Decision tests pass
-- [x] 2.2 Frontend tests pass
-- [x] 2.3 Type checking passes
-- [x] 2.4 Lint passes
-- [x] 2.5 AGENTS.md colour scan prints nothing
+- [x] 2.1 Decision tests pass — 10fe0cf
+- [x] 2.2 Frontend tests pass — 10fe0cf
+- [x] 2.3 Type checking passes — 10fe0cf
+- [x] 2.4 Lint passes — 10fe0cf
+- [x] 2.5 AGENTS.md colour scan prints nothing — 10fe0cf
 
 #### Manual
 
-- [x] 2.6 Kitchen sink PL/EN: "Wyślij do przełożonego" with hint for requires_supervisor, "Zatwierdź" otherwise
+- [x] 2.6 Kitchen sink PL/EN: "Wyślij do przełożonego" with hint for requires_supervisor, "Zatwierdź" otherwise — 10fe0cf
 - [ ] 2.7 Real app: approving a requires_supervisor draft shows the message and updates the badge on list and header
 
 ### Phase 3: Focus while signing out (F6)
 
 #### Automated
 
-- [ ] 3.1 Frontend tests pass
-- [ ] 3.2 Type checking passes
-- [ ] 3.3 Lint passes
-- [ ] 3.4 Build passes
-- [ ] 3.5 AGENTS.md colour scan prints nothing
+- [x] 3.1 Frontend tests pass
+- [x] 3.2 Type checking passes
+- [x] 3.3 Lint passes
+- [x] 3.4 Build passes
+- [x] 3.5 AGENTS.md colour scan prints nothing
 
 #### Manual
 

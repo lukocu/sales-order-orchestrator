@@ -17,6 +17,7 @@
   },
   "inbox": {
     "signOut": "Sign out",
+    "signingOut": "Signing out…",
     "heading": "Inbox",
     "fetchMail": "Fetch mail",
     "fetching": "Fetching…",

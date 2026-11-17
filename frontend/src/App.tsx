@@ -23,6 +23,9 @@ function App() {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [signingOut, setSigningOut] = useState(false)
+  // True once the app went authenticated -> anonymous: the sign-in heading takes focus then,
+  // not on the first load.
+  const [focusLogin, setFocusLogin] = useState(false)
   // Server text, or null for the translated fallback (translated at render time).
   const [signOutError, setSignOutError] = useState<{ message: string | null } | null>(null)
 
@@ -44,16 +47,19 @@ function App() {
   }, [attempt])
 
   const handleSignedIn = useCallback((user: User) => {
+    setFocusLogin(false)
     setState({ kind: 'authenticated', user })
   }, [])
   // After Sign out and whenever the API answers 401 (session gone).
   const handleSignedOut = useCallback(() => {
+    setFocusLogin(true)
     setSigningOut(false)
     setSignOutError(null)
     setState({ kind: 'anonymous' })
   }, [])
 
   async function handleSignOut() {
+    if (signingOut) return
     setSigningOut(true)
     setSignOutError(null)
     try {
@@ -100,7 +106,7 @@ function App() {
           </CardContent>
         </Card>
       )}
-      {state.kind === 'anonymous' && <LoginForm onSignedIn={handleSignedIn} />}
+      {state.kind === 'anonymous' && <LoginForm onSignedIn={handleSignedIn} focusHeading={focusLogin} />}
       {state.kind === 'authenticated' && signOutError && (
         <p className="text-destructive" role="alert">
           {signOutError.message ?? t('inbox.genericError')}

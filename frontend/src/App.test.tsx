@@ -218,6 +218,58 @@ describe('App', () => {
     )
   })
 
+  it('moves focus to the sign-in heading after Sign out, but not on the first load', async () => {
+    stubApi(SIGNED_IN_INBOX)
+
+    await renderWithRouter('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+
+    const heading = await screen.findByRole('heading', { name: 'Sign in' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it('does not focus the sign-in heading on the first load', async () => {
+    stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
+
+    await renderWithRouter('/')
+
+    const heading = await screen.findByRole('heading', { name: 'Sign in' })
+    expect(heading).not.toHaveFocus()
+  })
+
+  it('keeps focus on Sign out while it runs and calls logout once', async () => {
+    let finish: () => void = () => {}
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const fetchMock = stubApi(SIGNED_IN_INBOX)
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (input, init) => {
+      if (`${init?.method ?? 'GET'} ${String(input)}` === 'POST /api/auth/logout') {
+        await pending
+        return new Response(null, { status: 204 })
+      }
+      return base(input, init)
+    })
+
+    await renderWithRouter('/')
+    const button = await screen.findByRole('button', { name: 'Sign out' })
+    button.focus()
+    fireEvent.click(button)
+
+    const busy = await screen.findByRole('button', { name: 'Signing out…' })
+    expect(busy).toBe(button)
+    expect(busy).toHaveAttribute('aria-disabled', 'true')
+    expect(busy).toHaveFocus()
+
+    fireEvent.click(busy)
+    finish()
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    const logoutCalls = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/auth/logout')
+    expect(logoutCalls).toHaveLength(1)
+  })
+
   it('shows the Sign out error under the header and stays signed in', async () => {
     stubApi({
       ...SIGNED_IN_INBOX,

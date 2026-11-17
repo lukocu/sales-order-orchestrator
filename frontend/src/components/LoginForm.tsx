@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { login, UnauthorizedError, type User } from '../api/auth'
 import { Button } from '@/components/ui/button'
@@ -8,11 +8,17 @@ import { Label } from '@/components/ui/label'
 
 type Props = {
   onSignedIn: (user: User) => void
+  // Move focus to the heading on mount (after sign-out or session loss).
+  focusHeading?: boolean
 }
 
-function LoginForm({ onSignedIn }: Props) {
+function LoginForm({ onSignedIn, focusHeading = false }: Props) {
   const { t } = useTranslation()
   const id = useId()
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (focusHeading) headingRef.current?.focus()
+  }, [focusHeading])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -41,7 +47,9 @@ function LoginForm({ onSignedIn }: Props) {
     <Card className="gap-4 rounded-lg py-5 shadow-none">
       <CardHeader>
         <CardTitle className="text-lg">
-          <h2>{t('login.title')}</h2>
+          <h2 ref={headingRef} tabIndex={-1} className="outline-none">
+            {t('login.title')}
+          </h2>
         </CardTitle>
       </CardHeader>
       <CardContent>

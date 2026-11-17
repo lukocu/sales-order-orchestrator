@@ -17,6 +17,7 @@
   },
   "inbox": {
     "signOut": "Wyloguj się",
+    "signingOut": "Wylogowywanie…",
     "heading": "Skrzynka zapytań",
     "fetchMail": "Pobierz pocztę",
     "fetching": "Pobieranie…",
