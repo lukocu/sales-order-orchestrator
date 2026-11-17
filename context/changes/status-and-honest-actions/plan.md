@@ -286,7 +286,7 @@ None. No schema or JSONB change; `analyzed` is derived at read time (lessons.md 
 #### Manual
 
 - [x] 2.6 Kitchen sink PL/EN: "Wyślij do przełożonego" with hint for requires_supervisor, "Zatwierdź" otherwise — 10fe0cf
-- [ ] 2.7 Real app: approving a requires_supervisor draft shows the message and updates the badge on list and header
+- [x] 2.7 Real app: approving a requires_supervisor draft shows the message and updates the badge on list and header — 10fe0cf
 
 ### Phase 3: Focus while signing out (F6)
 
