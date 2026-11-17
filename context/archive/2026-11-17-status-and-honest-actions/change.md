@@ -1,10 +1,10 @@
 ---
 change_id: status-and-honest-actions
 title: Widoczny status zapytania i uczciwe etykiety akcji
-status: implemented
+status: archived
 created: 2026-11-17
 updated: 2026-11-17
-archived_at: null
+archived_at: 2026-11-17T23:28:40Z
 ---
 
 ## Notes
