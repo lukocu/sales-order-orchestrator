@@ -46,7 +46,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-11 | run-inspector-and-system-page | użytkownik otwiera inspektor przebiegu i stronę systemową; diagnostyka znika z przepływu handlowca     | F-03          | FR-015, FR-005, US-03, FR-020, NFR, Access Control | done |
 | S-12 | inquiry-steps                 | handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź z jedną główną akcją         | F-03, S-11    | FR-016, US-01, FR-002, FR-010, FR-011, NFR       | done |
 | S-13 | variant-comparison            | handlowiec porównuje warianty realizacji obok siebie                                                  | S-12          | FR-017, FR-007, US-01, NFR                       | done |
-| S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | proposed |
+| S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | done |
 | S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | proposed |
 | S-16 | backend-messages-by-code      | użytkownik widzi wyniki sprawdzeń, reguły polityki i sygnały pewności w wybranym języku               | F-03, S-12    | FR-021, US-01, US-02                             | proposed |
 | S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | proposed |
@@ -139,7 +139,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Statusy listy mogą wymagać rozszerzenia odpowiedzi listy zapytań w API; pionowy wycinek obejmuje tę zmianę, a nie zakłada jej.
-- **Status:** proposed
+- **Status:** done
 
 ### S-15: Kolejka „Do akceptacji” dla przełożonego
 
@@ -233,3 +233,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-11: użytkownik otwiera „Inspektor przebiegu” z widoku zapytania i widzi plan orchestratora, wyniki agentów oraz tokeny, koszt i czas każdego kroku i łącznie; stan systemu jest na osobnej stronie dostępnej po zalogowaniu; z przepływu handlowca i z ekranu logowania znikają metryki, nazwy agentów, numer migracji i inne identyfikatory techniczne.** — Archived 2026-11-16 → `context/archive/2026-11-16-run-inspector-and-system-page/`. Lesson: —.
 - **S-12: handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź; w każdym kroku najpierw widzi dane potrzebne do decyzji, potem jedną wyróżnioną główną akcję widoczną bez przewijania na 1440×900; akcje destrukcyjne są odróżnione, każda informacja jest pokazana raz, a powrót do wcześniejszego kroku (po odrzuceniu, edycji, ponownej analizie) jest jawny.** — Archived 2026-11-16 → `context/archive/2026-11-16-inquiry-steps/`. Lesson: —.
 - **S-13: handlowiec porównuje warianty realizacji obok siebie (pokrycie, termin względem oczekiwanego, wartość, marża, ryzyka, pewność) pod czytelnymi nazwami, z wyróżnionym wariantem rekomendowanym; na wąskim ekranie żadna informacja nie jest ukryta bez sygnału.** — Archived 2026-11-17 → `context/archive/2026-11-16-variant-comparison/`. Lesson: —.
+- **S-14: użytkownik widzi status zapytania na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji (ogłaszany czytnikom ekranu); gdy polityka wymaga akceptacji, akcja nazywa się „Send to supervisor”, a nie „Approve”.** — Archived 2026-11-17 → `context/archive/2026-11-17-status-and-honest-actions/`. Lesson: —.

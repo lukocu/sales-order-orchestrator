@@ -19,6 +19,7 @@ export type InquirySummary = {
   source: InquirySource
   outcome: Outcome | null // of the check result, only while it is current
   draft_status: ReplyDraftStatus | null // of the inquiry's reply draft, null without one
+  analyzed: boolean // an analysis exists (also when its checks are stale)
 }
 
 export type InquiryDetail = InquirySummary & { body: string }
@@ -34,7 +35,8 @@ function isInquirySummary(value: unknown): value is InquirySummary {
     typeof v.received_at === 'string' &&
     (v.source === 'sample' || v.source === 'mailbox') &&
     (v.outcome === null || isOutcome(v.outcome)) &&
-    (v.draft_status === null || isReplyDraftStatus(v.draft_status))
+    (v.draft_status === null || isReplyDraftStatus(v.draft_status)) &&
+    typeof v.analyzed === 'boolean'
   )
 }
 

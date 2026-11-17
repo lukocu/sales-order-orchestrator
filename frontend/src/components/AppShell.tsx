@@ -43,10 +43,11 @@ function AppShell({ user, onSignOut, signingOut = false, nav, children }: Props)
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={onSignOut}
-                  disabled={signingOut}
+                  className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                  onClick={signingOut ? undefined : onSignOut}
+                  aria-disabled={signingOut ? 'true' : undefined}
                 >
-                  {t('inbox.signOut')}
+                  {signingOut ? t('inbox.signingOut') : t('inbox.signOut')}
                 </Button>
               </>
             )}

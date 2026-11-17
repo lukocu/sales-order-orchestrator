@@ -31,6 +31,7 @@ const NEWER: InquiryDetail = {
   source: 'sample',
   outcome: 'exception',
   draft_status: null,
+  analyzed: true,
   body: 'Dzień dobry,\nproszę o wycenę 2 palet papieru A4.',
 }
 const OLDER: InquiryDetail = {
@@ -42,6 +43,7 @@ const OLDER: InquiryDetail = {
   source: 'sample',
   outcome: null,
   draft_status: null,
+  analyzed: false,
   body: 'Prosimy o ofertę na tonery.',
 }
 
@@ -216,6 +218,58 @@ describe('App', () => {
     )
   })
 
+  it('moves focus to the sign-in heading after Sign out, but not on the first load', async () => {
+    stubApi(SIGNED_IN_INBOX)
+
+    await renderWithRouter('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+
+    const heading = await screen.findByRole('heading', { name: 'Sign in' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it('does not focus the sign-in heading on the first load', async () => {
+    stubApi({ 'GET /api/auth/me': UNAUTHORIZED })
+
+    await renderWithRouter('/')
+
+    const heading = await screen.findByRole('heading', { name: 'Sign in' })
+    expect(heading).not.toHaveFocus()
+  })
+
+  it('keeps focus on Sign out while it runs and calls logout once', async () => {
+    let finish: () => void = () => {}
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const fetchMock = stubApi(SIGNED_IN_INBOX)
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (input, init) => {
+      if (`${init?.method ?? 'GET'} ${String(input)}` === 'POST /api/auth/logout') {
+        await pending
+        return new Response(null, { status: 204 })
+      }
+      return base(input, init)
+    })
+
+    await renderWithRouter('/')
+    const button = await screen.findByRole('button', { name: 'Sign out' })
+    button.focus()
+    fireEvent.click(button)
+
+    const busy = await screen.findByRole('button', { name: 'Signing out…' })
+    expect(busy).toBe(button)
+    expect(busy).toHaveAttribute('aria-disabled', 'true')
+    expect(busy).toHaveFocus()
+
+    fireEvent.click(busy)
+    finish()
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    const logoutCalls = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/auth/logout')
+    expect(logoutCalls).toHaveLength(1)
+  })
+
   it('shows the Sign out error under the header and stays signed in', async () => {
     stubApi({
       ...SIGNED_IN_INBOX,
@@ -247,7 +301,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
-  it('shows the outcome badge of each inquiry and updates it after an analysis', async () => {
+  it('shows the status badge of each inquiry and updates it after an analysis', async () => {
     const fetchMock = stubApi({
       ...SIGNED_IN_INBOX,
       'POST /api/inquiries/1/analysis': () => json(200, OLDER_ANALYSIS),
@@ -257,12 +311,13 @@ describe('App', () => {
     const newer = await screen.findByRole('link', { name: /Zapytanie o papier A4/ })
     const older = screen.getByRole('link', { name: /Tonery do drukarek/ })
     expect(within(newer).getByText('Exception')).toBeInTheDocument()
-    expect(older.querySelector('[data-slot="badge"]')).toBeNull()
+    expect(within(older).getByText('New')).toBeInTheDocument()
 
     fireEvent.click(older)
     fireEvent.click(await screen.findByRole('button', { name: 'Analyze request' }))
 
-    expect(await within(older).findByText('Standard')).toBeInTheDocument()
+    expect(await within(older).findByText('Analysed')).toBeInTheDocument()
+    expect(within(older).queryByText('New')).not.toBeInTheDocument()
     expect(within(newer).getByText('Exception')).toBeInTheDocument()
     const listReads = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/inquiries')
     expect(listReads).toHaveLength(1)

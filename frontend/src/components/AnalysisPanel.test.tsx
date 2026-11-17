@@ -9,8 +9,11 @@ import { ACME_RECOMMENDATION } from '../test/recommendationFixtures'
 import {
   ACME_APPROVED,
   ACME_DRAFT,
+  ACME_EDITED,
+  ACME_EDITED_DRAFT,
   ACME_REJECTED_EARLIER,
   DELTA_AWAITING,
+  DELTA_DRAFT,
   DELTA_SUBMITTED,
 } from '../test/replyDraftFixtures'
 import { renderWithRouter } from '../test/renderWithRouter'
@@ -213,8 +216,8 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
 
 function renderPanel(
   onUnauthorized = vi.fn(),
-  onOutcome = vi.fn(),
-  { user = SALES, onDraftStatus = vi.fn() }: { user?: User; onDraftStatus?: () => void } = {},
+  onStatusFacts = vi.fn(),
+  { user = SALES }: { user?: User } = {},
 ) {
   // The panel links to the run inspector, so it needs a router (not loaded: no route
   // matches, the inspector stays closed).
@@ -226,8 +229,7 @@ function renderPanel(
         body={MAIL_BODY}
         user={user}
         onUnauthorized={onUnauthorized}
-        onOutcome={onOutcome}
-        onDraftStatus={onDraftStatus}
+        onStatusFacts={onStatusFacts}
       />
     </RouterContextProvider>,
   )
@@ -446,8 +448,8 @@ describe('AnalysisPanel', () => {
     expect(screen.getByRole('link', { name: 'How was this calculated?' })).toBeInTheDocument()
   })
 
-  it('shows the checks below the analysis and reports the outcome after a correction', async () => {
-    const onOutcome = vi.fn()
+  it('shows the checks below the analysis and reports the status facts after a correction', async () => {
+    const onStatusFacts = vi.fn()
     stubApi({
       [`GET ${PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
       [`PUT ${PATH}`]: () =>
@@ -462,12 +464,16 @@ describe('AnalysisPanel', () => {
         ),
     })
 
-    renderPanel(vi.fn(), onOutcome)
+    renderPanel(vi.fn(), onStatusFacts)
 
     // The exception without an orchestration stands at Variants; the checks are in Inquiry.
     await openStep(/Inquiry/)
     expect(await screen.findByText(/^Exception: insufficient stock/)).toBeInTheDocument()
-    expect(onOutcome).toHaveBeenLastCalledWith(7, 'exception')
+    expect(onStatusFacts).toHaveBeenLastCalledWith(7, {
+      analyzed: true,
+      outcome: 'exception',
+      draft_status: null,
+    })
 
     fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
@@ -475,23 +481,37 @@ describe('AnalysisPanel', () => {
     expect(
       await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
-    expect(onOutcome).toHaveBeenLastCalledWith(7, 'standard')
+    expect(onStatusFacts).toHaveBeenLastCalledWith(7, {
+      analyzed: true,
+      outcome: 'standard',
+      draft_status: null,
+    })
     expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
   })
 
   it('re-runs stale checks without discarding unsaved edits', async () => {
-    const onOutcome = vi.fn()
+    const onStatusFacts = vi.fn()
     const fetchMock = stubApi({
       [`GET ${PATH}`]: () => json(200, analysis({ checks: { ...EXCEPTION, stale: true } })),
       [`POST ${CHECKS_PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
     })
 
-    renderPanel(vi.fn(), onOutcome)
+    renderPanel(vi.fn(), onStatusFacts)
     fireEvent.change(await screen.findByLabelText('Customer'), { target: { value: 'ACME SA' } })
-    expect(onOutcome).toHaveBeenLastCalledWith(7, null)
+    // Stale checks: there is an analysis but no current outcome.
+    expect(onStatusFacts).toHaveBeenLastCalledWith(7, {
+      analyzed: true,
+      outcome: null,
+      draft_status: null,
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Re-run checks' }))
 
-    await vi.waitFor(() => expect(onOutcome).toHaveBeenLastCalledWith(7, 'exception'))
+    await vi.waitFor(() =>
+      expect(onStatusFacts).toHaveBeenLastCalledWith(
+        7,
+        expect.objectContaining({ outcome: 'exception' }),
+      ),
+    )
     // Fresh checks move the flow on to Variants; the unsaved edit waits in Inquiry.
     await screen.findByRole('tab', { name: /Variants/, selected: true })
     await openStep(/Inquiry/)
@@ -657,12 +677,74 @@ describe('AnalysisPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'The draft changed since it was opened — reloaded, your decision was not saved.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'The draft changed since it was opened — reloaded, your decision was not saved.',
+      ),
     )
     expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(fetchMock.mock.calls.filter(([path]) => path === PATH)).toHaveLength(2)
+  })
+
+  it('keeps the status region mounted and empty until a decision is made', async () => {
+    stubApi({ [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)) })
+
+    renderPanel()
+    await screen.findByRole('region', { name: 'Reply draft' })
+
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  it.each<[string, Partial<Analysis>, string, string]>([
+    [
+      'sending to the supervisor',
+      { draft: { ...DELTA_DRAFT, status: 'awaiting_supervisor' } },
+      'Send to supervisor',
+      'Sent to supervisor.',
+    ],
+    [
+      'approving',
+      { draft: { ...ACME_DRAFT, status: 'ready_to_send' } },
+      'Approve',
+      'Approved — ready to send (sending is simulated).',
+    ],
+  ])('announces %s after the decision', async (_name, after, open, message) => {
+    const before = open === 'Approve' ? DRAFTED : { ...DRAFTED, draft: DELTA_DRAFT }
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(before)),
+      [`POST ${DECISION_PATH}`]: () => json(200, analysis({ ...before, ...after })),
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: open }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: open === 'Approve' ? 'Confirm approval' : 'Confirm sending to supervisor',
+      }),
+    )
+
+    await vi.waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(message))
+    expect(screen.getByRole('status').querySelectorAll('p')).toHaveLength(1)
+  })
+
+  it('announces the saved offer after an edit', async () => {
+    stubApi({
+      [`GET ${PATH}`]: () => json(200, analysis(DRAFTED)),
+      [`PUT /api/inquiries/7/draft`]: () =>
+        json(200, analysis({ ...DRAFTED, draft: ACME_EDITED_DRAFT, decisions: [ACME_EDITED] })),
+    })
+
+    renderPanel()
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit offer' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), {
+      target: { value: 'Negocjacje cenowe' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save edit' }))
+
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Offer changes saved.'),
+    )
   })
 
   it('keeps the decision history visible after a correction removes the exception', async () => {
@@ -716,8 +798,8 @@ describe('AnalysisPanel', () => {
     decisions: [DELTA_SUBMITTED],
   }
 
-  it("approves as the supervisor with a reason and reports the draft's status", async () => {
-    const onDraftStatus = vi.fn()
+  it("approves as the supervisor with a reason and reports the status facts", async () => {
+    const onStatusFacts = vi.fn()
     const fetchMock = stubApi({
       [`GET ${PATH}`]: () => json(200, analysis(AWAITING)),
       [`POST ${SUPERVISOR_DECISION_PATH}`]: () =>
@@ -740,9 +822,14 @@ describe('AnalysisPanel', () => {
         ),
     })
 
-    renderPanel(vi.fn(), vi.fn(), { user: SUPERVISOR, onDraftStatus })
+    renderPanel(vi.fn(), onStatusFacts, { user: SUPERVISOR })
     const group = await screen.findByRole('group', { name: 'Supervisor decision' })
-    await vi.waitFor(() => expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'awaiting_supervisor'))
+    await vi.waitFor(() =>
+      expect(onStatusFacts).toHaveBeenLastCalledWith(
+        7,
+        expect.objectContaining({ draft_status: 'awaiting_supervisor' }),
+      ),
+    )
     fireEvent.click(within(group).getByRole('button', { name: 'Approve' }))
     fireEvent.change(screen.getByLabelText('Reason (required)'), {
       target: { value: 'Klient strategiczny' },
@@ -750,12 +837,18 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
     expect(await screen.findByText('Ready to send (sending is simulated)')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Approved by the supervisor — ready to send.',
+    )
     await openStep(/Approval/)
     expect(await screen.findAllByText('Ready to send (sending is simulated)')).toHaveLength(2)
     expect(screen.getByRole('region', { name: 'Decision history' })).toHaveTextContent(
       'Approved by supervisor',
     )
-    expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'ready_to_send')
+    expect(onStatusFacts).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ draft_status: 'ready_to_send' }),
+    )
     const call = fetchMock.mock.calls.find(([path]) => path === SUPERVISOR_DECISION_PATH)
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
       updated_at: DELTA_AWAITING.updated_at,
@@ -781,8 +874,10 @@ describe('AnalysisPanel', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'The draft changed since it was opened — reloaded, your decision was not saved.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'The draft changed since it was opened — reloaded, your decision was not saved.',
+      ),
     )
     expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
     expect(fetchMock.mock.calls.filter(([path]) => path === PATH)).toHaveLength(2)
@@ -963,7 +1058,7 @@ describe('AnalysisPanel steps', () => {
     )
     expect(screen.getByRole('region', { name: 'Recommendation' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Reply draft' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('does not open a locked step', async () => {
@@ -995,7 +1090,7 @@ describe('AnalysisPanel steps', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Re-run orchestrator' }))
 
     expect(await screen.findByRole('tab', { name: /Approval/, selected: true })).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('returns to Approval with one status message after the draft is rejected', async () => {
@@ -1017,17 +1112,20 @@ describe('AnalysisPanel steps', () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Za drogo' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Back to Approval: the draft was rejected.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Back to Approval: the draft was rejected.',
+      ),
     )
     expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getByRole('status').querySelectorAll('p')).toHaveLength(1)
     expect(tab(/Approval/)).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByRole('button', { name: 'Regenerate draft' })).toBeEnabled()
 
     // The user's own click on a done step shows no further message.
     await openStep(/Variants/)
     await screen.findByRole('region', { name: 'Recommendation' })
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('goes back to Inquiry with a message when the request is analysed again', async () => {
@@ -1041,8 +1139,10 @@ describe('AnalysisPanel steps', () => {
     await openStep(/Inquiry/)
     fireEvent.click(await screen.findByRole('button', { name: 'Re-analyze' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Back to Inquiry: the request was analysed again.',
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Back to Inquiry: the request was analysed again.',
+      ),
     )
     expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(tab(/Inquiry/)).toHaveAttribute('aria-selected', 'true')
@@ -1473,6 +1573,7 @@ describe('AnalysisPanel run inspector (routed)', () => {
     source: 'sample',
     outcome: null,
     draft_status: null,
+    analyzed: false,
   }
 
   // The whole app at `path`, signed in, with inquiry 7 and its analysis.

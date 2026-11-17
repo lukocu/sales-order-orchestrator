@@ -56,6 +56,7 @@ const DELTA: InquiryDetail = {
   source: 'sample',
   outcome: 'exception',
   draft_status: 'awaiting_supervisor',
+  analyzed: true,
   body: 'Prosimy o 500 szt. ABC-100.',
 }
 
@@ -68,6 +69,7 @@ const ACME: InquirySummary = {
   source: 'sample',
   outcome: 'exception',
   draft_status: 'draft',
+  analyzed: true,
 }
 
 const OMEGA: InquirySummary = {
@@ -79,6 +81,7 @@ const OMEGA: InquirySummary = {
   source: 'sample',
   outcome: null,
   draft_status: null,
+  analyzed: false,
 }
 
 const { body: _body, ...DELTA_SUMMARY } = DELTA
@@ -95,6 +98,7 @@ const MAILED: InquirySummary = {
   source: 'mailbox',
   outcome: null,
   draft_status: null,
+  analyzed: false,
 }
 
 const FIELDS: ParsedFields = {
@@ -194,24 +198,134 @@ function fetchButton(): HTMLElement {
   return screen.getByRole('button', { name: /^(Fetch mail|Fetching…)$/ })
 }
 
+// The status badge of a row: every row has exactly one, next to the optional mailbox badge.
+function statusBadge(row: HTMLElement): HTMLElement {
+  const badges = Array.from(row.querySelectorAll<HTMLElement>('[data-slot="badge"]')).filter(
+    (badge) => badge.textContent?.startsWith('Status:'),
+  )
+  expect(badges).toHaveLength(1)
+  return badges[0]
+}
+
+// The status badge in the header of the open inquiry.
+function headerBadge(): HTMLElement {
+  const badge = screen
+    .getByRole('region', { name: 'Inquiry' })
+    .querySelector<HTMLElement>('article [data-slot="badge"]')
+  expect(badge).not.toBeNull()
+  return badge!
+}
+
 function filterButton(): HTMLElement {
   return screen.getByRole('button', { name: /^Awaiting supervisor only/ })
 }
 
 describe('Inbox', () => {
-  it('marks an inquiry awaiting the supervisor with a badge', async () => {
-    stubApi({ 'GET /api/inquiries': () => json(200, SUMMARIES) })
+  it('shows one status badge per row, for each of the seven statuses', async () => {
+    const row = (id: number, subject: string, fields: Partial<InquirySummary>): InquirySummary => ({
+      ...OMEGA,
+      id,
+      subject,
+      ...fields,
+    })
+    stubApi({
+      'GET /api/inquiries': () =>
+        json(200, [
+          row(11, 'S new', {}),
+          row(12, 'S analysed', { analyzed: true }),
+          row(13, 'S exception', { analyzed: true, outcome: 'exception', draft_status: 'draft' }),
+          row(14, 'S needs input', { analyzed: true, outcome: 'needs_input' }),
+          row(15, 'S awaiting', {
+            analyzed: true,
+            outcome: 'exception',
+            draft_status: 'awaiting_supervisor',
+          }),
+          row(16, 'S ready', { analyzed: true, outcome: 'exception', draft_status: 'ready_to_send' }),
+          row(17, 'S rejected', { analyzed: true, outcome: 'exception', draft_status: 'rejected' }),
+        ]),
+    })
+
+    await renderInbox(SALES)
+
+    await screen.findByRole('link', { name: /S new/ })
+    const expected: [string, string, string][] = [
+      ['S new', 'New', 'outline'],
+      ['S analysed', 'Analysed', 'success-outline'],
+      ['S exception', 'Exception', 'destructive-outline'],
+      ['S needs input', 'Needs input', 'warning-outline'],
+      ['S awaiting', 'Awaiting supervisor', 'warning'],
+      ['S ready', 'Ready to send', 'success'],
+      ['S rejected', 'Rejected', 'destructive-outline'],
+    ]
+    for (const [subject, text, variant] of expected) {
+      const badge = statusBadge(screen.getByRole('link', { name: new RegExp(subject) }))
+      expect(badge).toHaveTextContent(`Status: ${text}`)
+      expect(badge).toHaveAttribute('data-variant', variant)
+    }
+  })
+
+  it('shows the status of an inquiry awaiting the supervisor once, next to the mailbox badge', async () => {
+    stubApi({ 'GET /api/inquiries': () => json(200, [{ ...DELTA_SUMMARY, source: 'mailbox' }, ACME]) })
 
     await renderInbox(SALES)
 
     const delta = await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
-    expect(within(delta).getByText('Awaiting supervisor')).toHaveAttribute(
-      'data-variant',
-      'warning',
-    )
-    expect(within(delta).getByText('Exception')).toBeInTheDocument()
+    expect(statusBadge(delta)).toHaveTextContent('Status: Awaiting supervisor')
+    expect(within(delta).getByText('E-mail')).toBeInTheDocument()
+    expect(within(delta).queryByText('Exception')).not.toBeInTheDocument()
     const acme = screen.getByRole('link', { name: /Zapytanie ofertowe ABC-100/ })
-    expect(within(acme).queryByText('Awaiting supervisor')).not.toBeInTheDocument()
+    expect(statusBadge(acme)).toHaveTextContent('Status: Exception')
+  })
+
+  it('shows the same status in the header of the open inquiry as in its row', async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'GET /api/inquiries/3': () => json(200, DELTA),
+      'GET /api/inquiries/3/analysis': () => json(200, analysis()),
+    })
+
+    await renderInbox(SUPERVISOR, '/inquiries/3')
+
+    const row = await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
+    await screen.findByRole('group', { name: 'Supervisor decision' })
+    expect(headerBadge()).toHaveTextContent('Status: Awaiting supervisor')
+    expect(headerBadge()).toHaveAttribute('data-variant', statusBadge(row).dataset.variant)
+  })
+
+  it("falls back to the detail's own status in the header when the list failed", async () => {
+    stubApi({
+      'GET /api/inquiries': () => json(500, { detail: 'Database unavailable' }),
+      'GET /api/inquiries/3': () => json(200, DELTA),
+      'GET /api/inquiries/3/analysis': () => json(200, analysis()),
+    })
+
+    await renderInbox(SUPERVISOR, '/inquiries/3')
+
+    await screen.findByRole('group', { name: 'Supervisor decision' })
+    expect(headerBadge()).toHaveTextContent('Status: Awaiting supervisor')
+  })
+
+  it('updates the row and the header in place from the facts the panel reports', async () => {
+    const fetchMock = stubApi({
+      'GET /api/inquiries': () => json(200, SUMMARIES),
+      'GET /api/inquiries/2': () => json(200, { ...ACME, body: 'Prosimy o ofertę.' }),
+      'GET /api/inquiries/2/analysis': () =>
+        json(
+          200,
+          analysis({
+            inquiry_id: 2,
+            draft: { ...DELTA_AWAITING, status: 'ready_to_send', submitted_by: null },
+          }),
+        ),
+    })
+
+    await renderInbox(SALES, '/inquiries/2')
+
+    const row = await screen.findByRole('link', { name: /Zapytanie ofertowe ABC-100/ })
+    await vi.waitFor(() => expect(statusBadge(row)).toHaveTextContent('Status: Ready to send'))
+    expect(headerBadge()).toHaveTextContent('Status: Ready to send')
+    const listReads = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/inquiries')
+    expect(listReads).toHaveLength(1)
   })
 
   it.each([
@@ -295,7 +409,7 @@ describe('Inbox', () => {
     expect(listedSubjects()).toEqual([])
     fireEvent.click(filterButton())
     const delta = screen.getByRole('link', { name: /Zamówienie ABC-100/ })
-    expect(within(delta).queryByText('Awaiting supervisor')).not.toBeInTheDocument()
+    expect(statusBadge(delta)).toHaveTextContent('Status: Rejected')
   })
 
   it('fetches mail, reloads the list and marks the inquiry from the mailbox', async () => {

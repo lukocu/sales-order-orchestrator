@@ -38,6 +38,7 @@ def test_list_is_newest_first(auth_client: TestClient, make_inquiry: InquiryFact
         "source",
         "outcome",
         "draft_status",
+        "analyzed",
     }
     assert {r["source"] for r in rows} == {"sample"}
 
@@ -128,6 +129,11 @@ def test_list_and_detail_show_only_a_current_outcome(
     for inquiry, outcome in ((checked, "standard"), (unchecked, None), (stale, None)):
         detail = auth_client.get(f"/api/inquiries/{inquiry.id}").json()
         assert detail["outcome"] == outcome
+    # An analysis with stale checks is still an analysis; only the unanalysed one is new.
+    for inquiry, analyzed in ((checked, True), (unchecked, False), (stale, True)):
+        assert rows[inquiry.id]["analyzed"] is analyzed
+        detail = auth_client.get(f"/api/inquiries/{inquiry.id}").json()
+        assert detail["analyzed"] is analyzed
 
 
 def test_list_and_detail_show_the_draft_status(

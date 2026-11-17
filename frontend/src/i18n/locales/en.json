@@ -17,6 +17,7 @@
   },
   "inbox": {
     "signOut": "Sign out",
+    "signingOut": "Signing out…",
     "heading": "Inbox",
     "fetchMail": "Fetch mail",
     "fetching": "Fetching…",
@@ -26,7 +27,6 @@
     "empty": "No inquiries yet.",
     "emptyAwaiting": "No inquiries awaiting a supervisor.",
     "badgeMailbox": "E-mail",
-    "badgeAwaiting": "Awaiting supervisor",
     "detailLabel": "Inquiry",
     "selectPrompt": "Select an inquiry to read it.",
     "loadingDetail": "Loading inquiry…",
@@ -52,10 +52,15 @@
     "salesperson": "Salesperson",
     "supervisor": "Supervisor"
   },
-  "outcome": {
-    "standard": "Standard",
+  "inquiryStatus": {
+    "label": "Status",
+    "new": "New",
+    "analyzed": "Analysed",
     "exception": "Exception",
-    "needs_input": "Needs input"
+    "needs_input": "Needs input",
+    "awaiting_supervisor": "Awaiting supervisor",
+    "ready_to_send": "Ready to send",
+    "rejected": "Rejected"
   },
   "health": {
     "heading": "System status",
@@ -319,6 +324,8 @@
     "decisionGroup": "Decision",
     "supervisorGroup": "Supervisor decision",
     "editOffer": "Edit offer",
+    "sendToSupervisor": "Send to supervisor",
+    "sendToSupervisorHint": "The policy requires supervisor approval — the offer goes to the supervisor for approval.",
     "staleAwaiting": "No supervisor decision is possible on this draft; re-run the recommendation to continue.",
     "waiting": "Waiting for a supervisor decision.",
     "submittedBySelf": "You submitted this draft; another supervisor must approve it. You can reject it to start over.",
@@ -342,6 +349,8 @@
     "verdictNone": "{{title}}: none — approval needs a current policy verdict.",
     "form": {
       "approveDraft": "Approve draft",
+      "sendToSupervisorDraft": "Send draft to supervisor",
+      "confirmSendToSupervisor": "Confirm sending to supervisor",
       "rejectDraft": "Reject draft",
       "approveSupervisor": "Approve as supervisor",
       "rejectSupervisor": "Reject as supervisor",
@@ -469,6 +478,12 @@
       "substituteStock": "substitute from stock",
       "supplier": "supplier {{name}}"
     }
+  },
+  "decision": {
+    "sentToSupervisor": "Sent to supervisor.",
+    "approved": "Approved — ready to send (sending is simulated).",
+    "edited": "Offer changes saved.",
+    "supervisorApproved": "Approved by the supervisor — ready to send."
   },
   "analysis": {
     "heading": "Analysis",

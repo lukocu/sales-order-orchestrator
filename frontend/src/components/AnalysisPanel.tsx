@@ -30,6 +30,7 @@ import ChecksSection from './ChecksSection'
 import { errorMessage, formatDate } from './format'
 import { inquirySteps, stepBackReason, type StepBackKey, type StepId } from './inquirySteps'
 import InquiryStepper from './InquiryStepper'
+import type { InquiryStatusFacts } from './inquiryStatus'
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
 import { policyRerunOffered } from './policyLabels'
@@ -46,12 +47,10 @@ type Props = {
   user: User
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
-  // Called with the inquiry's current outcome whenever the analysis is loaded or replaced
-  // (null without a current check result), so the inbox can update its badge.
-  onOutcome?: (inquiryId: number, outcome: Outcome | null) => void
-  // Called with the status of the inquiry's reply draft (null without one) whenever the
-  // analysis is loaded or replaced, so the inbox can update its badge and filter.
-  onDraftStatus?: (inquiryId: number, status: ReplyDraftStatus | null) => void
+  // Called with the facts behind the inquiry's status (an analysis exists, the current
+  // outcome, the draft's status) whenever the analysis is loaded or replaced, so the inbox can
+  // update its badges and filter.
+  onStatusFacts?: (inquiryId: number, facts: InquiryStatusFacts) => void
 }
 
 type LoadState =
@@ -99,7 +98,14 @@ const SUBSTITUTE_KEY = {
 } as const satisfies Record<Substitute, string>
 
 // Notices are kept as keys and translated at render time, so they follow a language switch.
-type NoticeKey = 'analysis.saved' | 'analysis.reloaded' | 'analysis.draftReloaded'
+type NoticeKey =
+  | 'analysis.saved'
+  | 'analysis.reloaded'
+  | 'analysis.draftReloaded'
+  | 'decision.sentToSupervisor'
+  | 'decision.approved'
+  | 'decision.edited'
+  | 'decision.supervisorApproved'
 
 // The draft was written since it was read (another decision, a regenerated draft or a new
 // recommendation); every other 409 of a decision is shown at its form.
@@ -116,6 +122,15 @@ function outcomeOf(analysis: Analysis | null): Outcome | null {
 // As the inbox lists it: the stored draft's status, also of a stale draft.
 function draftStatusOf(analysis: Analysis | null): ReplyDraftStatus | null {
   return analysis?.draft?.status ?? null
+}
+
+// The facts of the inquiry's status, as the inbox lists them.
+function statusFactsOf(analysis: Analysis | null): InquiryStatusFacts {
+  return {
+    analyzed: analysis !== null,
+    outcome: outcomeOf(analysis),
+    draft_status: draftStatusOf(analysis),
+  }
 }
 
 function substituteOf(value: boolean | null): Substitute {
@@ -251,7 +266,7 @@ function MailBody({ body }: { body: string }) {
   return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
 }
 
-function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
+function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
@@ -310,8 +325,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
         setDraft(analysis === null ? null : toDraft(analysis.fields))
         setReviewed([])
         follow(analysis)
-        onOutcome?.(inquiryId, outcomeOf(analysis))
-        onDraftStatus?.(inquiryId, draftStatusOf(analysis))
+        onStatusFacts?.(inquiryId, statusFactsOf(analysis))
       },
       (error: unknown) => {
         if (controller.signal.aborted) return
@@ -324,15 +338,14 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
       },
     )
     return () => controller.abort()
-  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus, follow])
+  }, [inquiryId, loadAttempt, onUnauthorized, onStatusFacts, follow])
 
   function show(analysis: Analysis) {
     setLoad({ kind: 'ok', analysis })
     setDraft(toDraft(analysis.fields))
     setReviewed([])
     follow(analysis)
-    onOutcome?.(inquiryId, outcomeOf(analysis))
-    onDraftStatus?.(inquiryId, draftStatusOf(analysis))
+    onStatusFacts?.(inquiryId, statusFactsOf(analysis))
   }
 
   function reload() {
@@ -358,8 +371,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
     }
     setLoad({ kind: 'ok', analysis: next })
     follow(next)
-    onOutcome?.(inquiryId, outcomeOf(next))
-    onDraftStatus?.(inquiryId, draftStatusOf(next))
+    onStatusFacts?.(inquiryId, statusFactsOf(next))
   }
 
   // Errors are left to ChecksSection, which shows them next to its button.
@@ -414,11 +426,19 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
 
   // A draft written meanwhile reloads the analysis, like a replaced analysis on save; other
   // errors are left to ReplyDraftSection, which shows them at its form.
-  async function decideOnReplyDraft(send: () => Promise<Analysis>) {
+  // After a decision the notice says what happened, unless the step-back message already
+  // announces the transition (a rejection).
+  async function decideOnReplyDraft(
+    send: () => Promise<Analysis>,
+    noticeFor: (next: Analysis) => NoticeKey | null,
+  ) {
     setBusy('deciding')
     setNotice(null)
     try {
-      showChecked(await send())
+      const next = await send()
+      const announced = stepBackReason(lastAnalysis.current, next) !== null
+      showChecked(next)
+      if (!announced) setNotice(noticeFor(next))
     } catch (error) {
       if (!draftChanged(error)) throw error
       setNotice('analysis.draftReloaded')
@@ -429,7 +449,10 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
   }
 
   function editReplyDraft(updatedAt: string, edit: ReplyDraftEdit) {
-    return decideOnReplyDraft(() => editDraft(inquiryId, updatedAt, edit))
+    return decideOnReplyDraft(
+      () => editDraft(inquiryId, updatedAt, edit),
+      () => 'decision.edited',
+    )
   }
 
   function decideReplyDraft(
@@ -437,7 +460,15 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
     action: 'approve' | 'reject',
     reason: string | null,
   ) {
-    return decideOnReplyDraft(() => decideDraft(inquiryId, updatedAt, action, reason))
+    return decideOnReplyDraft(
+      () => decideDraft(inquiryId, updatedAt, action, reason),
+      (next) => {
+        if (action !== 'approve') return null
+        const status = next.draft?.status
+        if (status === 'awaiting_supervisor') return 'decision.sentToSupervisor'
+        return status === 'ready_to_send' ? 'decision.approved' : null
+      },
+    )
   }
 
   function decideReplyDraftAsSupervisor(
@@ -445,7 +476,13 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
     action: 'approve' | 'reject',
     reason: string,
   ) {
-    return decideOnReplyDraft(() => decideAsSupervisor(inquiryId, updatedAt, action, reason))
+    return decideOnReplyDraft(
+      () => decideAsSupervisor(inquiryId, updatedAt, action, reason),
+      (next) =>
+        action === 'approve' && next.draft?.status === 'ready_to_send'
+          ? 'decision.supervisorApproved'
+          : null,
+    )
   }
 
   async function runAnalysis() {
@@ -911,19 +948,18 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
           </Button>
         </div>
       )}
-      {(notice || stepMessage) && (
-        <div className="analysis__notice" role="status">
-          {notice && <p>{t(notice)}</p>}
-          {stepMessage && (
-            <p>
-              {t('steps.backMessage', {
-                step: t(`steps.names.${stepMessage.step}`),
-                reason: t(stepMessage.reason),
-              })}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Always mounted, so a message that is set later is announced; empty it takes no room. */}
+      <div className="analysis__notice empty:sr-only" role="status">
+        {notice && <p>{t(notice)}</p>}
+        {stepMessage && (
+          <p>
+            {t('steps.backMessage', {
+              step: t(`steps.names.${stepMessage.step}`),
+              reason: t(stepMessage.reason),
+            })}
+          </p>
+        )}
+      </div>
       {analyzeError && (
         <div role="alert" className="analysis__problem">
           <p className="error">{analyzeError}</p>
