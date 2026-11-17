@@ -63,16 +63,27 @@ function inquiry(id: number, fields: Partial<InquirySummary>): InquirySummary {
     source: 'sample',
     outcome: null,
     draft_status: null,
+    analyzed: false,
     ...fields,
   }
 }
 
-// Every badge the list can show: E-mail, Awaiting supervisor and the three outcomes.
+// Every badge the list can show: E-mail and the seven statuses (awaiting supervisor, analysed,
+// needs input, new, exception, ready to send, rejected).
 const INQUIRIES = [
-  inquiry(1, { source: 'mailbox', draft_status: 'awaiting_supervisor', outcome: 'exception' }),
-  inquiry(2, { sender_name: 'Maria Wiśniewska', outcome: 'standard' }),
-  inquiry(3, { source: 'mailbox', sender_name: 'Piotr Zieliński', outcome: 'needs_input' }),
+  inquiry(1, {
+    source: 'mailbox', analyzed: true, draft_status: 'awaiting_supervisor', outcome: 'exception',
+  }),
+  inquiry(2, { sender_name: 'Maria Wiśniewska', analyzed: true, outcome: 'standard' }),
+  inquiry(3, { source: 'mailbox', sender_name: 'Piotr Zieliński', analyzed: true, outcome: 'needs_input' }),
   inquiry(4, { sender_name: 'Firma Długa-Nazwa Sp. z o.o.', subject: 'Re: termin dostawy' }),
+  inquiry(5, { sender_name: 'Ewa Lis', analyzed: true, outcome: 'exception', draft_status: 'draft' }),
+  inquiry(6, {
+    sender_name: 'Tomasz Mazur', analyzed: true, outcome: 'exception', draft_status: 'ready_to_send',
+  }),
+  inquiry(7, {
+    sender_name: 'Alicja Dąbrowska', analyzed: true, outcome: 'exception', draft_status: 'rejected',
+  }),
 ]
 const NONE_AWAITING = INQUIRIES.filter((item) => item.draft_status !== 'awaiting_supervisor')
 
@@ -596,7 +607,7 @@ function KitchenSink() {
       {/* Keyed on the language: every cell remounts and is driven again, so messages the
           components keep in state (e.g. the login error) are produced in the new language. */}
       <main key={i18n.resolvedLanguage} className="mx-auto grid max-w-7xl gap-10 px-4 py-6">
-        <Section state="default" caption="Signed out (login) and signed in (inbox list with every badge it shows), plus the ui primitives.">
+        <Section state="default" caption="Signed out (login) and signed in (inbox list with every badge it shows: the seven statuses and E-mail), plus the ui primitives.">
           <Cell label="Header logged out + login" shell>
             <AppShell user={null}>
               <LoginForm onSignedIn={() => {}} />
@@ -626,7 +637,7 @@ function KitchenSink() {
           <Cell label="System page (/system): ok, with Refresh">
             <SystemPage />
           </Cell>
-          <Cell label="Run inspector: every run, the plan by stage and the grand total (inquiry 1)" wide shell>
+          <Cell label="Run inspector: every run, the plan by stage and the grand total (inquiry 1; the header shows its status)" wide shell>
             <InspectorCell inquiryId={1} />
           </Cell>
           <PanelCell panel={PANEL_CASES.needsInput} />

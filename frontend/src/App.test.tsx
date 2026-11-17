@@ -31,6 +31,7 @@ const NEWER: InquiryDetail = {
   source: 'sample',
   outcome: 'exception',
   draft_status: null,
+  analyzed: true,
   body: 'Dzień dobry,\nproszę o wycenę 2 palet papieru A4.',
 }
 const OLDER: InquiryDetail = {
@@ -42,6 +43,7 @@ const OLDER: InquiryDetail = {
   source: 'sample',
   outcome: null,
   draft_status: null,
+  analyzed: false,
   body: 'Prosimy o ofertę na tonery.',
 }
 
@@ -247,7 +249,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
-  it('shows the outcome badge of each inquiry and updates it after an analysis', async () => {
+  it('shows the status badge of each inquiry and updates it after an analysis', async () => {
     const fetchMock = stubApi({
       ...SIGNED_IN_INBOX,
       'POST /api/inquiries/1/analysis': () => json(200, OLDER_ANALYSIS),
@@ -257,12 +259,13 @@ describe('App', () => {
     const newer = await screen.findByRole('link', { name: /Zapytanie o papier A4/ })
     const older = screen.getByRole('link', { name: /Tonery do drukarek/ })
     expect(within(newer).getByText('Exception')).toBeInTheDocument()
-    expect(older.querySelector('[data-slot="badge"]')).toBeNull()
+    expect(within(older).getByText('New')).toBeInTheDocument()
 
     fireEvent.click(older)
     fireEvent.click(await screen.findByRole('button', { name: 'Analyze request' }))
 
-    expect(await within(older).findByText('Standard')).toBeInTheDocument()
+    expect(await within(older).findByText('Analysed')).toBeInTheDocument()
+    expect(within(older).queryByText('New')).not.toBeInTheDocument()
     expect(within(newer).getByText('Exception')).toBeInTheDocument()
     const listReads = fetchMock.mock.calls.filter(([input]) => String(input) === '/api/inquiries')
     expect(listReads).toHaveLength(1)

@@ -26,7 +26,6 @@
     "empty": "Brak zapytań.",
     "emptyAwaiting": "Brak zapytań czekających na przełożonego.",
     "badgeMailbox": "E-mail",
-    "badgeAwaiting": "Czeka na przełożonego",
     "detailLabel": "Zapytanie",
     "selectPrompt": "Wybierz zapytanie, aby je przeczytać.",
     "loadingDetail": "Ładowanie zapytania…",
@@ -52,10 +51,15 @@
     "salesperson": "Handlowiec",
     "supervisor": "Przełożony"
   },
-  "outcome": {
-    "standard": "Standard",
+  "inquiryStatus": {
+    "label": "Status",
+    "new": "Nowe",
+    "analyzed": "Przeanalizowane",
     "exception": "Wyjątek",
-    "needs_input": "Wymaga uzupełnienia"
+    "needs_input": "Wymaga uzupełnienia",
+    "awaiting_supervisor": "Czeka na przełożonego",
+    "ready_to_send": "Gotowe do wysłania",
+    "rejected": "Odrzucone"
   },
   "health": {
     "heading": "Stan systemu",

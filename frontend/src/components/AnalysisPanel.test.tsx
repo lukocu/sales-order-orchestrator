@@ -213,8 +213,8 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
 
 function renderPanel(
   onUnauthorized = vi.fn(),
-  onOutcome = vi.fn(),
-  { user = SALES, onDraftStatus = vi.fn() }: { user?: User; onDraftStatus?: () => void } = {},
+  onStatusFacts = vi.fn(),
+  { user = SALES }: { user?: User } = {},
 ) {
   // The panel links to the run inspector, so it needs a router (not loaded: no route
   // matches, the inspector stays closed).
@@ -226,8 +226,7 @@ function renderPanel(
         body={MAIL_BODY}
         user={user}
         onUnauthorized={onUnauthorized}
-        onOutcome={onOutcome}
-        onDraftStatus={onDraftStatus}
+        onStatusFacts={onStatusFacts}
       />
     </RouterContextProvider>,
   )
@@ -446,8 +445,8 @@ describe('AnalysisPanel', () => {
     expect(screen.getByRole('link', { name: 'How was this calculated?' })).toBeInTheDocument()
   })
 
-  it('shows the checks below the analysis and reports the outcome after a correction', async () => {
-    const onOutcome = vi.fn()
+  it('shows the checks below the analysis and reports the status facts after a correction', async () => {
+    const onStatusFacts = vi.fn()
     stubApi({
       [`GET ${PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
       [`PUT ${PATH}`]: () =>
@@ -462,12 +461,16 @@ describe('AnalysisPanel', () => {
         ),
     })
 
-    renderPanel(vi.fn(), onOutcome)
+    renderPanel(vi.fn(), onStatusFacts)
 
     // The exception without an orchestration stands at Variants; the checks are in Inquiry.
     await openStep(/Inquiry/)
     expect(await screen.findByText(/^Exception: insufficient stock/)).toBeInTheDocument()
-    expect(onOutcome).toHaveBeenLastCalledWith(7, 'exception')
+    expect(onStatusFacts).toHaveBeenLastCalledWith(7, {
+      analyzed: true,
+      outcome: 'exception',
+      draft_status: null,
+    })
 
     fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
@@ -475,23 +478,37 @@ describe('AnalysisPanel', () => {
     expect(
       await screen.findByText('Standard inquiry — no additional checks needed'),
     ).toBeInTheDocument()
-    expect(onOutcome).toHaveBeenLastCalledWith(7, 'standard')
+    expect(onStatusFacts).toHaveBeenLastCalledWith(7, {
+      analyzed: true,
+      outcome: 'standard',
+      draft_status: null,
+    })
     expect(screen.queryByRole('region', { name: /metrics/i })).not.toBeInTheDocument()
   })
 
   it('re-runs stale checks without discarding unsaved edits', async () => {
-    const onOutcome = vi.fn()
+    const onStatusFacts = vi.fn()
     const fetchMock = stubApi({
       [`GET ${PATH}`]: () => json(200, analysis({ checks: { ...EXCEPTION, stale: true } })),
       [`POST ${CHECKS_PATH}`]: () => json(200, analysis({ checks: EXCEPTION })),
     })
 
-    renderPanel(vi.fn(), onOutcome)
+    renderPanel(vi.fn(), onStatusFacts)
     fireEvent.change(await screen.findByLabelText('Customer'), { target: { value: 'ACME SA' } })
-    expect(onOutcome).toHaveBeenLastCalledWith(7, null)
+    // Stale checks: there is an analysis but no current outcome.
+    expect(onStatusFacts).toHaveBeenLastCalledWith(7, {
+      analyzed: true,
+      outcome: null,
+      draft_status: null,
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Re-run checks' }))
 
-    await vi.waitFor(() => expect(onOutcome).toHaveBeenLastCalledWith(7, 'exception'))
+    await vi.waitFor(() =>
+      expect(onStatusFacts).toHaveBeenLastCalledWith(
+        7,
+        expect.objectContaining({ outcome: 'exception' }),
+      ),
+    )
     // Fresh checks move the flow on to Variants; the unsaved edit waits in Inquiry.
     await screen.findByRole('tab', { name: /Variants/, selected: true })
     await openStep(/Inquiry/)
@@ -716,8 +733,8 @@ describe('AnalysisPanel', () => {
     decisions: [DELTA_SUBMITTED],
   }
 
-  it("approves as the supervisor with a reason and reports the draft's status", async () => {
-    const onDraftStatus = vi.fn()
+  it("approves as the supervisor with a reason and reports the status facts", async () => {
+    const onStatusFacts = vi.fn()
     const fetchMock = stubApi({
       [`GET ${PATH}`]: () => json(200, analysis(AWAITING)),
       [`POST ${SUPERVISOR_DECISION_PATH}`]: () =>
@@ -740,9 +757,14 @@ describe('AnalysisPanel', () => {
         ),
     })
 
-    renderPanel(vi.fn(), vi.fn(), { user: SUPERVISOR, onDraftStatus })
+    renderPanel(vi.fn(), onStatusFacts, { user: SUPERVISOR })
     const group = await screen.findByRole('group', { name: 'Supervisor decision' })
-    await vi.waitFor(() => expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'awaiting_supervisor'))
+    await vi.waitFor(() =>
+      expect(onStatusFacts).toHaveBeenLastCalledWith(
+        7,
+        expect.objectContaining({ draft_status: 'awaiting_supervisor' }),
+      ),
+    )
     fireEvent.click(within(group).getByRole('button', { name: 'Approve' }))
     fireEvent.change(screen.getByLabelText('Reason (required)'), {
       target: { value: 'Klient strategiczny' },
@@ -755,7 +777,10 @@ describe('AnalysisPanel', () => {
     expect(screen.getByRole('region', { name: 'Decision history' })).toHaveTextContent(
       'Approved by supervisor',
     )
-    expect(onDraftStatus).toHaveBeenLastCalledWith(7, 'ready_to_send')
+    expect(onStatusFacts).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ draft_status: 'ready_to_send' }),
+    )
     const call = fetchMock.mock.calls.find(([path]) => path === SUPERVISOR_DECISION_PATH)
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
       updated_at: DELTA_AWAITING.updated_at,
@@ -1473,6 +1498,7 @@ describe('AnalysisPanel run inspector (routed)', () => {
     source: 'sample',
     outcome: null,
     draft_status: null,
+    analyzed: false,
   }
 
   // The whole app at `path`, signed in, with inquiry 7 and its analysis.

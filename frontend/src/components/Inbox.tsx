@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import type { Outcome, ReplyDraftStatus } from '../api/analysis'
 import { ApiError, UnauthorizedError } from '../api/auth'
 import {
   fetchInquiries,
@@ -18,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { useSession } from '../session'
 import AnalysisPanel from './AnalysisPanel'
 import { formatDate } from './format'
+import { inquiryStatus, STATUS_VARIANT, type InquiryStatusFacts } from './inquiryStatus'
 
 type Props = {
   // The open inquiry, parsed from /inquiries/$inquiryId by the route; null on `/`.
@@ -37,12 +37,21 @@ type DetailState =
 
 type FetchStatus = { kind: 'ok'; result: FetchResult } | { kind: 'error'; error: unknown }
 
-// Text and colour: the badge never relies on colour alone. Outline marks an outcome.
-const OUTCOME_VARIANT = {
-  standard: 'success-outline',
-  exception: 'destructive-outline',
-  needs_input: 'warning-outline',
-} as const satisfies Record<Outcome, string>
+function sameFacts(a: InquiryStatusFacts, b: InquiryStatusFacts): boolean {
+  return a.analyzed === b.analyzed && a.outcome === b.outcome && a.draft_status === b.draft_status
+}
+
+// The one status of an inquiry; the text is always there, the colour only supports it.
+function StatusBadge({ facts }: { facts: InquiryStatusFacts }) {
+  const { t } = useTranslation()
+  const status = inquiryStatus(facts)
+  return (
+    <Badge variant={STATUS_VARIANT[status]}>
+      <span className="sr-only">{t('inquiryStatus.label')}: </span>
+      {t(`inquiryStatus.${status}`)}
+    </Badge>
+  )
+}
 
 function errorText(error: unknown): string | null {
   return error instanceof Error ? error.message : null
@@ -110,42 +119,28 @@ function Inbox({ selectedId = null }: Props) {
     return () => controller.abort()
   }, [selectedId, onUnauthorized])
 
-  // The panel reports the outcome after an analysis, a correction or a re-run of the
-  // checks; the list item is updated in place, without fetching the list again.
-  const handleOutcome = useCallback((inquiryId: number, outcome: Outcome | null) => {
+  // The panel reports the status facts after loading the analysis and after every change of
+  // it (an analysis, a correction, a re-run, a decision, a regenerated or dropped draft); the
+  // list item and the open inquiry are updated in place, without fetching again.
+  const handleStatusFacts = useCallback((inquiryId: number, facts: InquiryStatusFacts) => {
     setList((current) =>
       current.kind !== 'ok'
         ? current
         : {
             ...current,
             inquiries: current.inquiries.map((inquiry) =>
-              inquiry.id === inquiryId && inquiry.outcome !== outcome
-                ? { ...inquiry, outcome }
+              inquiry.id === inquiryId && !sameFacts(inquiry, facts)
+                ? { ...inquiry, ...facts }
                 : inquiry,
             ),
           },
     )
+    setDetail((current) =>
+      current?.kind === 'ok' && current.id === inquiryId && !sameFacts(current.inquiry, facts)
+        ? { ...current, inquiry: { ...current.inquiry, ...facts } }
+        : current,
+    )
   }, [])
-
-  // The panel reports the draft status after loading the analysis and after every change of
-  // the draft (a decision, an edit, a regenerated or dropped draft); updated in place too.
-  const handleDraftStatus = useCallback(
-    (inquiryId: number, draftStatus: ReplyDraftStatus | null) => {
-      setList((current) =>
-        current.kind !== 'ok'
-          ? current
-          : {
-              ...current,
-              inquiries: current.inquiries.map((inquiry) =>
-                inquiry.id === inquiryId && inquiry.draft_status !== draftStatus
-                  ? { ...inquiry, draft_status: draftStatus }
-                  : inquiry,
-              ),
-            },
-      )
-    },
-    [],
-  )
 
   function retryList() {
     setList({ kind: 'loading' })
@@ -174,6 +169,14 @@ function Inbox({ selectedId = null }: Props) {
 
   // The detail fetched for an earlier selection is stale until the new one arrives.
   const currentDetail = detail !== null && detail.id === selectedId ? detail : null
+
+  // The header shows what the list shows; the detail's own facts when the list has no such item.
+  const headerFacts =
+    currentDetail?.kind === 'ok'
+      ? (list.kind === 'ok'
+          ? list.inquiries.find((inquiry) => inquiry.id === currentDetail.id)
+          : undefined) ?? currentDetail.inquiry
+      : null
 
   const awaiting =
     list.kind === 'ok'
@@ -273,14 +276,7 @@ function Inbox({ selectedId = null }: Props) {
                               {t('inbox.badgeMailbox')}
                             </Badge>
                           )}
-                          {inquiry.draft_status === 'awaiting_supervisor' && (
-                            <Badge variant="warning">{t('inbox.badgeAwaiting')}</Badge>
-                          )}
-                          {inquiry.outcome !== null && (
-                            <Badge variant={OUTCOME_VARIANT[inquiry.outcome]}>
-                              {t(`outcome.${inquiry.outcome}`)}
-                            </Badge>
-                          )}
+                          <StatusBadge facts={inquiry} />
                         </span>
                       </span>
                     </Link>
@@ -304,7 +300,10 @@ function Inbox({ selectedId = null }: Props) {
         )}
         {currentDetail?.kind === 'ok' && (
           <article>
-            <h3 className="detail__subject font-bold">{currentDetail.inquiry.subject}</h3>
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+              <h3 className="detail__subject font-bold">{currentDetail.inquiry.subject}</h3>
+              {headerFacts !== null && <StatusBadge facts={headerFacts} />}
+            </div>
             <p className="detail__meta">
               {currentDetail.inquiry.sender_name} &lt;{currentDetail.inquiry.sender_email}&gt;
               {' · '}
@@ -321,8 +320,7 @@ function Inbox({ selectedId = null }: Props) {
             body={currentDetail.inquiry.body}
             user={user}
             onUnauthorized={onUnauthorized}
-            onOutcome={handleOutcome}
-            onDraftStatus={handleDraftStatus}
+            onStatusFacts={handleStatusFacts}
           />
         )}
       </section>

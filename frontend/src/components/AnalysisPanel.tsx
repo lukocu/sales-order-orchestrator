@@ -30,6 +30,7 @@ import ChecksSection from './ChecksSection'
 import { errorMessage, formatDate } from './format'
 import { inquirySteps, stepBackReason, type StepBackKey, type StepId } from './inquirySteps'
 import InquiryStepper from './InquiryStepper'
+import type { InquiryStatusFacts } from './inquiryStatus'
 import OrchestrationSection from './OrchestrationSection'
 import PolicySection from './PolicySection'
 import { policyRerunOffered } from './policyLabels'
@@ -46,12 +47,10 @@ type Props = {
   user: User
   // Called whenever the API answers 401 (session gone).
   onUnauthorized: () => void
-  // Called with the inquiry's current outcome whenever the analysis is loaded or replaced
-  // (null without a current check result), so the inbox can update its badge.
-  onOutcome?: (inquiryId: number, outcome: Outcome | null) => void
-  // Called with the status of the inquiry's reply draft (null without one) whenever the
-  // analysis is loaded or replaced, so the inbox can update its badge and filter.
-  onDraftStatus?: (inquiryId: number, status: ReplyDraftStatus | null) => void
+  // Called with the facts behind the inquiry's status (an analysis exists, the current
+  // outcome, the draft's status) whenever the analysis is loaded or replaced, so the inbox can
+  // update its badges and filter.
+  onStatusFacts?: (inquiryId: number, facts: InquiryStatusFacts) => void
 }
 
 type LoadState =
@@ -116,6 +115,15 @@ function outcomeOf(analysis: Analysis | null): Outcome | null {
 // As the inbox lists it: the stored draft's status, also of a stale draft.
 function draftStatusOf(analysis: Analysis | null): ReplyDraftStatus | null {
   return analysis?.draft?.status ?? null
+}
+
+// The facts of the inquiry's status, as the inbox lists them.
+function statusFactsOf(analysis: Analysis | null): InquiryStatusFacts {
+  return {
+    analyzed: analysis !== null,
+    outcome: outcomeOf(analysis),
+    draft_status: draftStatusOf(analysis),
+  }
 }
 
 function substituteOf(value: boolean | null): Substitute {
@@ -251,7 +259,7 @@ function MailBody({ body }: { body: string }) {
   return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
 }
 
-function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDraftStatus }: Props) {
+function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
@@ -310,8 +318,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
         setDraft(analysis === null ? null : toDraft(analysis.fields))
         setReviewed([])
         follow(analysis)
-        onOutcome?.(inquiryId, outcomeOf(analysis))
-        onDraftStatus?.(inquiryId, draftStatusOf(analysis))
+        onStatusFacts?.(inquiryId, statusFactsOf(analysis))
       },
       (error: unknown) => {
         if (controller.signal.aborted) return
@@ -324,15 +331,14 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
       },
     )
     return () => controller.abort()
-  }, [inquiryId, loadAttempt, onUnauthorized, onOutcome, onDraftStatus, follow])
+  }, [inquiryId, loadAttempt, onUnauthorized, onStatusFacts, follow])
 
   function show(analysis: Analysis) {
     setLoad({ kind: 'ok', analysis })
     setDraft(toDraft(analysis.fields))
     setReviewed([])
     follow(analysis)
-    onOutcome?.(inquiryId, outcomeOf(analysis))
-    onDraftStatus?.(inquiryId, draftStatusOf(analysis))
+    onStatusFacts?.(inquiryId, statusFactsOf(analysis))
   }
 
   function reload() {
@@ -358,8 +364,7 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onOutcome, onDra
     }
     setLoad({ kind: 'ok', analysis: next })
     follow(next)
-    onOutcome?.(inquiryId, outcomeOf(next))
-    onDraftStatus?.(inquiryId, draftStatusOf(next))
+    onStatusFacts?.(inquiryId, statusFactsOf(next))
   }
 
   // Errors are left to ChecksSection, which shows them next to its button.

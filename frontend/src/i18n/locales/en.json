@@ -26,7 +26,6 @@
     "empty": "No inquiries yet.",
     "emptyAwaiting": "No inquiries awaiting a supervisor.",
     "badgeMailbox": "E-mail",
-    "badgeAwaiting": "Awaiting supervisor",
     "detailLabel": "Inquiry",
     "selectPrompt": "Select an inquiry to read it.",
     "loadingDetail": "Loading inquiry…",
@@ -52,10 +51,15 @@
     "salesperson": "Salesperson",
     "supervisor": "Supervisor"
   },
-  "outcome": {
-    "standard": "Standard",
+  "inquiryStatus": {
+    "label": "Status",
+    "new": "New",
+    "analyzed": "Analysed",
     "exception": "Exception",
-    "needs_input": "Needs input"
+    "needs_input": "Needs input",
+    "awaiting_supervisor": "Awaiting supervisor",
+    "ready_to_send": "Ready to send",
+    "rejected": "Rejected"
   },
   "health": {
     "heading": "System status",

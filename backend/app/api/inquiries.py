@@ -15,6 +15,7 @@ from app.db import get_engine
 from app.draft.models import InquiryDraft
 from app.draft.schema import DraftStatus
 from app.inquiries.models import Inquiry, InquirySource
+from app.parsing.models import InquiryAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class InquirySummary(BaseModel):
     outcome: Outcome | None = None  # of the check result, only while it is current
     # Raw status of the stored draft (also when it is stale); None without a draft.
     draft_status: DraftStatus | None = None
+    analyzed: bool = False  # an analysis exists (also when its checks are stale)
 
 
 class InquiryDetail(InquirySummary):
@@ -38,18 +40,21 @@ class InquiryDetail(InquirySummary):
 
 
 def _with_outcome[T: InquirySummary](
-    model: type[T], inquiry: Inquiry, outcome: Any, draft_status: Any
+    model: type[T], inquiry: Inquiry, outcome: Any, draft_status: Any, analyzed: Any
 ) -> T:
     summary = model.model_validate(inquiry, from_attributes=True)
-    return summary.model_copy(update={"outcome": outcome, "draft_status": draft_status})
+    return summary.model_copy(
+        update={"outcome": outcome, "draft_status": draft_status, "analyzed": bool(analyzed)}
+    )
 
 
 def _inquiry_rows() -> Any:
-    """`(Inquiry, outcome, draft status)` rows, one per inquiry (a draft is unique per
-    inquiry)."""
-    return with_current_outcome(select(Inquiry, current_outcome(), InquiryDraft.status)).outerjoin(
-        InquiryDraft, col(InquiryDraft.inquiry_id) == col(Inquiry.id)
-    )
+    """`(Inquiry, outcome, draft status, analyzed)` rows, one per inquiry (a draft is unique
+    per inquiry)."""
+    analyzed = col(InquiryAnalysis.inquiry_id).is_not(None)
+    return with_current_outcome(
+        select(Inquiry, current_outcome(), InquiryDraft.status, analyzed)
+    ).outerjoin(InquiryDraft, col(InquiryDraft.inquiry_id) == col(Inquiry.id))
 
 
 @router.get("/inquiries", response_model=list[InquirySummary])
@@ -60,8 +65,8 @@ def list_inquiries(engine: Annotated[Engine, Depends(get_engine)]) -> list[Inqui
         with Session(engine) as session:
             rows = session.exec(statement).all()
             return [
-                _with_outcome(InquirySummary, inquiry, outcome, draft_status)
-                for inquiry, outcome, draft_status in rows
+                _with_outcome(InquirySummary, inquiry, outcome, draft_status, analyzed)
+                for inquiry, outcome, draft_status, analyzed in rows
             ]
     except SQLAlchemyError:
         logger.exception("Inquiries API: database unavailable")
