@@ -300,4 +300,4 @@ None. No schema or JSONB change; `analyzed` is derived at read time (lessons.md 
 
 #### Manual
 
-- [ ] 3.6 Keyboard-only sign-out: focus stays on the button while "Wylogowywanie…", then lands on the sign-in heading
+- [x] 3.6 Keyboard-only sign-out: focus stays on the button while "Wylogowywanie…", then lands on the sign-in heading — c0b0326
