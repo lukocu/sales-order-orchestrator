@@ -445,7 +445,7 @@ describe('ReplyDraftSection', () => {
     expect(screen.getByRole('table', { name: /edited offer/ })).toHaveTextContent('Fail')
   })
 
-  it('labels each option of the edit by its kind and value, not by its id', () => {
+  it('names each option of the edit by its lines and value, not by its id', () => {
     renderSection(ACME_DRAFT)
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit offer' }))
@@ -453,8 +453,8 @@ describe('ReplyDraftSection', () => {
     const labels = within(select)
       .getAllByRole('option')
       .map((item) => item.textContent)
-    expect(labels).toContain('Stock + substitute · 9262.50 PLN')
-    expect(labels).toContain('Partial delivery from stock · 5700.00 PLN')
+    expect(labels).toContain('Stock + substitute ABC-110 · 9262.50 PLN')
+    expect(labels).toContain('Stock only (partial delivery) · 5700.00 PLN')
     expect(labels.some((label) => label?.includes('stock+'))).toBe(false)
     expect(select).toHaveValue('stock+ABC-110')
   })

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { errorMessage, formatDate, formatPercent, formatPln, sourceText } from './format'
 import { ACTION_KEY, STATUS } from './draftLabels'
 import { OUTCOME_LABEL, RULE_LABEL } from './policyLabels'
+import { variantName } from './variantName'
 
 type Decision = 'approve' | 'reject'
 
@@ -457,11 +458,11 @@ function EditForm(props: EditProps) {
   const shown: (ReplyDraftOfferLine | RecommendationOption['lines'][number])[] =
     optionId === offer.option_id || option === undefined ? offer.lines : option.lines
   // The current offer leads when the recommendation no longer lists its option.
-  const choices: Pick<RecommendationOption, 'id' | 'kind' | 'value'>[] = options.some(
+  const choices: Pick<RecommendationOption, 'id' | 'kind' | 'value' | 'lines'>[] = options.some(
     (item) => item.id === offer.option_id,
   )
     ? options
-    : [{ id: offer.option_id, kind: offer.kind, value: offer.value }, ...options]
+    : [{ id: offer.option_id, kind: offer.kind, value: offer.value, lines: offer.lines }, ...options]
 
   function choose(id: string) {
     setOptionId(id)
@@ -519,7 +520,7 @@ function EditForm(props: EditProps) {
         {choices.map((item) => (
           <option key={item.id} value={item.id}>
             {t('draft.optionLabel', {
-              kind: t(`optionKind.${item.kind}`),
+              name: variantName(item, t),
               value: formatPln(item.value),
             })}
           </option>

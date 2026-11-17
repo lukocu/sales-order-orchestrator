@@ -11,7 +11,6 @@ import {
 import { ACME_ORCHESTRATION, DELTA_ORCHESTRATION } from '../test/orchestrationFixtures'
 import {
   ACME_RECOMMENDATION,
-  ACME_SUPPLIER_OPTION,
   DELTA_RECOMMENDATION,
 } from '../test/recommendationFixtures'
 import RecommendationSection from './RecommendationSection'
@@ -73,7 +72,9 @@ function Harness({
   initial,
   orchestration,
   onUnauthorized,
+  expectedDeadline,
 }: {
+  expectedDeadline: string | null
   initial: RecommendationView | null
   orchestration: OrchestrationView | null
   onUnauthorized: () => void
@@ -99,6 +100,7 @@ function Harness({
       running={running}
       onRerun={rerun}
       onUnauthorized={onUnauthorized}
+      expectedDeadline={expectedDeadline}
     />
   )
 }
@@ -107,13 +109,28 @@ function renderSection(
   initial: RecommendationView | null,
   orchestration: OrchestrationView | null = ACME_ORCHESTRATION,
   onUnauthorized = vi.fn(),
+  expectedDeadline: string | null = '2026-11-06',
 ) {
-  render(<Harness initial={initial} orchestration={orchestration} onUnauthorized={onUnauthorized} />)
+  render(
+    <Harness
+      initial={initial}
+      orchestration={orchestration}
+      onUnauthorized={onUnauthorized}
+      expectedDeadline={expectedDeadline}
+    />,
+  )
   return onUnauthorized
 }
 
-function recommended(): HTMLElement {
-  return screen.getByRole('region', { name: 'Recommended option' })
+function table(): HTMLElement {
+  return screen.getByRole('table', { name: 'Variant comparison' })
+}
+
+function columnNames(): string[] {
+  return within(table())
+    .getAllByRole('columnheader')
+    .slice(1)
+    .map((header) => header.textContent ?? '')
 }
 
 function items(container: HTMLElement, list: string): string[] {
@@ -122,25 +139,10 @@ function items(container: HTMLElement, list: string): string[] {
     .map((item) => item.textContent ?? '')
 }
 
-// An option by the readable name of its kind (each kind appears once in the fixtures).
-function option(list: string, kind: string): HTMLElement {
-  const item = within(screen.getByRole('list', { name: list }))
-    .getAllByRole('listitem')
-    .find((li) => li.querySelector('.check__name')?.textContent === kind)
-  if (item === undefined) throw new Error(`No option ${kind}`)
-  return item
-}
-
 // The recommender, the run metrics and the raw option ids stay in the run inspector.
 function expectNoTechnicalText() {
   expect(screen.queryByText(/recommender/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/rule-based/)).not.toBeInTheDocument()
-  // The confidence chips read as words; the recommender's own justification may quote the enum.
-  const bands = document.querySelectorAll('.recommendation__band')
-  expect(bands.length).toBeGreaterThan(0)
-  for (const band of bands) {
-    expect(band.textContent).toMatch(/^(High|Medium|Low) confidence$/)
-  }
   expect(screen.queryByText(/^stock(\+.*)?$/)).not.toBeInTheDocument()
   expect(screen.queryByText('Option')).not.toBeInTheDocument()
   expect(screen.queryByText(/ in \/ \d+ out|deterministic/)).not.toBeInTheDocument()
@@ -148,43 +150,37 @@ function expectNoTechnicalText() {
 }
 
 describe('RecommendationSection', () => {
-  it('shows the ACME substitute as a high-confidence recommendation with its cited positives', () => {
-    renderSection(ACME_RECOMMENDATION)
+  it('shows the ACME substitute first in the comparison table with the justification once', () => {
+    renderSection(ACME_RECOMMENDATION, ACME_ORCHESTRATION)
 
     expect(screen.getByText('Recommendation: Completed')).toBeInTheDocument()
-    const card = recommended()
-    expect(card).toHaveTextContent('Stock + substitute')
-    expect(within(card).getByText('High confidence')).toBeInTheDocument()
-    expect(card).toHaveTextContent(
-      '50 × ABC-100 Czujnik ciśnienia ABC-100 — own stock, available 2026-11-02, 114.00 PLN/pc',
-    )
-    expect(card).toHaveTextContent(
-      '30 × ABC-110 Czujnik ciśnienia ABC-110 — substitute from stock, available 2026-11-02, ' +
-        '118.75 PLN/pc',
-    )
-    expect(card).toHaveTextContent('Coverage80 / 80 pcs')
-    expect(card).toHaveTextContent('Fulfilled2026-11-02, meets the deadline')
-    expect(card).toHaveTextContent('Value9262.50 PLN')
-    expect(card).toHaveTextContent('Cost6900.00 PLN')
-    expect(card).toHaveTextContent('Margin25.51%')
-    expect(within(card).getByText('Why this recommendation?')).toBeInTheDocument()
-    expect(card).toHaveTextContent('Wybrano opcję stock+ABC-110: pokrycie 80/80 szt.')
-    const positives = items(card, 'Positive')
-    expect(positives).toHaveLength(5)
-    expect(positives.every((item) => item.endsWith(' · cited'))).toBe(true)
-    expect(positives[2]).toContain('Zamiennik ABC-110 w pełni zgodny')
-    expect(within(card).queryByRole('list', { name: 'Risks' })).not.toBeInTheDocument()
+    expect(columnNames()).toEqual([
+      'Stock + substitute ABC-110Recommended',
+      'Stock only (partial delivery)',
+      'Stock + supplier Sensortech Polska',
+    ])
+    expect(screen.getAllByText('Recommended')).toHaveLength(1)
+    expect(screen.getAllByText('Why this recommendation?')).toHaveLength(1)
+    expect(screen.getAllByText(/Wybrano opcję stock\+ABC-110/)).toHaveLength(1)
 
-    const others = screen.getByRole('list', { name: 'Other options' })
-    expect(others.querySelectorAll(':scope > li')).toHaveLength(2)
-    const supplier = option('Other options', 'Stock + supplier')
-    expect(supplier).toHaveTextContent('Low confidence')
-    expect(supplier).toHaveTextContent('supplier Sensortech Polska, available 2026-11-09')
-    expect(supplier).toHaveTextContent('Fulfilled2026-11-09, misses the deadline')
-    expect(items(supplier, 'Risks')).toEqual(['⚠ Realizacja 2026-11-09 po terminie 2026-11-06'])
-    expect(option('Other options', 'Partial delivery from stock')).toHaveTextContent(
-      'Coverage50 / 80 pcs',
-    )
+    const cells = (row: string) =>
+      within(screen.getByRole('row', { name: new RegExp(`^${row}`) }))
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    expect(cells('Coverage')).toEqual(['80 / 80 pcs', '50 / 80 pcs', '80 / 80 pcs'])
+    expect(cells('Value')).toEqual(['9262.50 PLN', '5700.00 PLN', '9120.00 PLN'])
+    expect(cells('Margin')).toEqual(['25.51%', '26.32%', '22.37%'])
+    expect(cells('Confidence')).toEqual(['High confidence', 'Low confidence', 'Low confidence'])
+    expect(cells('Deadline')).toEqual([
+      '2026-11-02, 4 days before the deadline',
+      '2026-11-02, 4 days before the deadline',
+      '2026-11-09, 3 days after the deadline',
+    ])
+    expect(cells('Risks')).toEqual([
+      'none',
+      'Pokrywa 50 z 80 szt.',
+      'Realizacja 2026-11-09 po terminie 2026-11-06',
+    ])
 
     expectNoTechnicalText()
     expect(
@@ -192,50 +188,30 @@ describe('RecommendationSection', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows the Delta combination as low confidence with cited risks and uncited information', () => {
-    renderSection(DELTA_RECOMMENDATION, DELTA_ORCHESTRATION)
+  it('shows the Delta combination with no deadline and cited signals in its open details', () => {
+    renderSection(DELTA_RECOMMENDATION, DELTA_ORCHESTRATION, vi.fn(), null)
 
-    const card = recommended()
-    expect(card).toHaveTextContent('Stock + substitute + supplier')
-    expect(card).toHaveTextContent('Low confidence')
-    expect(card).toHaveTextContent('Coverage290 / 500 pcs')
-    expect(card).toHaveTextContent('Fulfilled2026-11-10, no deadline')
-    expect(card).toHaveTextContent('Margin14.29%')
-    expect(items(card, 'Positive')).toEqual(['✓ Zamiennik ABC-110 w pełni zgodny · cited'])
-    expect(items(card, 'Risks')).toEqual([
+    expect(columnNames()[0]).toContain('Recommended')
+    const deadline = screen.getByRole('row', { name: /^Deadline/ })
+    expect(
+      within(deadline)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['2026-11-10, no deadline', '2026-11-03, no deadline'])
+    const details = document.querySelector('details[open]') as HTMLElement
+    expect(items(details, 'Positive')).toEqual(['✓ Zamiennik ABC-110 w pełni zgodny · cited'])
+    expect(items(details, 'Risks')).toEqual([
       '⚠ Pokrywa 290 z 500 szt. · cited',
       '⚠ Brak potwierdzenia zgody na zamiennik · cited',
       '⚠ Brak uzupełniany z dwóch źródeł: zamiennik i dostawca · cited',
     ])
-    expect(items(card, 'Information')).toEqual([
+    expect(items(details, 'Information')).toEqual([
       'ℹ Zapytanie bez terminu',
       'ℹ Klient nie dostawał dotąd zamienników',
     ])
   })
 
-  it('keeps a check skipped for an alternative visible as information', () => {
-    const supplier = {
-      ...ACME_SUPPLIER_OPTION,
-      signals: [
-        ...ACME_SUPPLIER_OPTION.signals,
-        {
-          code: 'alternative_not_checked:customer-history',
-          polarity: 'info' as const,
-          label: 'Alternatywy nie sprawdzono: historia klienta',
-        },
-      ],
-    }
-    renderSection({
-      ...ACME_RECOMMENDATION,
-      options: [ACME_RECOMMENDATION.options[0], ACME_RECOMMENDATION.options[1], supplier],
-    })
-
-    expect(items(option('Other options', 'Stock + supplier'), 'Information')).toEqual([
-      'ℹ Alternatywy nie sprawdzono: historia klienta',
-    ])
-  })
-
-  it('shows a rejected choice as failed with all options, one sentence and a re-run', () => {
+  it('shows a rejected choice as failed with all variants in build order and none recommended', () => {
     renderSection({
       ...ACME_RECOMMENDATION,
       status: 'failed',
@@ -253,12 +229,25 @@ describe('RecommendationSection', () => {
     expect(
       screen.queryByText('A cited signal does not belong to the chosen option'),
     ).not.toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Recommended option' })).not.toBeInTheDocument()
-    expect(option('Options', 'Stock + substitute')).toHaveTextContent('High confidence')
-    expect(option('Options', 'Partial delivery from stock')).toHaveTextContent('Low confidence')
+    expect(screen.queryByText('Recommended')).not.toBeInTheDocument()
+    expect(screen.queryByText('Why this recommendation?')).not.toBeInTheDocument()
+    expect(columnNames()).toEqual([
+      'Stock only (partial delivery)',
+      'Stock + substitute ABC-110',
+      'Stock + supplier Sensortech Polska',
+    ])
     expectNoTechnicalText()
     expect(screen.queryByText(/· cited/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Re-run recommendation' })).toBeEnabled()
+  })
+
+  it('shows no table when there are no options', () => {
+    renderSection({ ...ACME_RECOMMENDATION, options: [], choice: null, status: 'failed' })
+
+    expect(
+      screen.getByText('No option could be built from the orchestration results.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
   it('shows a recommender failure as one sentence, without its code', () => {
@@ -271,7 +260,7 @@ describe('RecommendationSection', () => {
 
     expect(screen.getByText('No option could be recommended this time.')).toBeInTheDocument()
     expect(screen.queryByText(/rate_limited|Rate limit reached/)).not.toBeInTheDocument()
-    expect(option('Options', 'Partial delivery from stock')).toBeInTheDocument()
+    expect(table()).toBeInTheDocument()
     expectNoTechnicalText()
     expect(screen.getByRole('button', { name: 'Re-run recommendation' })).toBeInTheDocument()
   })
@@ -329,7 +318,7 @@ describe('RecommendationSection', () => {
     answer(json(200, analysis(ACME_RECOMMENDATION)))
 
     expect(await screen.findByText('Recommendation: Completed')).toBeInTheDocument()
-    expect(recommended()).toHaveTextContent('High confidence')
+    expect(columnNames()[0]).toContain('Recommended')
     expect(
       screen.queryByRole('button', { name: 'Re-run recommendation' }),
     ).not.toBeInTheDocument()
