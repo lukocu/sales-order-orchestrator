@@ -294,25 +294,25 @@ None. Display-only change, no stored data touched (lessons.md JSONB rule does no
 
 #### Automated
 
-- [x] 2.1 New and rewritten RecommendationSection/VariantComparison tests pass
-- [x] 2.2 Frontend tests pass
-- [x] 2.3 Type checking passes
-- [x] 2.4 Lint passes
-- [x] 2.5 AGENTS.md colour scan with VariantComparison prints nothing
+- [x] 2.1 New and rewritten RecommendationSection/VariantComparison tests pass — d87fab4
+- [x] 2.2 Frontend tests pass — d87fab4
+- [x] 2.3 Type checking passes — d87fab4
+- [x] 2.4 Lint passes — d87fab4
+- [x] 2.5 AGENTS.md colour scan with VariantComparison prints nothing — d87fab4
 
 #### Manual
 
-- [ ] 2.6 Kitchen sink at 1440 px PL light/dark: recommended column first, labelled and outlined, each information once
+- [x] 2.6 Kitchen sink at 1440 px PL light/dark: recommended column first, labelled and outlined, each information once — d87fab4
 
 ### Phase 3: Narrow screen and kitchen sink
 
 #### Automated
 
-- [ ] 3.1 Frontend tests pass
-- [ ] 3.2 Type checking passes
-- [ ] 3.3 Lint passes
-- [ ] 3.4 Build passes
-- [ ] 3.5 AGENTS.md colour scan (updated list) prints nothing
+- [x] 3.1 Frontend tests pass
+- [x] 3.2 Type checking passes
+- [x] 3.3 Lint passes
+- [x] 3.4 Build passes
+- [x] 3.5 AGENTS.md colour scan (updated list) prints nothing
 
 #### Manual
 

@@ -280,6 +280,8 @@
   "variants": {
     "caption": "Variant comparison",
     "attribute": "Attribute",
+    "scrollRegion": "Variant comparison, scrolls sideways",
+    "scrollHint": "Variants: {{count}} — scroll sideways to see them all",
     "recommended": "Recommended",
     "noRisks": "none",
     "row": {

@@ -280,6 +280,8 @@
   "variants": {
     "caption": "Porównanie wariantów",
     "attribute": "Cecha",
+    "scrollRegion": "Porównanie wariantów, przewijane w bok",
+    "scrollHint": "Wariantów: {{count}} — przewiń w bok, aby zobaczyć wszystkie",
     "recommended": "Rekomendowany",
     "noRisks": "brak",
     "row": {

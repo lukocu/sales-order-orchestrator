@@ -187,6 +187,70 @@ export const ACME_RECOMMENDATION: RecommendationView = {
   run: recommendationRun(),
 }
 
+// ACME with five variants (two substitutes, a combined one, a late supplier one), for the narrow
+// screen: the table does not fit 375 px, so the scroll hint shows.
+export const ACME_SECOND_SUBSTITUTE_OPTION: RecommendationOption = {
+  ...ACME_SUBSTITUTE_OPTION,
+  id: 'stock+ABC-120',
+  lines: [
+    ACME_STOCK_LINE,
+    {
+      ...ACME_SUBSTITUTE_OPTION.lines[1],
+      product_code: 'ABC-120',
+      product_name: 'Czujnik ciśnienia ABC-120',
+    },
+  ],
+  band: 'MEDIUM',
+  signals: [
+    { code: 'full_coverage', polarity: 'positive', label: 'Pokrywa całą zamówioną ilość' },
+    { code: 'compat_partial', polarity: 'risk', label: 'Zamiennik ABC-120 częściowo zgodny' },
+  ],
+}
+
+export const ACME_COMBINED_OPTION: RecommendationOption = {
+  ...ACME_SUPPLIER_OPTION,
+  id: 'stock+ABC-110+supplier:Sensortech Polska',
+  kind: 'combined',
+  lines: [
+    ACME_STOCK_LINE,
+    ACME_SUBSTITUTE_OPTION.lines[1],
+    { ...ACME_SUPPLIER_OPTION.lines[1], quantity: 10, value: '1140.00', cost: '960.00' },
+  ],
+  fulfilled_on: '2026-11-09',
+  meets_deadline: false,
+  value: '10402.50',
+  cost: '7860.00',
+  margin_percent: '24.44',
+  signals: [
+    { code: 'full_coverage', polarity: 'positive', label: 'Pokrywa całą zamówioną ilość' },
+    { code: 'deadline_missed', polarity: 'risk', label: 'Realizacja 2026-11-09 po terminie 2026-11-06' },
+    { code: 'two_sources', polarity: 'risk', label: 'Brak uzupełniany z dwóch źródeł: zamiennik i dostawca' },
+  ],
+}
+
+export const ACME_MANY_VARIANTS_RECOMMENDATION: RecommendationView = {
+  ...ACME_RECOMMENDATION,
+  options: [
+    ACME_STOCK_OPTION,
+    ACME_SUBSTITUTE_OPTION,
+    ACME_SECOND_SUBSTITUTE_OPTION,
+    ACME_SUPPLIER_OPTION,
+    ACME_COMBINED_OPTION,
+  ],
+}
+
+// The recommended variant is the one that misses the customer's deadline (the supplier one).
+export const ACME_LATE_RECOMMENDATION: RecommendationView = {
+  ...ACME_RECOMMENDATION,
+  choice: {
+    option_id: ACME_SUPPLIER_OPTION.id,
+    justification:
+      'Wybrano opcję stock+supplier:Sensortech Polska: pokrycie 80/80 szt., realizacja 2026-11-09. ' +
+      'Ryzyka: Realizacja 2026-11-09 po terminie 2026-11-06.',
+    cited_signals: ['full_coverage', 'deadline_missed'],
+  },
+}
+
 // Hurtownia Delta, 500 × ABC-100 without a deadline with 50 in stock, substitute not stated,
 // 10% discount.
 const DELTA_STOCK_LINE = line({

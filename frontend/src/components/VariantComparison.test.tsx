@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RecommendationOption, RecommendationView } from '../api/analysis'
 import {
   ACME_RECOMMENDATION,
@@ -26,6 +26,11 @@ function withFulfilled(option: RecommendationOption, fulfilledOn: string): Recom
 }
 
 describe('VariantComparison', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+
   it('is a table named by its caption with column and row headers', () => {
     renderComparison()
 
@@ -129,5 +134,37 @@ describe('VariantComparison', () => {
       .map((header) => header.textContent)
     expect(names[0]).toContain('substitute ABC-110')
     expect(names[1]).toBe('Stock + substitute ABC-120')
+  })
+
+  describe('scroll region', () => {
+    it('is a focusable region named by the caption, with no hint when everything fits', () => {
+      renderComparison()
+
+      const region = screen.getByRole('region', { name: 'Variant comparison' })
+      expect(region).toHaveAttribute('tabindex', '0')
+      expect(region).toContainElement(screen.getByRole('table'))
+      expect(region).not.toHaveAttribute('aria-describedby')
+      expect(screen.queryByText(/scroll sideways/)).not.toBeInTheDocument()
+    })
+
+    it('shows the hint and references it when the variants overflow', async () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          disconnect() {}
+          unobserve() {}
+        },
+      )
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(900)
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(375)
+
+      renderComparison()
+
+      const hint = await screen.findByText('Variants: 3 — scroll sideways to see them all')
+      const region = screen.getByRole('region', { name: 'Variant comparison' })
+      expect(region).toHaveAccessibleDescription(hint.textContent ?? '')
+      expect(region.getAttribute('aria-describedby')).toBe(hint.id)
+    })
   })
 })

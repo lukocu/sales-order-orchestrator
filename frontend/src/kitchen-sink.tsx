@@ -33,7 +33,12 @@ import {
   SUPPLIER_TASK,
 } from './test/orchestrationFixtures'
 import { ACME_POLICY, DELTA_POLICY } from './test/policyFixtures'
-import { ACME_RECOMMENDATION, DELTA_RECOMMENDATION } from './test/recommendationFixtures'
+import {
+  ACME_LATE_RECOMMENDATION,
+  ACME_MANY_VARIANTS_RECOMMENDATION,
+  ACME_RECOMMENDATION,
+  DELTA_RECOMMENDATION,
+} from './test/recommendationFixtures'
 import {
   ACME_APPROVED,
   ACME_DRAFT,
@@ -230,6 +235,28 @@ const PANEL_CASES = {
       policy: null,
       draft: null,
     },
+  },
+  manyVariants: {
+    id: 20, anchor: 'step-variants-many', label: 'Step view: Variants, five variants (two substitutes, a combined one; scroll hint on a narrow screen)',
+    user: SALES,
+    analysis: { ...AT_APPROVAL, recommendation: ACME_MANY_VARIANTS_RECOMMENDATION, policy: null, draft: null },
+  },
+  noDeadline: {
+    id: 21, anchor: 'step-variants-no-deadline', label: 'Step view: Variants, the inquiry has no customer deadline', user: SALES,
+    analysis: {
+      ...DELTA_BASE,
+      fields: {
+        customer: 'Hurtownia Delta', product_code: 'ABC-100', quantity: 500, deadline: null,
+        deadline_text: null, substitute_allowed: null, price_kind: 'best_price' as const,
+        price_value: null, price_text: null,
+      },
+      policy: null,
+      draft: null,
+    },
+  },
+  lateRecommended: {
+    id: 22, anchor: 'step-variants-late', label: 'Step view: Variants, the recommended variant misses the deadline', user: SALES,
+    analysis: { ...AT_APPROVAL, recommendation: ACME_LATE_RECOMMENDATION, policy: null, draft: null },
   },
   approval: {
     id: 15, anchor: 'step-approval-draft', label: 'Step view: Approval, current draft (salesperson)',
@@ -604,6 +631,9 @@ function KitchenSink() {
           </Cell>
           <PanelCell panel={PANEL_CASES.needsInput} />
           <PanelCell panel={PANEL_CASES.standard} />
+          <PanelCell panel={PANEL_CASES.manyVariants} />
+          <PanelCell panel={PANEL_CASES.noDeadline} />
+          <PanelCell panel={PANEL_CASES.lateRecommended} />
           <PanelCell panel={PANEL_CASES.approval} />
           <PanelCell panel={PANEL_CASES.awaitingSales} />
           <PanelCell panel={PANEL_CASES.awaitingSupervisor} />

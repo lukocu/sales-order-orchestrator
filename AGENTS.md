@@ -9,7 +9,7 @@ Setup, commands and quality gates: `README.md` ("Development", "Quality gates").
 - **No literal colours or arbitrary values in views.** Use token classes (`bg-card`, `text-muted-foreground`, `border-input`, …). This scan over the view files must print nothing:
 
   ```sh
-  grep -nE '#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|-\[[0-9.]+(px|rem)\]|\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b' frontend/src/App.tsx frontend/src/kitchen-sink.tsx frontend/src/components/{AppShell,AppNav,LoginForm,Inbox,LanguageSwitch,NotFound,SystemPage,RunInspector,InquiryStepper,AnalysisPanel,ReplyStep,ChecksSection,OrchestrationSection,RecommendationSection,PolicySection,ReplyDraftSection}.tsx frontend/src/components/draftLabels.ts
+  grep -nE '#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|-\[[0-9.]+(px|rem)\]|\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b' frontend/src/App.tsx frontend/src/kitchen-sink.tsx frontend/src/components/{AppShell,AppNav,LoginForm,Inbox,LanguageSwitch,NotFound,SystemPage,RunInspector,InquiryStepper,AnalysisPanel,ReplyStep,ChecksSection,OrchestrationSection,RecommendationSection,PolicySection,ReplyDraftSection,VariantComparison}.tsx frontend/src/components/draftLabels.ts
   ```
 
   Add each view you rebuild to that file list.
