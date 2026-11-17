@@ -308,14 +308,14 @@ None. Display-only change, no stored data touched (lessons.md JSONB rule does no
 
 #### Automated
 
-- [x] 3.1 Frontend tests pass
-- [x] 3.2 Type checking passes
-- [x] 3.3 Lint passes
-- [x] 3.4 Build passes
-- [x] 3.5 AGENTS.md colour scan (updated list) prints nothing
+- [x] 3.1 Frontend tests pass — 74f916f
+- [x] 3.2 Type checking passes — 74f916f
+- [x] 3.3 Lint passes — 74f916f
+- [x] 3.4 Build passes — 74f916f
+- [x] 3.5 AGENTS.md colour scan (updated list) prints nothing — 74f916f
 
 #### Manual
 
-- [ ] 3.6 At 375 px: no page scroll, focusable scroll region, hint shown only on overflow, sticky attribute column
-- [ ] 3.7 At 1440 and 375 px PL/EN light/dark: highlight, focus ring and sticky-column contrast fine
+- [x] 3.6 At 375 px: no page scroll, focusable scroll region, hint shown only on overflow, sticky attribute column — 74f916f
+- [x] 3.7 At 1440 and 375 px PL/EN light/dark: highlight, focus ring and sticky-column contrast fine — 74f916f
 - [ ] 3.8 Real app with backend: Warianty table with readable names and correct deadline relation
