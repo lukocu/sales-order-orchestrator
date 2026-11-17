@@ -1,10 +1,10 @@
 ---
 change_id: variant-comparison
 title: Porównanie wariantów realizacji obok siebie
-status: implemented
+status: archived
 created: 2026-11-16
 updated: 2026-11-17
-archived_at: null
+archived_at: 2026-11-17T20:43:21Z
 ---
 
 ## Notes
