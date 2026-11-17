@@ -292,11 +292,11 @@ None. No schema or JSONB change; `analyzed` is derived at read time (lessons.md 
 
 #### Automated
 
-- [x] 3.1 Frontend tests pass
-- [x] 3.2 Type checking passes
-- [x] 3.3 Lint passes
-- [x] 3.4 Build passes
-- [x] 3.5 AGENTS.md colour scan prints nothing
+- [x] 3.1 Frontend tests pass — c0b0326
+- [x] 3.2 Type checking passes — c0b0326
+- [x] 3.3 Lint passes — c0b0326
+- [x] 3.4 Build passes — c0b0326
+- [x] 3.5 AGENTS.md colour scan prints nothing — c0b0326
 
 #### Manual
 
