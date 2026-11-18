@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-17
+updated: 2026-11-18
 prd_version: 2
 main_goal: quality
 top_blocker: skills
@@ -48,7 +48,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-13 | variant-comparison            | handlowiec porównuje warianty realizacji obok siebie                                                  | S-12          | FR-017, FR-007, US-01, NFR                       | done |
 | S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | done |
 | S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | done |
-| S-16 | backend-messages-by-code      | użytkownik widzi wyniki sprawdzeń, reguły polityki i sygnały pewności w wybranym języku               | F-03, S-12    | FR-021, US-01, US-02                             | proposed |
+| S-16 | backend-messages-by-code      | użytkownik widzi wyniki sprawdzeń, reguły polityki i sygnały pewności w wybranym języku               | F-03, S-12    | FR-021, US-01, US-02                             | done |
 | S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | proposed |
 
 ## Streams
@@ -164,7 +164,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy każdy komunikat ma już stabilny kod (reguły polityki i sygnały pewności tak; wyniki sprawdzeń do zweryfikowania)? — Owner: autor. Block: no.
 - **Risk:** Teksty są zapisane w JSONB (decyzje, migawki szkicu, lekcja w `lessons.md`), dlatego tłumaczenie po kodzie przy wyświetlaniu, bez migracji danych; po S-12, żeby nie przepisywać tych samych komponentów dwa razy.
-- **Status:** proposed
+- **Status:** done
 
 ### S-17: Adresy URL do zapytań, kroków i widoków
 
@@ -234,3 +234,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-12: handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź; w każdym kroku najpierw widzi dane potrzebne do decyzji, potem jedną wyróżnioną główną akcję widoczną bez przewijania na 1440×900; akcje destrukcyjne są odróżnione, każda informacja jest pokazana raz, a powrót do wcześniejszego kroku (po odrzuceniu, edycji, ponownej analizie) jest jawny.** — Archived 2026-11-16 → `context/archive/2026-11-16-inquiry-steps/`. Lesson: —.
 - **S-13: handlowiec porównuje warianty realizacji obok siebie (pokrycie, termin względem oczekiwanego, wartość, marża, ryzyka, pewność) pod czytelnymi nazwami, z wyróżnionym wariantem rekomendowanym; na wąskim ekranie żadna informacja nie jest ukryta bez sygnału.** — Archived 2026-11-17 → `context/archive/2026-11-16-variant-comparison/`. Lesson: —.
 - **S-14: użytkownik widzi status zapytania na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji (ogłaszany czytnikom ekranu); gdy polityka wymaga akceptacji, akcja nazywa się „Send to supervisor”, a nie „Approve”.** — Archived 2026-11-17 → `context/archive/2026-11-17-status-and-honest-actions/`. Lesson: —.
+- **S-16: użytkownik widzi wyniki sprawdzeń, powody reguł polityki i sygnały pewności w języku wybranym przełącznikiem PL | EN; tłumaczenie dzieje się przy wyświetlaniu po stabilnych kodach, a zapisane dane, mail klienta, szkic odpowiedzi i uzasadnienie napisane przez model nie zmieniają się.** — Archived 2026-11-18 → `context/archive/2026-11-18-backend-messages-by-code/`. Lesson: —.
