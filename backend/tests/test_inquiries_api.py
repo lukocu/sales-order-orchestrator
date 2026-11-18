@@ -15,7 +15,7 @@ def test_without_session_is_401(client: TestClient, path: str) -> None:
     response = client.get(path)
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 def test_list_is_newest_first(auth_client: TestClient, make_inquiry: InquiryFactory) -> None:
@@ -79,7 +79,7 @@ def test_unknown_inquiry_is_json_404(auth_client: TestClient) -> None:
     response = auth_client.get("/api/inquiries/2147483647")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Inquiry not found"}
+    assert response.json() == {"detail": "Inquiry not found", "code": "INQUIRY_NOT_FOUND"}
 
 
 @pytest.mark.parametrize("inquiry_id", [0, 2_147_483_648])
@@ -97,7 +97,7 @@ def test_unreachable_database_is_json_503(client_without_db: TestClient, path: s
     response = client_without_db.get(path)
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database unavailable"}
+    assert response.json() == {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}
 
 
 def test_list_and_detail_show_only_a_current_outcome(

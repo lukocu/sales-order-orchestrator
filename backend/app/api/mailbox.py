@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable
 from app.db import get_engine
 from app.mailbox.client import (
     Mailbox,
@@ -26,16 +26,21 @@ def _mailbox_failed(error: MailboxError) -> HTTPException:
     # Class only: the details of a mailbox failure belong to the server, not to the log.
     logger.warning("Mailbox API: fetch failed: %s", type(error).__name__)
     if isinstance(error, MailboxNotConfigured):
-        return HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Mailbox not configured"
+        return ApiHTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Mailbox not configured",
+            code="MAILBOX_NOT_CONFIGURED",
         )
     if isinstance(error, MailboxAuthFailed):
         detail = "Mailbox login failed"
+        code = "MAILBOX_AUTH_FAILED"
     elif isinstance(error, MailboxUnavailable):
         detail = "Mailbox unavailable"
+        code = "MAILBOX_UNAVAILABLE"
     else:
         detail = "Mailbox error"
-    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail)
+        code = "MAILBOX_ERROR"
+    return ApiHTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail, code=code)
 
 
 @router.post("/mailbox/fetch", response_model=FetchResult)
@@ -48,8 +53,10 @@ def fetch_mail(
         return fetch_mailbox(engine, mailbox)
     except MailboxBusy:
         logger.info("Mailbox API: fetch refused: MailboxBusy")
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Mailbox fetch already in progress"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Mailbox fetch already in progress",
+            code="MAILBOX_BUSY",
         ) from None
     except MailboxError as error:
         raise _mailbox_failed(error) from None

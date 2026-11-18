@@ -96,7 +96,7 @@ def test_unknown_run_is_json_404(auth_client: TestClient) -> None:
     response = auth_client.get("/api/runs/999999999")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Run not found"}
+    assert response.json() == {"detail": "Run not found", "code": "RUN_NOT_FOUND"}
 
 
 @pytest.mark.parametrize("run_id", [0, 2_147_483_648])
@@ -110,7 +110,7 @@ def test_without_session_is_401(client: TestClient) -> None:
     response = client.get("/api/runs/1")
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None:
@@ -120,4 +120,4 @@ def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None
     response = client_without_db.get("/api/runs/1")
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database unavailable"}
+    assert response.json() == {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}

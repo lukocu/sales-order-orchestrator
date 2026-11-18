@@ -248,7 +248,7 @@ def test_recheck_with_failing_check_is_json_500(
     response = auth_client.post(_checks_path(acme.id))
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Checks failed"}
+    assert response.json() == {"detail": "Checks failed", "code": "CHECKS_FAILED"}
     assert "RuntimeError" in caplog.text
     assert str(acme.id) in caplog.text
     assert "check failed" not in caplog.text
@@ -300,21 +300,21 @@ def test_recheck_without_analysis_is_404(auth_client: TestClient, acme: Inquiry)
     response = auth_client.post(_checks_path(acme.id))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "No analysis yet"}
+    assert response.json() == {"detail": "No analysis yet", "code": "NO_ANALYSIS"}
 
 
 def test_recheck_of_unknown_inquiry_is_404(auth_client: TestClient) -> None:
     response = auth_client.post(_checks_path(2_147_483_647))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Inquiry not found"}
+    assert response.json() == {"detail": "Inquiry not found", "code": "INQUIRY_NOT_FOUND"}
 
 
 def test_recheck_without_session_is_401(client: TestClient) -> None:
     response = client.post(_checks_path(1))
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 def test_recheck_with_unreachable_database_is_json_503(client_without_db: TestClient) -> None:
@@ -323,7 +323,7 @@ def test_recheck_with_unreachable_database_is_json_503(client_without_db: TestCl
     response = client_without_db.post(_checks_path(1))
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database unavailable"}
+    assert response.json() == {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}
 
 
 def test_uncertain_inputs_are_listed(

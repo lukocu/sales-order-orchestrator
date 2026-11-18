@@ -2,13 +2,13 @@ import logging
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Path, status
 from pydantic import BaseModel
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable
 from app.checks.schema import Outcome
 from app.checks.service import current_outcome, with_current_outcome
 from app.db import get_engine
@@ -88,5 +88,9 @@ def read_inquiry(
         logger.exception("Inquiries API: database unavailable")
         raise database_unavailable() from None
     if detail is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inquiry not found")
+        raise ApiHTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inquiry not found",
+            code="INQUIRY_NOT_FOUND",
+        )
     return detail

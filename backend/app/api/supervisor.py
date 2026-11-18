@@ -3,12 +3,12 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable
 from app.auth.deps import AuthUser, require_supervisor
 from app.db import get_engine
 from app.inquiries.supervisor_queue import QueueView, ReviewView, get_queue, get_review
@@ -44,5 +44,9 @@ def read_review(
         logger.exception("Supervisor API: database unavailable")
         raise database_unavailable() from None
     if review is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inquiry not found")
+        raise ApiHTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inquiry not found",
+            code="INQUIRY_NOT_FOUND",
+        )
     return review

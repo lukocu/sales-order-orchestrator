@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 
 from alembic.runtime.migration import MigrationContext
 from fastapi import APIRouter, Depends, Response, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,7 +25,7 @@ class HealthResponse(BaseModel):
 def health(
     engine: Annotated[Engine, Depends(get_engine)],
     response: Response,
-) -> HealthResponse:
+) -> HealthResponse | JSONResponse:
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -32,6 +33,14 @@ def health(
             revision = MigrationContext.configure(connection).get_current_revision()
     except SQLAlchemyError:
         logger.exception("Health check: database unreachable")
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return HealthResponse(status="degraded", database="error", migration=None)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "degraded",
+                "database": "error",
+                "migration": None,
+                "detail": "Database unavailable",
+                "code": "DATABASE_UNAVAILABLE",
+            },
+        )
     return HealthResponse(status="ok", database="ok", migration=revision)

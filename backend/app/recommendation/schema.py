@@ -13,7 +13,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr
 
 from app.orchestration.schema import HistorySignal, SubstituteConsent
 
@@ -49,7 +49,8 @@ class Signal(BaseModel):
 
     code: str  # e.g. full_coverage, task_failed:customer-history
     polarity: SignalPolarity
-    label: str  # Polish text for the UI
+    label: str  # Original text retained for older clients and unknown codes
+    params: dict[str, StrictStr | StrictInt | StrictFloat] = Field(default_factory=dict)
 
 
 class RecommendationOption(BaseModel):

@@ -14,9 +14,9 @@ from app.main import app
 from app.settings import get_settings
 from tests.conftest import TEST_PASSWORD, UserFactory, new_test_username
 
-INVALID_CREDENTIALS = {"detail": "Invalid username or password"}
-NOT_AUTHENTICATED = {"detail": "Not authenticated"}
-DATABASE_UNAVAILABLE = {"detail": "Database unavailable"}
+INVALID_CREDENTIALS = {"detail": "Invalid username or password", "code": "INVALID_CREDENTIALS"}
+NOT_AUTHENTICATED = {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
+DATABASE_UNAVAILABLE = {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}
 
 
 def _credentials(username: str, password: str = TEST_PASSWORD) -> dict[str, str]:
@@ -99,7 +99,7 @@ def test_login_is_503_when_all_verification_slots_are_busy(
             LOGIN_VERIFY_SLOTS.release()
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Login busy, try again"}
+    assert response.json() == {"detail": "Login busy, try again", "code": "LOGIN_BUSY"}
     assert "set-cookie" not in response.headers
 
 
@@ -208,7 +208,7 @@ def test_unknown_api_path_without_session_is_json_404(client: TestClient) -> Non
 
     assert response.status_code == 404
     assert response.headers["content-type"] == "application/json"
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Not Found", "code": "NOT_FOUND"}
 
 
 @pytest.mark.parametrize(("role", "allowed"), [("supervisor", True), ("salesperson", False)])
@@ -235,4 +235,4 @@ def test_supervisor_only_endpoint_is_403_for_a_salesperson(auth_client: TestClie
     response = auth_client.post("/api/inquiries/1/draft/supervisor-decision", json={})
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Supervisor role required"}
+    assert response.json() == {"detail": "Supervisor role required", "code": "SUPERVISOR_REQUIRED"}

@@ -1,12 +1,12 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable
 from app.db import get_engine
 from app.tracing.summary import RunSummary, get_run_summary
 
@@ -29,5 +29,7 @@ def read_run(
         logger.exception("Runs API: database unavailable")
         raise database_unavailable() from None
     if summary is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+        raise ApiHTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Run not found", code="RUN_NOT_FOUND"
+        )
     return summary

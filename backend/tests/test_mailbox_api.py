@@ -37,7 +37,7 @@ def test_without_session_is_401(client: TestClient, use_mailbox: MailboxSetter) 
     response = client.post(PATH)
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 @pytest.mark.parametrize("role", ["salesperson", "supervisor"])
@@ -85,15 +85,15 @@ def test_unconfigured_mailbox_is_503(auth_client: TestClient, use_mailbox: Mailb
     response = auth_client.post(PATH)
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Mailbox not configured"}
+    assert response.json() == {"detail": "Mailbox not configured", "code": "MAILBOX_NOT_CONFIGURED"}
 
 
 @pytest.mark.parametrize(
-    ("error", "detail"),
+    ("error", "detail", "code"),
     [
-        (MailboxAuthFailed(SERVER_TEXT), "Mailbox login failed"),
-        (MailboxUnavailable(SERVER_TEXT), "Mailbox unavailable"),
-        (MailboxProtocolError(SERVER_TEXT), "Mailbox error"),
+        (MailboxAuthFailed(SERVER_TEXT), "Mailbox login failed", "MAILBOX_AUTH_FAILED"),
+        (MailboxUnavailable(SERVER_TEXT), "Mailbox unavailable", "MAILBOX_UNAVAILABLE"),
+        (MailboxProtocolError(SERVER_TEXT), "Mailbox error", "MAILBOX_ERROR"),
     ],
 )
 def test_mailbox_errors_are_502_without_server_text(
@@ -102,6 +102,7 @@ def test_mailbox_errors_are_502_without_server_text(
     caplog: pytest.LogCaptureFixture,
     error: MailboxError,
     detail: str,
+    code: str,
 ) -> None:
     use_mailbox(FailingMailbox(error))
 
@@ -109,7 +110,7 @@ def test_mailbox_errors_are_502_without_server_text(
         response = auth_client.post(PATH)
 
     assert response.status_code == 502
-    assert response.json() == {"detail": detail}
+    assert response.json() == {"detail": detail, "code": code}
     assert SERVER_TEXT not in caplog.text
     assert type(error).__name__ in caplog.text
 
@@ -126,7 +127,10 @@ def test_fetch_in_progress_is_409(
             connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": MAILBOX_LOCK_KEY})
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Mailbox fetch already in progress"}
+    assert response.json() == {
+        "detail": "Mailbox fetch already in progress",
+        "code": "MAILBOX_BUSY",
+    }
 
 
 def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None:
@@ -136,4 +140,4 @@ def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None
     response = client_without_db.post(PATH)
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database unavailable"}
+    assert response.json() == {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}

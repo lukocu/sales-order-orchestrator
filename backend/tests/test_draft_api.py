@@ -154,7 +154,7 @@ def test_reject_without_a_reason_is_422(
     response = auth_client.post(_decision_path(acme.id), json=request)
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "Reason is required"}
+    assert response.json() == {"detail": "Reason is required", "code": "REASON_REQUIRED"}
     after = auth_client.get(f"/api/inquiries/{acme.id}/analysis").json()
     assert (after["draft"]["status"], after["decisions"]) == ("draft", [])
 
@@ -219,7 +219,7 @@ def test_edit_without_a_reason_is_422(
     response = auth_client.put(_draft_path(acme.id), json=_edit_body(draft, reason=reason))
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "Reason is required"}
+    assert response.json() == {"detail": "Reason is required", "code": "REASON_REQUIRED"}
 
 
 def test_invalid_edit_is_422(
@@ -233,9 +233,12 @@ def test_invalid_edit_is_422(
     )
 
     assert zero_price.status_code == 422
-    assert zero_price.json() == {"detail": "Unit price must be above zero"}
+    assert zero_price.json() == {"detail": "Unit price must be above zero", "code": "INVALID_EDIT"}
     assert unknown_option.status_code == 422
-    assert unknown_option.json() == {"detail": "Option is not one of the recommendation's options"}
+    assert unknown_option.json() == {
+        "detail": "Option is not one of the recommendation's options",
+        "code": "INVALID_EDIT",
+    }
     after = auth_client.get(f"/api/inquiries/{acme.id}/analysis").json()
     assert (after["draft"]["offer"]["edited"], after["decisions"]) == (False, [])
 
@@ -270,7 +273,7 @@ def test_changed_draft_is_409(
 
     for response in (approve, edit):
         assert response.status_code == 409
-        assert response.json() == {"detail": "Draft changed, reload"}
+        assert response.json() == {"detail": "Draft changed, reload", "code": "DRAFT_CHANGED"}
 
 
 def test_decided_draft_is_409(
@@ -291,7 +294,10 @@ def test_decided_draft_is_409(
 
     for response in (reject, edit):
         assert response.status_code == 409
-        assert response.json() == {"detail": "Draft cannot be changed"}
+        assert response.json() == {
+            "detail": "Draft cannot be changed",
+            "code": "DRAFT_NOT_EDITABLE",
+        }
 
 
 def test_stale_draft_is_409(
@@ -308,7 +314,7 @@ def test_stale_draft_is_409(
     )
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Draft is stale"}
+    assert response.json() == {"detail": "Draft is stale", "code": "DRAFT_STALE"}
 
 
 def test_approve_without_a_verdict_is_409(
@@ -329,7 +335,7 @@ def test_approve_without_a_verdict_is_409(
     )
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Policy verdict missing"}
+    assert response.json() == {"detail": "Policy verdict missing", "code": "POLICY_MISSING"}
 
 
 def test_inquiry_without_a_draft_is_409(
@@ -349,7 +355,7 @@ def test_inquiry_without_a_draft_is_409(
 
     for response in (approve, edit):
         assert response.status_code == 409
-        assert response.json() == {"detail": "Nothing to draft"}
+        assert response.json() == {"detail": "Nothing to draft", "code": "NOTHING_TO_DRAFT"}
 
 
 # --- Not found and auth -----------------------------------------------------------------
@@ -362,7 +368,7 @@ def test_without_analysis_is_404(auth_client: TestClient, acme: Inquiry) -> None
     )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "No analysis yet"}
+    assert response.json() == {"detail": "No analysis yet", "code": "NO_ANALYSIS"}
 
 
 def test_unknown_inquiry_is_404(auth_client: TestClient) -> None:
@@ -377,7 +383,7 @@ def test_unknown_inquiry_is_404(auth_client: TestClient) -> None:
     )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Inquiry not found"}
+    assert response.json() == {"detail": "Inquiry not found", "code": "INQUIRY_NOT_FOUND"}
 
 
 def test_naive_token_is_422(auth_client: TestClient) -> None:
@@ -395,7 +401,7 @@ def test_without_session_is_401(client: TestClient, method: str) -> None:
     response = client.request(method.upper(), path, json={})
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 @pytest.mark.parametrize("endpoint", ["edit", "decision"])
@@ -421,7 +427,7 @@ def test_unexpected_error_is_a_logged_500(
         )
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Decision failed"}
+    assert response.json() == {"detail": "Decision failed", "code": "DECISION_FAILED"}
 
 
 # --- Supervisor decision ----------------------------------------------------------------
@@ -503,7 +509,7 @@ def test_salesperson_supervisor_decision_is_403(
     )
 
     assert response.status_code == 403
-    assert response.json() == {"detail": "Supervisor role required"}
+    assert response.json() == {"detail": "Supervisor role required", "code": "SUPERVISOR_REQUIRED"}
     assert auth_client.get(f"/api/inquiries/{delta.id}/analysis").json() == before
 
 
@@ -511,7 +517,7 @@ def test_supervisor_decision_without_session_is_401(client: TestClient) -> None:
     response = client.post(_supervisor_path(1), json={})
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 @pytest.mark.parametrize("reason", [None, "", "   "], ids=["missing", "empty", "blank"])
@@ -532,7 +538,7 @@ def test_supervisor_decision_without_a_reason_is_422(
 
     assert response.status_code == 422
     if reason is not None:
-        assert response.json() == {"detail": "Reason is required"}
+        assert response.json() == {"detail": "Reason is required", "code": "REASON_REQUIRED"}
     after = auth_client.get(f"/api/inquiries/{delta.id}/analysis").json()
     assert after["draft"]["status"] == "awaiting_supervisor"
 
@@ -549,7 +555,10 @@ def test_supervisor_decision_on_a_draft_not_awaiting_is_409(
     )
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Draft is not awaiting supervisor"}
+    assert response.json() == {
+        "detail": "Draft is not awaiting supervisor",
+        "code": "NOT_AWAITING_SUPERVISOR",
+    }
 
 
 def test_supervisor_cannot_approve_own_submission_but_can_reject_it(
@@ -572,7 +581,10 @@ def test_supervisor_cannot_approve_own_submission_but_can_reject_it(
     )
 
     assert approve.status_code == 409
-    assert approve.json() == {"detail": "Cannot approve your own submission"}
+    assert approve.json() == {
+        "detail": "Cannot approve your own submission",
+        "code": "OWN_SUBMISSION",
+    }
     assert reject.status_code == 200
     assert reject.json()["draft"]["status"] == "rejected"
     assert reject.json()["decisions"][-1]["action"] == "supervisor_reject"
@@ -593,7 +605,7 @@ def test_supervisor_decision_with_a_changed_token_is_409(
     )
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Draft changed, reload"}
+    assert response.json() == {"detail": "Draft changed, reload", "code": "DRAFT_CHANGED"}
 
 
 def test_supervisor_decision_with_an_unknown_field_is_422(

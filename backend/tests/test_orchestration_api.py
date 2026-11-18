@@ -58,21 +58,21 @@ def test_standard_inquiry_is_409(
     response = auth_client.post(_path(biuro_max.id))
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Nothing to orchestrate"}
+    assert response.json() == {"detail": "Nothing to orchestrate", "code": "NOTHING_TO_ORCHESTRATE"}
 
 
 def test_without_analysis_is_404(auth_client: TestClient, acme: Inquiry) -> None:
     response = auth_client.post(_path(acme.id))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "No analysis yet"}
+    assert response.json() == {"detail": "No analysis yet", "code": "NO_ANALYSIS"}
 
 
 def test_unknown_inquiry_is_404(auth_client: TestClient) -> None:
     response = auth_client.post(_path(2_147_483_647))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Inquiry not found"}
+    assert response.json() == {"detail": "Inquiry not found", "code": "INQUIRY_NOT_FOUND"}
 
 
 def test_unexpected_error_is_json_500(
@@ -93,7 +93,7 @@ def test_unexpected_error_is_json_500(
     response = auth_client.post(_path(acme.id))
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Orchestration failed"}
+    assert response.json() == {"detail": "Orchestration failed", "code": "ORCHESTRATION_FAILED"}
     assert "RuntimeError" in caplog.text
     assert str(acme.id) in caplog.text
     assert "secret inquiry content" not in caplog.text
@@ -106,7 +106,7 @@ def test_without_session_is_401(client: TestClient) -> None:
     response = client.post(_path(1))
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None:
@@ -115,4 +115,4 @@ def test_unreachable_database_is_json_503(client_without_db: TestClient) -> None
     response = client_without_db.post(_path(1))
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database unavailable"}
+    assert response.json() == {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}

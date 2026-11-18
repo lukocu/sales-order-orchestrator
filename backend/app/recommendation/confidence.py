@@ -52,25 +52,29 @@ class ConfidenceContext:
     uncertain_inputs: Sequence[str]
 
 
-def _positive(code: str, label: str) -> Signal:
-    return Signal(code=code, polarity="positive", label=label)
+def _positive(code: str, label: str, **params: str | int | float) -> Signal:
+    return Signal(code=code, polarity="positive", label=label, params=params)
 
 
-def _risk(code: str, label: str) -> Signal:
-    return Signal(code=code, polarity="risk", label=label)
+def _risk(code: str, label: str, **params: str | int | float) -> Signal:
+    return Signal(code=code, polarity="risk", label=label, params=params)
 
 
-def _info(code: str, label: str) -> Signal:
-    return Signal(code=code, polarity="info", label=label)
+def _info(code: str, label: str, **params: str | int | float) -> Signal:
+    return Signal(code=code, polarity="info", label=label, params=params)
 
 
 def _substitute_signals(code: str, context: ConfidenceContext) -> list[Signal]:
     signals: list[Signal] = []
     compatibility = context.compatibility.get(code)
     if compatibility == "full":
-        signals.append(_positive("compat_full", f"Zamiennik {code} w pełni zgodny"))
+        signals.append(
+            _positive("compat_full", f"Zamiennik {code} w pełni zgodny", product_code=code)
+        )
     elif compatibility == "partial":
-        signals.append(_risk("compat_partial", f"Zamiennik {code} zgodny tylko częściowo"))
+        signals.append(
+            _risk("compat_partial", f"Zamiennik {code} zgodny tylko częściowo", product_code=code)
+        )
     if context.consent == "confirmed":
         signals.append(_positive("consent_confirmed", "Klient zgodził się na zamiennik"))
     elif context.consent == "unconfirmed":
@@ -130,6 +134,8 @@ def assess(
             _risk(
                 "incomplete_coverage",
                 f"Pokrywa {option.covered_quantity} z {option.requested_quantity} szt.",
+                covered=option.covered_quantity,
+                requested=option.requested_quantity,
             )
         )
     if context.deadline is None:
@@ -142,6 +148,8 @@ def assess(
                 "deadline_missed",
                 f"Realizacja {option.fulfilled_on.isoformat()} po terminie "
                 f"{context.deadline.isoformat()}",
+                fulfilled_on=option.fulfilled_on.isoformat(),
+                deadline=context.deadline.isoformat(),
             )
         )
 

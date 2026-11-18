@@ -104,7 +104,7 @@ def test_without_session_is_401(client: TestClient, method: str) -> None:
     response = client.request(method, _path(1))
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 @pytest.mark.parametrize("method", ["GET", "POST", "PUT"])
@@ -120,7 +120,7 @@ def test_unreachable_database_is_json_503(client_without_db: TestClient, method:
     response = client_without_db.request(method, _path(1), json=body if method == "PUT" else None)
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database unavailable"}
+    assert response.json() == {"detail": "Database unavailable", "code": "DATABASE_UNAVAILABLE"}
 
 
 def test_get_before_analysis_is_null(auth_client: TestClient, acme: Inquiry) -> None:
@@ -137,7 +137,7 @@ def test_unknown_inquiry_is_404(
     response = auth_client.request(method, _path(2_147_483_647))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Inquiry not found"}
+    assert response.json() == {"detail": "Inquiry not found", "code": "INQUIRY_NOT_FOUND"}
 
 
 @pytest.mark.parametrize("inquiry_id", [0, 2_147_483_648])
@@ -298,7 +298,7 @@ def test_stale_correction_is_409_and_changes_nothing(
     )
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Analysis changed, reload"}
+    assert response.json() == {"detail": "Analysis changed, reload", "code": "ANALYSIS_CHANGED"}
     assert auth_client.get(_path(acme.id)).json() == current
 
 
@@ -309,7 +309,7 @@ def test_correction_without_analysis_is_404(auth_client: TestClient, acme: Inqui
     )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "No analysis yet"}
+    assert response.json() == {"detail": "No analysis yet", "code": "NO_ANALYSIS"}
 
 
 @pytest.mark.parametrize(
@@ -336,11 +336,16 @@ def test_invalid_correction_is_422(
 
 
 @pytest.mark.parametrize(
-    ("error", "status_code", "detail"),
+    ("error", "status_code", "detail", "code"),
     [
-        (ExtractionNotConfigured("no key"), 503, "LLM not configured"),
-        (ExtractionRateLimited("429"), 503, "LLM rate limit reached, try again later"),
-        (ExtractionFailed("bad json"), 502, "Analysis failed, try again"),
+        (ExtractionNotConfigured("no key"), 503, "LLM not configured", "ANALYSIS_NOT_CONFIGURED"),
+        (
+            ExtractionRateLimited("429"),
+            503,
+            "LLM rate limit reached, try again later",
+            "ANALYSIS_RATE_LIMITED",
+        ),
+        (ExtractionFailed("bad json"), 502, "Analysis failed, try again", "ANALYSIS_FAILED"),
     ],
 )
 def test_extraction_error_keeps_existing_result(
@@ -350,6 +355,7 @@ def test_extraction_error_keeps_existing_result(
     error: ExtractionError,
     status_code: int,
     detail: str,
+    code: str,
 ) -> None:
     before = auth_client.post(_path(acme.id)).json()
     use_extractor(StubExtractor(name="groq", step_kind="llm", error=error))
@@ -357,7 +363,7 @@ def test_extraction_error_keeps_existing_result(
     response = auth_client.post(_path(acme.id))
 
     assert response.status_code == status_code
-    assert response.json() == {"detail": detail}
+    assert response.json() == {"detail": detail, "code": code}
     assert auth_client.get(_path(acme.id)).json() == before
 
 
@@ -412,4 +418,7 @@ def test_stored_analysis_not_matching_schema_is_500(
     response = auth_client.get(_path(acme.id))
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Stored analysis is invalid"}
+    assert response.json() == {
+        "detail": "Stored analysis is invalid",
+        "code": "STORED_ANALYSIS_INVALID",
+    }

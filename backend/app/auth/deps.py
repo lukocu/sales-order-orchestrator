@@ -8,7 +8,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable
 from app.auth.models import Role, User
 from app.auth.sessions import SESSION_COOKIE, get_session_user
 from app.db import get_engine
@@ -34,7 +34,11 @@ class AuthUser(BaseModel):
 
 
 def not_authenticated() -> HTTPException:
-    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return ApiHTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        code="NOT_AUTHENTICATED",
+    )
 
 
 def get_current_user(
@@ -59,7 +63,9 @@ def get_current_user(
 def require_supervisor(user: Annotated[AuthUser, Depends(get_current_user)]) -> AuthUser:
     """The logged-in supervisor; 403 for any other role, 401 like `get_current_user`."""
     if user.role != "supervisor":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor role required"
+        raise ApiHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Supervisor role required",
+            code="SUPERVISOR_REQUIRED",
         )
     return user

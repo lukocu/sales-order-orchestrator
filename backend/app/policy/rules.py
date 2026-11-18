@@ -50,6 +50,7 @@ def evaluate_margin(margin_percent: Decimal, minimum: Decimal | None) -> RuleRes
             threshold=None,
             unit="percent",
             reason="No minimum margin threshold",
+            reason_code="margin_threshold_missing",
         )
     passed = margin_percent >= minimum
     return RuleResult(
@@ -59,6 +60,7 @@ def evaluate_margin(margin_percent: Decimal, minimum: Decimal | None) -> RuleRes
         threshold=minimum,
         unit="percent",
         reason="Margin at or above the minimum" if passed else "Margin below the minimum",
+        reason_code="margin_within_minimum" if passed else "margin_below_minimum",
     )
 
 
@@ -91,6 +93,7 @@ def evaluate_discount(
             threshold=None,
             unit="percent",
             reason="No maximum discount threshold",
+            reason_code="discount_threshold_missing",
         )
     decided = requested.verdict != "not_evaluated" and requested.actual is not None
     if decided and requested.actual is not None and requested.actual >= offered:
@@ -105,6 +108,9 @@ def evaluate_discount(
         reason="Offered discount within the maximum"
         if passed
         else "Offered discount above the maximum",
+        reason_code="offered_discount_within_maximum"
+        if passed
+        else "offered_discount_above_maximum",
     )
 
 
@@ -113,7 +119,7 @@ def _evaluate_requested_discount(
 ) -> RuleResult:
     """The S-06 discount rule: the requested discount, else the standard one."""
 
-    def not_evaluated(reason: str, actual: Decimal | None = None) -> RuleResult:
+    def not_evaluated(reason: str, reason_code: str, actual: Decimal | None = None) -> RuleResult:
         return RuleResult(
             code="discount",
             verdict="not_evaluated",
@@ -121,30 +127,34 @@ def _evaluate_requested_discount(
             threshold=maximum,
             unit="percent",
             reason=reason,
+            reason_code=reason_code,
         )
 
     if discount.status == "skipped":
-        return not_evaluated("Discount check skipped")
+        return not_evaluated("Discount check skipped", "discount_check_skipped")
     kind = discount.requested_kind
     if kind == "discount_percent":
         if discount.requested_value is None:
-            return not_evaluated("Requested discount missing")
+            return not_evaluated("Requested discount missing", "requested_discount_missing")
         actual = discount.requested_value
         subject = "Requested discount"
+        reason_prefix = "requested_discount"
     elif kind == "target_price":
         if discount.requested_value is None:
-            return not_evaluated("Target price missing")
+            return not_evaluated("Target price missing", "target_price_missing")
         if list_price is None or list_price <= 0:
-            return not_evaluated("Target price without a list price")
+            return not_evaluated("Target price without a list price", "target_list_price_missing")
         actual = target_price_discount(discount.requested_value, list_price)
         subject = "Discount implied by the target price"
+        reason_prefix = "target_discount"
     else:  # none, best_price: the customer gets the standard discount
         if discount.standard_percent is None:
-            return not_evaluated("No standard discount")
+            return not_evaluated("No standard discount", "standard_discount_missing")
         actual = discount.standard_percent
         subject = "Standard discount"
+        reason_prefix = "standard_discount"
     if maximum is None:
-        return not_evaluated("No maximum discount threshold", actual)
+        return not_evaluated("No maximum discount threshold", "discount_threshold_missing", actual)
     passed = actual <= maximum
     return RuleResult(
         code="discount",
@@ -153,6 +163,9 @@ def _evaluate_requested_discount(
         threshold=maximum,
         unit="percent",
         reason=f"{subject} within the maximum" if passed else f"{subject} above the maximum",
+        reason_code=f"{reason_prefix}_within_maximum"
+        if passed
+        else f"{reason_prefix}_above_maximum",
     )
 
 
@@ -165,6 +178,7 @@ def evaluate_order_value(value: Decimal, maximum: Decimal | None) -> RuleResult:
             threshold=None,
             unit="PLN",
             reason="No maximum order value threshold",
+            reason_code="order_value_threshold_missing",
         )
     passed = value <= maximum
     return RuleResult(
@@ -174,6 +188,7 @@ def evaluate_order_value(value: Decimal, maximum: Decimal | None) -> RuleResult:
         threshold=maximum,
         unit="PLN",
         reason="Order value within the maximum" if passed else "Order value above the maximum",
+        reason_code="order_value_within_maximum" if passed else "order_value_above_maximum",
     )
 
 
@@ -191,6 +206,7 @@ def evaluate_credit(credit: CreditCheck, value: Decimal) -> RuleResult:
             threshold=None,
             unit="PLN",
             reason="Credit check skipped",
+            reason_code="credit_check_skipped",
         )
     actual = credit.balance + value if credit.balance is not None else None
     if credit.status == "blocked":
@@ -201,6 +217,7 @@ def evaluate_credit(credit: CreditCheck, value: Decimal) -> RuleResult:
             threshold=credit.limit,
             unit="PLN",
             reason="Customer credit blocked",
+            reason_code="credit_blocked",
         )
     if actual is None or credit.limit is None:
         return RuleResult(
@@ -210,6 +227,7 @@ def evaluate_credit(credit: CreditCheck, value: Decimal) -> RuleResult:
             threshold=credit.limit,
             unit="PLN",
             reason="Credit limit or balance missing",
+            reason_code="credit_data_missing",
         )
     passed = actual <= credit.limit
     return RuleResult(
@@ -223,6 +241,7 @@ def evaluate_credit(credit: CreditCheck, value: Decimal) -> RuleResult:
             if passed
             else "Balance + selected option value over limit"
         ),
+        reason_code="credit_within_limit" if passed else "credit_over_limit",
     )
 
 

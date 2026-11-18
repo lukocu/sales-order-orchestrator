@@ -144,7 +144,10 @@ def test_pending_inquiry_blocks_all_mutations_before_providers(
     response = auth_client.request(method, f"/api/inquiries/{scenario.id}/{path}", json=payload)
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Inquiry awaiting supervisor decision"}
+    assert response.json() == {
+        "detail": "Inquiry awaiting supervisor decision",
+        "code": "AWAITING_SUPERVISOR",
+    }
     assert _business_state(migrated_engine, scenario.id) == before
 
 
@@ -241,7 +244,8 @@ def test_stage_cannot_store_after_submission_or_subsequent_decision(
             "Inquiry awaiting supervisor decision"
             if outcome == "pending"
             else "Inquiry changed, reload"
-        )
+        ),
+        "code": "AWAITING_SUPERVISOR" if outcome == "pending" else "INQUIRY_CHANGED",
     }
     assert expected
     assert _business_state(migrated_engine, scenario.id) == expected

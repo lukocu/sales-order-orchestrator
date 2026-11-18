@@ -735,7 +735,8 @@ def test_decided_draft_cannot_be_regenerated(
         if status == "awaiting_supervisor"
         else "Draft already decided"
     )
-    assert response.json() == {"detail": detail}
+    code = "AWAITING_SUPERVISOR" if status == "awaiting_supervisor" else "DRAFT_DECIDED"
+    assert response.json() == {"detail": detail, "code": code}
     row = _stored(migrated_engine, acme)
     assert row is not None
     assert row.status == status
@@ -814,21 +815,21 @@ def test_standard_inquiry_is_409(
     response = auth_client.post(_path(biuro_max.id))
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Nothing to draft"}
+    assert response.json() == {"detail": "Nothing to draft", "code": "NOTHING_TO_DRAFT"}
 
 
 def test_without_analysis_is_404(auth_client: TestClient, acme: Inquiry) -> None:
     response = auth_client.post(_path(acme.id))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "No analysis yet"}
+    assert response.json() == {"detail": "No analysis yet", "code": "NO_ANALYSIS"}
 
 
 def test_unknown_inquiry_is_404(auth_client: TestClient) -> None:
     response = auth_client.post(_path(2_147_483_647))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Inquiry not found"}
+    assert response.json() == {"detail": "Inquiry not found", "code": "INQUIRY_NOT_FOUND"}
 
 
 def test_unexpected_error_is_json_500(
@@ -846,7 +847,7 @@ def test_unexpected_error_is_json_500(
     response = auth_client.post(_path(acme.id))
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Drafting failed"}
+    assert response.json() == {"detail": "Drafting failed", "code": "DRAFT_FAILED"}
     assert "RuntimeError" in caplog.text
     assert str(acme.id) in caplog.text
     assert "secret inquiry content" not in caplog.text
@@ -859,7 +860,7 @@ def test_without_session_is_401(client: TestClient) -> None:
     response = client.post(_path(1))
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
+    assert response.json() == {"detail": "Not authenticated", "code": "NOT_AUTHENTICATED"}
 
 
 # --- Decisions --------------------------------------------------------------------------

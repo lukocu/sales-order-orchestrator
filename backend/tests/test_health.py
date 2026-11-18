@@ -18,4 +18,10 @@ def test_health_degraded_when_database_unreachable(client_without_db: TestClient
     response = client_without_db.get("/api/health")
 
     assert response.status_code == 503
-    assert response.json() == {"status": "degraded", "database": "error", "migration": None}
+    assert response.json() == {
+        "status": "degraded",
+        "database": "error",
+        "migration": None,
+        "detail": "Database unavailable",
+        "code": "DATABASE_UNAVAILABLE",
+    }

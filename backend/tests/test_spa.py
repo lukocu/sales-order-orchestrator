@@ -39,7 +39,7 @@ def test_unknown_api_path_returns_json_404(spa_client: TestClient) -> None:
 
     assert response.status_code == 404
     assert response.headers["content-type"] == "application/json"
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Not Found", "code": "NOT_FOUND"}
 
 
 def test_path_traversal_does_not_escape_static_dir(spa_client: TestClient) -> None:

@@ -8,7 +8,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable, error_body
 from app.auth.deps import AuthUser, get_current_user, session_cookie
 from app.auth.models import User
 from app.auth.passwords import LOGIN_VERIFY_SLOTS, LOGIN_VERIFY_WAIT_SECONDS, verify_password
@@ -27,14 +27,18 @@ class LoginRequest(BaseModel):
 
 
 def _invalid_credentials() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password"
+    return ApiHTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid username or password",
+        code="INVALID_CREDENTIALS",
     )
 
 
 def _login_busy() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Login busy, try again"
+    return ApiHTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Login busy, try again",
+        code="LOGIN_BUSY",
     )
 
 
@@ -114,9 +118,7 @@ def logout(
         except SQLAlchemyError:
             logger.exception("Logout: database unavailable")
             error = database_unavailable()
-            error_response = JSONResponse(
-                status_code=error.status_code, content={"detail": error.detail}
-            )
+            error_response = JSONResponse(status_code=error.status_code, content=error_body(error))
             _clear_session_cookie(error_response, settings)
             return error_response
     _clear_session_cookie(response, settings)

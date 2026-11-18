@@ -6,7 +6,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, ValidationError
 from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.errors import database_unavailable
+from app.api.errors import ApiHTTPException, database_unavailable
 from app.auth.deps import AuthUser, get_current_user, require_supervisor
 from app.checks.service import NoAnalysis
 from app.db import get_engine
@@ -23,7 +23,7 @@ from app.draft.service import (
     PolicyMissing,
     ReasonRequired,
 )
-from app.inquiries.mutations import MutationConflict
+from app.inquiries.mutations import AwaitingSupervisor, MutationConflict
 from app.orchestration.planning import Planner, get_planner
 from app.orchestration.service import NothingToOrchestrate
 from app.parsing.extractor import (
@@ -79,27 +79,42 @@ class CorrectionRequest(BaseModel):
     analyzed_at: AwareDatetime  # of the analysis the corrections were made on
 
 
+def _mutation_conflict(error: MutationConflict) -> ApiHTTPException:
+    code = "AWAITING_SUPERVISOR" if isinstance(error, AwaitingSupervisor) else "INQUIRY_CHANGED"
+    return ApiHTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error), code=code)
+
+
 def _inquiry_not_found() -> HTTPException:
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inquiry not found")
+    return ApiHTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Inquiry not found", code="INQUIRY_NOT_FOUND"
+    )
 
 
 def _no_analysis() -> HTTPException:
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No analysis yet")
+    return ApiHTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="No analysis yet", code="NO_ANALYSIS"
+    )
 
 
 def _invalid_stored_analysis() -> HTTPException:
     # A stored row no longer matching ParsedFields (schema changed without a data migration).
     # Only the class is logged: the validation message would quote the stored values.
     logger.error("Analysis API: stored analysis does not match the schema (ValidationError)")
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stored analysis is invalid"
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Stored analysis is invalid",
+        code="STORED_ANALYSIS_INVALID",
     )
 
 
 def _checks_failed(inquiry_id: int, error: Exception) -> HTTPException:
     # Class and inquiry id only: the message could quote inquiry content.
     logger.error("Analysis API: checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Checks failed")
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Checks failed",
+        code="CHECKS_FAILED",
+    )
 
 
 def _orchestration_failed(inquiry_id: int, error: Exception) -> HTTPException:
@@ -107,8 +122,10 @@ def _orchestration_failed(inquiry_id: int, error: Exception) -> HTTPException:
     logger.error(
         "Analysis API: orchestration failed for inquiry %s: %s", inquiry_id, type(error).__name__
     )
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Orchestration failed"
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Orchestration failed",
+        code="ORCHESTRATION_FAILED",
     )
 
 
@@ -117,8 +134,10 @@ def _recommendation_failed(inquiry_id: int, error: Exception) -> HTTPException:
     logger.error(
         "Analysis API: recommendation failed for inquiry %s: %s", inquiry_id, type(error).__name__
     )
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Recommendation failed"
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Recommendation failed",
+        code="RECOMMENDATION_FAILED",
     )
 
 
@@ -129,8 +148,10 @@ def _policy_failed(inquiry_id: int, error: Exception) -> HTTPException:
         inquiry_id,
         type(error).__name__,
     )
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Policy evaluation failed"
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Policy evaluation failed",
+        code="POLICY_FAILED",
     )
 
 
@@ -139,8 +160,10 @@ def _draft_failed(inquiry_id: int, error: Exception) -> HTTPException:
     logger.error(
         "Analysis API: drafting failed for inquiry %s: %s", inquiry_id, type(error).__name__
     )
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Drafting failed"
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Drafting failed",
+        code="DRAFT_FAILED",
     )
 
 
@@ -149,23 +172,30 @@ def _decision_failed(inquiry_id: int, error: Exception) -> HTTPException:
     logger.error(
         "Analysis API: draft decision failed for inquiry %s: %s", inquiry_id, type(error).__name__
     )
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Decision failed"
+    return ApiHTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Decision failed",
+        code="DECISION_FAILED",
     )
 
 
 def _extraction_error(error: ExtractionError) -> HTTPException:
     if isinstance(error, ExtractionNotConfigured):
-        return HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured"
+        return ApiHTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LLM not configured",
+            code="ANALYSIS_NOT_CONFIGURED",
         )
     if isinstance(error, ExtractionRateLimited):
-        return HTTPException(
+        return ApiHTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="LLM rate limit reached, try again later",
+            code="ANALYSIS_RATE_LIMITED",
         )
-    return HTTPException(
-        status_code=status.HTTP_502_BAD_GATEWAY, detail="Analysis failed, try again"
+    return ApiHTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail="Analysis failed, try again",
+        code="ANALYSIS_FAILED",
     )
 
 
@@ -199,7 +229,7 @@ def analyze(
     try:
         return analyze_inquiry(engine, extractor, inquiry_id, user, planner, recommender, drafter)
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except ExtractionError as error:
@@ -244,12 +274,14 @@ def correct(
     except AnalysisNotFound:
         raise _no_analysis() from None
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:  # deleted right after the corrections were saved
         raise _inquiry_not_found() from None
     except AnalysisChanged:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Analysis changed, reload"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Analysis changed, reload",
+            code="ANALYSIS_CHANGED",
         ) from None
     except ValidationError:
         raise _invalid_stored_analysis() from None
@@ -270,7 +302,7 @@ def recheck(
     try:
         return recheck_inquiry(engine, inquiry_id, planner, recommender, drafter)
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except NoAnalysis:
@@ -297,14 +329,16 @@ def reorchestrate(
     try:
         return reorchestrate_inquiry(engine, inquiry_id, planner, recommender, drafter)
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
         raise _no_analysis() from None
     except NothingToOrchestrate:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Nothing to orchestrate"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nothing to orchestrate",
+            code="NOTHING_TO_ORCHESTRATE",
         ) from None
     except ValidationError:
         raise _invalid_stored_analysis() from None
@@ -326,14 +360,16 @@ def rerecommend(
     try:
         return rerecommend_inquiry(engine, inquiry_id, recommender, drafter)
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
         raise _no_analysis() from None
     except NothingToRecommend:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Nothing to recommend"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nothing to recommend",
+            code="NOTHING_TO_RECOMMEND",
         ) from None
     except ValidationError:
         raise _invalid_stored_analysis() from None
@@ -354,14 +390,16 @@ def reevaluate_policy(
     try:
         return reevaluate_policy_inquiry(engine, inquiry_id, drafter)
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
         raise _no_analysis() from None
     except NothingToEvaluate:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Nothing to evaluate"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nothing to evaluate",
+            code="NOTHING_TO_EVALUATE",
         ) from None
     except ValidationError:
         raise _invalid_stored_analysis() from None
@@ -382,18 +420,20 @@ def regenerate(
     try:
         return redraft_inquiry(engine, inquiry_id, drafter)
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
         raise _no_analysis() from None
     except NothingToDraft:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Nothing to draft"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Nothing to draft", code="NOTHING_TO_DRAFT"
         ) from None
     except DraftDecided:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Draft already decided"
+        raise ApiHTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Draft already decided",
+            code="DRAFT_DECIDED",
         ) from None
     except ValidationError:
         raise _invalid_stored_analysis() from None
@@ -432,12 +472,18 @@ class SupervisorDecisionRequest(BaseModel):
 def _decision_error(error: Exception) -> HTTPException:
     """The 409/422 of an edit or a decision; `error` is one of the draft service's."""
     if isinstance(error, ReasonRequired):
-        return HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Reason is required"
+        return ApiHTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Reason is required",
+            code="REASON_REQUIRED",
         )
     if isinstance(error, InvalidEdit):
         # Fixed English sentences of `app.draft.offer` and the service, no inquiry data.
-        return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error))
+        return ApiHTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(error),
+            code="INVALID_EDIT",
+        )
     details: dict[type[Exception], str] = {
         DraftChanged: "Draft changed, reload",
         DraftNotEditable: "Draft cannot be changed",
@@ -447,7 +493,20 @@ def _decision_error(error: Exception) -> HTTPException:
         NotAwaitingSupervisor: "Draft is not awaiting supervisor",
         OwnSubmission: "Cannot approve your own submission",
     }
-    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=details[type(error)])
+    codes: dict[type[Exception], str] = {
+        DraftChanged: "DRAFT_CHANGED",
+        DraftNotEditable: "DRAFT_NOT_EDITABLE",
+        DraftStale: "DRAFT_STALE",
+        PolicyMissing: "POLICY_MISSING",
+        NothingToDraft: "NOTHING_TO_DRAFT",
+        NotAwaitingSupervisor: "NOT_AWAITING_SUPERVISOR",
+        OwnSubmission: "OWN_SUBMISSION",
+    }
+    return ApiHTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=details[type(error)],
+        code=codes[type(error)],
+    )
 
 
 _DECISION_ERRORS = (
@@ -482,7 +541,7 @@ def edit(
             reason=request.reason,
         )
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -516,7 +575,7 @@ def decide_draft(
             reason=request.reason,
         )
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -552,7 +611,7 @@ def supervisor_decide_draft(
             reason=request.reason,
         )
     except MutationConflict as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
+        raise _mutation_conflict(error) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:

@@ -1,9 +1,16 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import analysis, auth, health, inquiries, mailbox, runs, supervisor
+from app.api.errors import (
+    http_error_response,
+    unexpected_error_response,
+    validation_error_response,
+)
 from app.auth.deps import get_current_user
 from app.settings import get_settings
 
@@ -43,6 +50,9 @@ def _add_spa_routes(app: FastAPI, static_dir: Path) -> None:
 
 def create_app(static_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="Sales Order Orchestrator")
+    app.add_exception_handler(StarletteHTTPException, http_error_response)
+    app.add_exception_handler(RequestValidationError, validation_error_response)
+    app.add_exception_handler(Exception, unexpected_error_response)
     app.include_router(api_router)
     if static_dir is not None and (static_dir / "index.html").is_file():
         _add_spa_routes(app, static_dir)

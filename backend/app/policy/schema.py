@@ -32,6 +32,7 @@ class RuleResult(BaseModel):
     threshold: Decimal | None
     unit: Unit
     reason: str
+    reason_code: str | None = None  # absent in historical JSONB
 
 
 class PolicyResult(BaseModel):
