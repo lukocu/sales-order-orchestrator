@@ -217,7 +217,7 @@ function analysis(overrides: Partial<Analysis> = {}): Analysis {
 function renderPanel(
   onUnauthorized = vi.fn(),
   onStatusFacts = vi.fn(),
-  { user = SALES }: { user?: User } = {},
+  { user = SALES, awaitingSupervisor = false }: { user?: User; awaitingSupervisor?: boolean } = {},
 ) {
   // The panel links to the run inspector, so it needs a router (not loaded: no route
   // matches, the inspector stays closed).
@@ -227,6 +227,7 @@ function renderPanel(
       <AnalysisPanel
         inquiryId={7}
         body={MAIL_BODY}
+        awaitingSupervisor={awaitingSupervisor}
         user={user}
         onUnauthorized={onUnauthorized}
         onStatusFacts={onStatusFacts}
@@ -247,6 +248,25 @@ function putBody(fetchMock: ReturnType<typeof stubApi>): unknown {
 }
 
 describe('AnalysisPanel', () => {
+  it.each([
+    ['salesperson', SALES],
+    ['supervisor', SUPERVISOR],
+  ])('locks analysis actions for a %s from raw awaiting status when the draft cannot be decoded', async (_, user) => {
+    stubApi({ [PATH]: () => json(200, null) })
+    renderPanel(vi.fn(), vi.fn(), { user, awaitingSupervisor: true })
+
+    expect(await screen.findByText(/waiting for a supervisor decision/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeDisabled()
+    if (user.role === 'supervisor') {
+      expect(screen.getByRole('link', { name: 'Open supervisor review' })).toHaveAttribute(
+        'href',
+        '/approvals/7',
+      )
+    } else {
+      expect(screen.queryByRole('link', { name: 'Open supervisor review' })).not.toBeInTheDocument()
+    }
+  })
+
   it('analyzes an inquiry without a result and shows the fields', async () => {
     let answer: (response: Response) => void = () => {}
     stubApi({

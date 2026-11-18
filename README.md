@@ -560,9 +560,22 @@ The **Policy** section under the recommendation shows the outcome (*No approval 
 policy run. Without a current recommendation it says why; a stale verdict or none yet offers
 **Re-run policy**.
 
-The policy does not enforce roles, queue the inquiry for a supervisor or record an approval
-(S-08), does not evaluate an edited draft of the answer (S-07) and never changes the
+The policy stage computes the verdict; the supervisor queue handles role access and decisions.
+Policy does not evaluate an edited draft of the answer (S-07) and never changes the
 recommender's choice or prices an option with the requested discount.
+
+## Supervisor review
+
+When the policy requires approval, a salesperson can submit the reply draft to a supervisor.
+The inquiry then appears in the supervisor's **Approvals** queue. While it awaits a decision,
+both roles see the inquiry as read-only, including when they open its ordinary inquiry URL.
+The supervisor reviews the rules that need attention and the actual offer, then approves or
+rejects it with a required comment. Approval leaves the draft ready to send (sending remains
+simulated); rejection returns it to the salesperson for corrections. A supervisor cannot
+approve their own submission, and stale or unreadable submissions can only be rejected.
+
+The queue count and list share one refreshable state. The app refreshes on entry, when a
+hidden tab becomes visible, after a decision and on request; it does not poll in the background.
 
 ## Step tracing
 

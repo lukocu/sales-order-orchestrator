@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import './index.css'
 import './i18n'
 import type { Analysis, ChecksView, OrchestrationView, RunSummary } from './api/analysis'
+import type { SupervisorQueue as SupervisorQueueData, SupervisorReview as SupervisorReviewData } from './api/supervisor'
 import type { User } from './api/auth'
 import type { InquiryDetail, InquirySummary } from './api/inquiries'
 import AppNav from './components/AppNav'
@@ -17,6 +18,8 @@ import Inbox from './components/Inbox'
 import LanguageSwitch from './components/LanguageSwitch'
 import LoginForm from './components/LoginForm'
 import SystemPage from './components/SystemPage'
+import SupervisorQueue from './components/SupervisorQueue'
+import SupervisorReview from './components/SupervisorReview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { createAppRouter } from './router'
 import { SessionContext, type Session } from './session'
+import { SupervisorQueueProvider } from './supervisorQueue'
 import {
   ACME_ORCHESTRATION,
   COMPATIBILITY_TASK,
@@ -132,6 +136,79 @@ function analysisOf(inquiryId: number, overrides: Partial<Analysis> = {}): Analy
     recommendation: ACME_RECOMMENDATION, policy: ACME_POLICY, draft: ACME_DRAFT, decisions: [],
     ...overrides,
   }
+}
+
+const SUPERVISOR_QUEUE: SupervisorQueueData = {
+  total: 4,
+  items: [
+    { id: 31, sender_name: 'Hurtownia Delta', subject: 'Edited offer review', received_at: '2026-11-16T09:30:00Z', submitted_at: '2026-11-16T10:00:00Z', submitted_by: 2, draft_updated_at: DELTA_AWAITING.updated_at, attention_rules: [{ code: 'margin', verdict: 'fail' }, { code: 'discount', verdict: 'fail' }], review_state: 'actionable' },
+    { id: 32, sender_name: 'ACME', subject: 'Own submission', received_at: '2026-11-16T09:30:00Z', submitted_at: '2026-11-16T10:10:00Z', submitted_by: SUPERVISOR.id, draft_updated_at: DELTA_AWAITING.updated_at, attention_rules: [{ code: 'order_value', verdict: 'not_evaluated' }], review_state: 'actionable' },
+    { id: 33, sender_name: 'Biuro Max', subject: 'Out-of-date submission', received_at: '2026-11-16T09:30:00Z', submitted_at: '2026-11-16T10:20:00Z', submitted_by: 2, draft_updated_at: DELTA_AWAITING.updated_at, attention_rules: [], review_state: 'stale' },
+    { id: 34, sender_name: 'Omega', subject: 'Offer details unavailable', received_at: '2026-11-16T09:30:00Z', submitted_at: '2026-11-16T10:30:00Z', submitted_by: null, draft_updated_at: DELTA_AWAITING.updated_at, attention_rules: [], review_state: 'unavailable' },
+  ],
+}
+
+function supervisorReviewOf(
+  inquiryId: number,
+  overrides: Partial<SupervisorReviewData> = {},
+): SupervisorReviewData {
+  return {
+    inquiry_id: inquiryId,
+    sender_name: 'Hurtownia Delta',
+    sender_email: 'zakupy@delta.example.com',
+    subject: 'Zamówienie ABC-100',
+    body: MAIL_BODY,
+    received_at: '2026-11-16T09:30:00Z',
+    draft_status: 'awaiting_supervisor',
+    draft_updated_at: DELTA_AWAITING.updated_at,
+    submitted_at: '2026-11-16T10:00:00Z',
+    submitted_by: 2,
+    review_state: 'actionable',
+    allowed_actions: ['approve', 'reject'],
+    offer: DELTA_AWAITING.offer,
+    offer_unavailable: false,
+    offer_subject: DELTA_AWAITING.subject,
+    offer_body: DELTA_AWAITING.body,
+    policy: DELTA_AWAITING.policy,
+    context: {
+      fields: analysisOf(inquiryId).fields,
+      checks: EXCEPTION_CHECKS,
+      orchestration: null,
+      recommendation: null,
+      policy: DELTA_AWAITING.policy,
+    },
+    decisions: [DELTA_SUBMITTED],
+    ...overrides,
+  }
+}
+
+const SUPERVISOR_REVIEWS: Record<number, SupervisorReviewData> = {
+  31: supervisorReviewOf(31, {
+    offer: { ...DELTA_AWAITING.offer, edited: true },
+    policy: {
+      ...DELTA_AWAITING.policy!,
+      rules: DELTA_AWAITING.policy!.rules.map((rule) =>
+        rule.code === 'margin' ? { ...rule, verdict: 'fail' } : rule,
+      ),
+    },
+  }),
+  32: supervisorReviewOf(32, { submitted_by: SUPERVISOR.id, allowed_actions: ['reject'] }),
+  33: supervisorReviewOf(33, { review_state: 'stale', allowed_actions: ['reject'] }),
+  34: supervisorReviewOf(34, { review_state: 'unavailable', allowed_actions: ['reject'], offer: null, offer_unavailable: true }),
+  35: supervisorReviewOf(35, {
+    draft_status: 'ready_to_send',
+    review_state: 'not_awaiting',
+    allowed_actions: [],
+    submitted_by: null,
+    decisions: [DELTA_SUBMITTED, ACME_APPROVED],
+  }),
+  36: supervisorReviewOf(36, {
+    draft_status: 'rejected',
+    review_state: 'not_awaiting',
+    allowed_actions: [],
+    submitted_by: null,
+    decisions: [DELTA_SUBMITTED, DELTA_SUPERVISOR_REJECTED],
+  }),
 }
 
 // A partial orchestration: the supplier agent failed twice, the rest of the plan ran.
@@ -326,6 +403,13 @@ const DEFAULTS: Replies = {
   'POST /api/auth/login': { status: 200, body: SUPERVISOR },
   'POST /api/auth/logout': { status: 204 },
   'POST /api/mailbox/fetch': { status: 200, body: { fetched: 3, created: 2, duplicates: 1, skipped: 0 } },
+  'GET /api/supervisor/queue': { status: 200, body: SUPERVISOR_QUEUE },
+  ...Object.fromEntries(
+    Object.entries(SUPERVISOR_REVIEWS).map(([id, review]): [string, Reply] => [
+      `GET /api/supervisor/reviews/${id}`,
+      { status: 200, body: review },
+    ]),
+  ),
   // The inquiry view behind the run inspector cells, one inquiry per state. Fetched after the
   // session resolves, so they cannot come from a cell's scope.
   ...Object.fromEntries(
@@ -472,7 +556,11 @@ function Routed({ children }: { children: ReactNode }) {
   const [router] = useState(() => memoryRouter('/'))
   return (
     <RouterContextProvider router={router}>
-      <SessionContext.Provider value={SESSION}>{children}</SessionContext.Provider>
+      <SessionContext.Provider value={SESSION}>
+        <SupervisorQueueProvider user={SUPERVISOR} onUnauthorized={() => {}}>
+          {children}
+        </SupervisorQueueProvider>
+      </SessionContext.Provider>
     </RouterContextProvider>
   )
 }
@@ -642,6 +730,27 @@ function KitchenSink() {
           <Cell label="System page (/system): ok, with Refresh">
             <SystemPage />
           </Cell>
+          <Cell label="Supervisor queue: one shared list and count, with several awaiting states" wide>
+            <Routed><SupervisorQueue /></Routed>
+          </Cell>
+          <Cell label="Supervisor review: edited offer and decision" wide>
+            <Routed><SupervisorReview inquiryId={31} /></Routed>
+          </Cell>
+          <Cell label="Supervisor review: own submission (reject only)" wide>
+            <Routed><SupervisorReview inquiryId={32} /></Routed>
+          </Cell>
+          <Cell label="Supervisor review: stale submission (reject only)" wide>
+            <Routed><SupervisorReview inquiryId={33} /></Routed>
+          </Cell>
+          <Cell label="Supervisor review: unavailable offer (reject only)" wide>
+            <Routed><SupervisorReview inquiryId={34} /></Routed>
+          </Cell>
+          <Cell label="Supervisor review: approved result" wide>
+            <Routed><SupervisorReview inquiryId={35} /></Routed>
+          </Cell>
+          <Cell label="Supervisor review: rejected result" wide>
+            <Routed><SupervisorReview inquiryId={36} /></Routed>
+          </Cell>
           <Cell label="Run inspector: every run, the plan by stage and the grand total (inquiry 1; the header shows its status)" wide shell>
             <InspectorCell inquiryId={1} />
           </Cell>
@@ -732,6 +841,14 @@ function KitchenSink() {
         </Section>
 
         <Section state="error" caption="Error text next to the field or action that failed.">
+          <Cell label="Supervisor queue refresh failed; the last count stays visible" wide>
+            <Driven drive={async (root) => {
+              const refresh = await find<HTMLButtonElement>(root, 'button')
+              withReplies({ 'GET /api/supervisor/queue': { status: 500, body: { detail: 'Unavailable' } } }, () => refresh.click())
+            }}>
+              <Routed><SupervisorQueue /></Routed>
+            </Driven>
+          </Cell>
           <Cell label="Login: invalid credentials (401)" shell>
             <Driven drive={(root) => signIn(root, { status: 401, body: { detail: 'Invalid credentials' } })}>
               <AppShell user={null}>
@@ -781,6 +898,11 @@ function KitchenSink() {
         </Section>
 
         <Section state="empty" caption="Lists with nothing to show.">
+          <Cell label="Supervisor queue: empty">
+            <Stub replies={{ 'GET /api/supervisor/queue': { status: 200, body: { items: [], total: 0 } } }}>
+              <Routed><SupervisorQueue /></Routed>
+            </Stub>
+          </Cell>
           <Cell label="No inquiries" wide>
             <Stub replies={NO_INQUIRIES}>
               <Routed>
@@ -805,6 +927,11 @@ function KitchenSink() {
         </Section>
 
         <Section state="loading" caption="Requests that never answer.">
+          <Cell label="Supervisor queue loading">
+            <Stub replies={{ 'GET /api/supervisor/queue': 'pending' }}>
+              <Routed><SupervisorQueue /></Routed>
+            </Stub>
+          </Cell>
           <Cell label="Session check (App)" shell>
             <RoutedApp replies={SESSION_PENDING} />
           </Cell>

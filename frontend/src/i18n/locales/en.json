@@ -43,6 +43,79 @@
     "inbox": "Inbox",
     "system": "System"
   },
+  "supervisor": {
+    "nav": { "queue": "To approve" },
+    "access": {
+      "denied": "Supervisor access required",
+      "explanation": "This review queue is only available to supervisors.",
+      "inbox": "Back to the inbox"
+    },
+    "queue": {
+      "heading": "Approval queue",
+      "count_one": "{{count}} inquiry waiting",
+      "count_few": "{{count}} inquiries waiting",
+      "count_many": "{{count}} inquiries waiting",
+      "count_other": "{{count}} inquiries waiting",
+      "refresh": "Refresh queue",
+      "loading": "Loading approval queue…",
+      "error": "Could not load the approval queue.",
+      "empty": "No inquiries are waiting for a decision.",
+      "stale": "Showing the last available count",
+      "waiting": "Waiting {{age}}"
+    },
+    "age": {
+      "minutes_one": "{{count}} minute",
+      "minutes_few": "{{count}} minutes",
+      "minutes_many": "{{count}} minutes",
+      "minutes_other": "{{count}} minutes",
+      "hours_one": "{{count}} hour",
+      "hours_few": "{{count}} hours",
+      "hours_many": "{{count}} hours",
+      "hours_other": "{{count}} hours",
+      "days_one": "{{count}} day",
+      "days_few": "{{count}} days",
+      "days_many": "{{count}} days",
+      "days_other": "{{count}} days"
+    },
+    "state": {
+      "actionable": "Ready to review",
+      "stale": "Out of date",
+      "unavailable": "Offer unavailable",
+      "not_awaiting": "No longer awaiting a decision"
+    },
+    "lock": {
+      "waiting": "This inquiry is waiting for a supervisor decision. Editing and re-running are disabled.",
+      "openReview": "Open supervisor review"
+    },
+    "review": {
+      "loading": "Loading review…",
+      "error": "Could not load this review.",
+      "back": "Back to the queue",
+      "submitted": "Submitted {{date}}",
+      "result": "Decision complete: {{status}}.",
+      "attention": "Rules needing attention",
+      "noAttention": "No rules need attention.",
+      "offer": "Evaluated offer",
+      "offerUnavailable": "The offer details are unavailable. Reject with an explanation to return this inquiry for correction.",
+      "coverage": "Coverage",
+      "fulfilled": "Fulfilled on",
+      "value": "Offer value",
+      "margin": "Margin",
+      "edited": "Edited offer",
+      "decision": "Decision",
+      "reasonRequired": "Enter a reason for the decision.",
+      "conflict": "This inquiry changed while you were reviewing it. The latest data has been loaded; review it before deciding.",
+      "networkError": "The decision could not be saved. Your comment is still here; retry after checking the inquiry.",
+      "readAgain": "The inquiry changed. Review the latest offer and choose to confirm that you have read it before submitting.",
+      "reviewed": "I reviewed the latest inquiry",
+      "confirmApprove": "Confirm approval",
+      "confirmReject": "Confirm rejection",
+      "noActions": "No decision is currently available for this inquiry.",
+      "context": "Other context and history",
+      "email": "Draft e-mail",
+      "originalEmail": "Original e-mail"
+    }
+  },
   "notFound": {
     "heading": "Page not found",
     "body": "There is nothing at this address.",

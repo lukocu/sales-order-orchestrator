@@ -43,6 +43,8 @@ type Props = {
   inquiryId: number
   // The e-mail text: shown in the inquiry step, as a disclosure in the others.
   body: string
+  // Raw status from the inquiry summary; this remains reliable if a draft cannot be decoded.
+  awaitingSupervisor?: boolean
   // The signed-in user: a supervisor decides on drafts awaiting the supervisor.
   user: User
   // Called whenever the API answers 401 (session gone).
@@ -266,7 +268,7 @@ function MailBody({ body }: { body: string }) {
   return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
 }
 
-function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }: Props) {
+function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUnauthorized, onStatusFacts }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
@@ -939,14 +941,19 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
         )}
       </div>
 
-      {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
-      {load.kind === 'error' && (
-        <div role="alert" className="analysis__problem">
-          <p className="error">{load.message ?? t('common.genericError')}</p>
-          <Button type="button" variant="outline" onClick={reload}>
-            {t('common.retry')}
-          </Button>
-        </div>
+      {awaitingSupervisor && (
+        <aside className="grid gap-2 rounded-md border border-warning bg-warning/10 p-3">
+          <p>{t('supervisor.lock.waiting')}</p>
+          {user.role === 'supervisor' && (
+            <Link
+              to="/approvals/$inquiryId"
+              params={{ inquiryId: String(inquiryId) }}
+              className="w-fit text-primary underline underline-offset-4"
+            >
+              {t('supervisor.lock.openReview')}
+            </Link>
+          )}
+        </aside>
       )}
       {/* Always mounted, so a message that is set later is announced; empty it takes no room. */}
       <div className="analysis__notice empty:sr-only" role="status">
@@ -960,21 +967,31 @@ function AnalysisPanel({ inquiryId, body, user, onUnauthorized, onStatusFacts }:
           </p>
         )}
       </div>
-      {analyzeError && (
-        <div role="alert" className="analysis__problem">
-          <p className="error">{analyzeError}</p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={requestReanalysis}
-            disabled={busy !== null}
-          >
-            {t('common.retry')}
-          </Button>
-        </div>
-      )}
-
-      {load.kind === 'ok' && renderSteps()}
+      <fieldset disabled={awaitingSupervisor} className="grid min-w-0 gap-3 border-0 p-0">
+        {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
+        {load.kind === 'error' && (
+          <div role="alert" className="analysis__problem">
+            <p className="error">{load.message ?? t('common.genericError')}</p>
+            <Button type="button" variant="outline" onClick={reload}>
+              {t('common.retry')}
+            </Button>
+          </div>
+        )}
+        {analyzeError && (
+          <div role="alert" className="analysis__problem">
+            <p className="error">{analyzeError}</p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={requestReanalysis}
+              disabled={busy !== null}
+            >
+              {t('common.retry')}
+            </Button>
+          </div>
+        )}
+        {load.kind === 'ok' && renderSteps()}
+      </fieldset>
 
       <RunInspector
         analysis={analysis}

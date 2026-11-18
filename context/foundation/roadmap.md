@@ -47,7 +47,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-12 | inquiry-steps                 | handlowiec przechodzi kroki Zapytanie → Warianty → Akceptacja → Odpowiedź z jedną główną akcją         | F-03, S-11    | FR-016, US-01, FR-002, FR-010, FR-011, NFR       | done |
 | S-13 | variant-comparison            | handlowiec porównuje warianty realizacji obok siebie                                                  | S-12          | FR-017, FR-007, US-01, NFR                       | done |
 | S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | done |
-| S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | proposed |
+| S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | done |
 | S-16 | backend-messages-by-code      | użytkownik widzi wyniki sprawdzeń, reguły polityki i sygnały pewności w wybranym języku               | F-03, S-12    | FR-021, US-01, US-02                             | proposed |
 | S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | proposed |
 

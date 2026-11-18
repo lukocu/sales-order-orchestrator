@@ -1,7 +1,7 @@
 ---
 change_id: supervisor-queue
 title: Supervisor queue
-status: implementing
+status: complete
 created: 2026-11-18
 updated: 2026-11-18
 archived_at: null
@@ -22,3 +22,12 @@ Weryfikacja fazy 1 (2026-11-18):
 - docker compose run --rm backend sh check.sh przechodzi: Ruff, formatowanie, mypy, migracje Alembic oraz 1025 testów backendu.
 - Poprawiono fixture testu wyścigu orkiestracji: przełączenie wyniku kontroli na standard czyści teraz również exception_type, zgodnie z ograniczeniem bazy.
 - Kryteria automatyczne fazy 1 oznaczone jako ukończone. Bez commita.
+
+Weryfikacja fazy 3 (2026-11-18):
+
+- Frontend: Oxlint, typecheck, 420 testów i build przechodzą. Build raportuje nieblokujące ostrzeżenie o chunku JS powyżej 500 kB.
+- Backend: `docker compose run --rm backend sh check.sh` przechodzi: Ruff, formatowanie, mypy, migracje Alembic i 1032 testy.
+- Ręczny przepływ dwóch sesji przechodzi: przekazanie, decyzja z komentarzem, aktualizacja licznika i wynik handlowca, poprawka po odrzuceniu i ponowne przekazanie.
+- Widok oceny mieści formularz decyzji na 1440×900; 375 px nie powoduje przewijania poziomego. Sprawdzono PL/EN, oba schematy kolorów, fokus po decyzji, URL po logowaniu dla obu ról i inspektor otwierany na żądanie.
+- Lokalna baza Compose pozostawiona z zapytaniem 3 oczekującym na decyzję po ponownym przekazaniu weryfikacyjnym.
+- Kryteria fazy 3 oznaczone jako ukończone. Bez commita.

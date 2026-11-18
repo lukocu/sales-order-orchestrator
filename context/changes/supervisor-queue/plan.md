@@ -282,24 +282,24 @@ Backend i frontend trafiają do jednego obrazu zgodnie z istniejącym wdrożenie
 
 #### Automated
 
-- [x] 2.1 Testy API kolejki potwierdzają 401/403, pustą listę, poprawny licznik, unikalność wierszy i kolejność według przekazania z deterministycznym remisem.
-- [x] 2.2 Testy odczytu obejmują edytowaną ofertę, reguły `not_evaluated`, nieaktualne i nieczytelne szkice oraz fallback daty bez ukrywania zgłoszeń.
-- [x] 2.3 Testy szczegółu obejmują wynik po decyzji, brak oczekiwania, brak danych oferty, 404/422 oraz brak skutków ubocznych odczytu.
-- [x] 2.4 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`.
+- [x] 2.1 Testy API kolejki potwierdzają 401/403, pustą listę, poprawny licznik, unikalność wierszy i kolejność według przekazania z deterministycznym remisem. - 4975141
+- [x] 2.2 Testy odczytu obejmują edytowaną ofertę, reguły `not_evaluated`, nieaktualne i nieczytelne szkice oraz fallback daty bez ukrywania zgłoszeń. - 4975141
+- [x] 2.3 Testy szczegółu obejmują wynik po decyzji, brak oczekiwania, brak danych oferty, 404/422 oraz brak skutków ubocznych odczytu. - 4975141
+- [x] 2.4 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`. - 4975141
 
 ### Phase 3: Kolejka, licznik i ekran decyzji
 
 #### Automated
 
-- [ ] 3.1 Testy interfejsu obejmują dostęp ról i bezpośrednie URL, jeden stan listy i licznika, wszystkie wyzwalacze odświeżania, anulowanie po wylogowaniu i odporność na spóźnione odpowiedzi.
-- [ ] 3.2 Testy przepływu obejmują ofertę edytowaną, obowiązkowy komentarz, własne zgłoszenie, nieaktualność, konflikt 409, 401, błąd sieci, pozostawienie wyniku i odblokowanie poprawek po odrzuceniu.
-- [ ] 3.3 Testy zwykłego widoku zapytania nie znajdują aktywnych mutacji w żadnym kroku oczekującej sprawy obu ról, również przy nieczytelnym szkicu.
-- [ ] 3.4 Bramki frontendu przechodzą z `frontend/`: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; bramki backendu przechodzą przez `docker compose run --rm backend sh check.sh`.
-- [ ] 3.5 Skan kolorów i wartości arbitralnych z `AGENTS.md`, rozszerzony o nowe widoki, nie wypisuje dopasowań; kitchen sink nie trafia do wejść builda.
+- [x] 3.1 Testy interfejsu obejmują dostęp ról i bezpośrednie URL, jeden stan listy i licznika, wszystkie wyzwalacze odświeżania, anulowanie po wylogowaniu i odporność na spóźnione odpowiedzi.
+- [x] 3.2 Testy przepływu obejmują ofertę edytowaną, obowiązkowy komentarz, własne zgłoszenie, nieaktualność, konflikt 409, 401, błąd sieci, pozostawienie wyniku i odblokowanie poprawek po odrzuceniu.
+- [x] 3.3 Testy zwykłego widoku zapytania nie znajdują aktywnych mutacji w żadnym kroku oczekującej sprawy obu ról, również przy nieczytelnym szkicu.
+- [x] 3.4 Bramki frontendu przechodzą z `frontend/`: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; bramki backendu przechodzą przez `docker compose run --rm backend sh check.sh`.
+- [x] 3.5 Skan kolorów i wartości arbitralnych z `AGENTS.md`, rozszerzony o nowe widoki, nie wypisuje dopasowań; kitchen sink nie trafia do wejść builda.
 
 #### Manual
 
-- [ ] 3.6 Dwie sesje sales/supervisor pokazują przekazanie, odświeżenie kolejki, decyzję z komentarzem, poprawny licznik i widoczny wynik dla handlowca; odrzucenie pozwala poprawić i ponownie przekazać sprawę.
-- [ ] 3.7 Na 1440×900 reguły, oceniana oferta i główna akcja oraz potwierdzenie formularza są dostępne bez przewijania; na 375 px strona nie przewija się poziomo, a kontekst jest czytelny.
-- [ ] 3.8 W PL/EN i obu motywach klawiatura zachowuje widoczny fokus, odczyt ekranu odpowiada kolejności decyzji, status jest ogłaszany, a po decyzji fokus pozostaje przy wyniku.
-- [ ] 3.9 Odświeżenie i otwarcie bez sesji URL kolejki / oceny zachowuje adres po logowaniu; ręczne wejście handlowca nie ujawnia danych oceny; inspektor otwiera się na żądanie.
+- [x] 3.6 Dwie sesje sales/supervisor pokazują przekazanie, odświeżenie kolejki, decyzję z komentarzem, poprawny licznik i widoczny wynik dla handlowca; odrzucenie pozwala poprawić i ponownie przekazać sprawę.
+- [x] 3.7 Na 1440×900 reguły, oceniana oferta i główna akcja oraz potwierdzenie formularza są dostępne bez przewijania; na 375 px strona nie przewija się poziomo, a kontekst jest czytelny.
+- [x] 3.8 W PL/EN i obu motywach klawiatura zachowuje widoczny fokus, odczyt ekranu odpowiada kolejności decyzji, status jest ogłaszany, a po decyzji fokus pozostaje przy wyniku.
+- [x] 3.9 Odświeżenie i otwarcie bez sesji URL kolejki / oceny zachowuje adres po logowaniu; ręczne wejście handlowca nie ujawnia danych oceny; inspektor otwiera się na żądanie.

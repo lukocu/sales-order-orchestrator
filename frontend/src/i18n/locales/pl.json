@@ -43,6 +43,17 @@
     "inbox": "Skrzynka",
     "system": "System"
   },
+  "supervisor": {
+    "nav": { "queue": "Do akceptacji" },
+    "access": { "denied": "Wymagane uprawnienia przełożonego", "explanation": "Kolejka jest dostępna tylko dla przełożonych.", "inbox": "Wróć do skrzynki" },
+    "queue": { "heading": "Kolejka akceptacji", "count_one": "{{count}} sprawa oczekuje", "count_few": "{{count}} sprawy oczekują", "count_many": "{{count}} spraw oczekuje", "count_other": "{{count}} sprawy oczekują", "refresh": "Odśwież kolejkę", "loading": "Ładowanie kolejki…", "error": "Nie udało się pobrać kolejki.", "empty": "Żadne sprawy nie czekają na decyzję.", "stale": "Wyświetlana jest ostatnia dostępna liczba", "waiting": "Oczekuje {{age}}" },
+    "age": { "minutes_one": "{{count}} minutę", "minutes_few": "{{count}} minuty", "minutes_many": "{{count}} minut", "minutes_other": "{{count}} minuty", "hours_one": "{{count}} godzinę", "hours_few": "{{count}} godziny", "hours_many": "{{count}} godzin", "hours_other": "{{count}} godziny", "days_one": "{{count}} dzień", "days_few": "{{count}} dni", "days_many": "{{count}} dni", "days_other": "{{count}} dnia" },
+    "state": { "actionable": "Gotowa do oceny", "stale": "Nieaktualna", "unavailable": "Oferta niedostępna", "not_awaiting": "Nie oczekuje już na decyzję" },
+    "lock": { "waiting": "Ta sprawa czeka na decyzję przełożonego. Edycja i ponawianie są wyłączone.", "openReview": "Otwórz ocenę przełożonego" },
+    "review": {
+      "loading": "Ładowanie oceny…", "error": "Nie udało się pobrać oceny.", "back": "Wróć do kolejki", "submitted": "Przekazano {{date}}", "result": "Decyzja zakończona: {{status}}.", "attention": "Reguły wymagające uwagi", "noAttention": "Żadna reguła nie wymaga uwagi.", "offer": "Oceniana oferta", "offerUnavailable": "Dane oferty są niedostępne. Odrzuć sprawę z wyjaśnieniem, aby umożliwić jej poprawę.", "coverage": "Pokrycie", "fulfilled": "Realizacja do", "value": "Wartość oferty", "margin": "Marża", "edited": "Oferta po edycji", "decision": "Decyzja", "reasonRequired": "Podaj uzasadnienie decyzji.", "conflict": "Sprawa zmieniła się podczas oceny. Pobrano najnowsze dane; sprawdź je przed decyzją.", "networkError": "Nie udało się zapisać decyzji. Komentarz pozostał w formularzu; sprawdź sprawę przed ponowieniem.", "readAgain": "Sprawa się zmieniła. Sprawdź najnowszą ofertę i potwierdź zapoznanie się z nią przed wysłaniem decyzji.", "reviewed": "Zapoznałem się z aktualną sprawą", "confirmApprove": "Potwierdź zatwierdzenie", "confirmReject": "Potwierdź odrzucenie", "noActions": "Obecnie nie można podjąć decyzji w tej sprawie.", "context": "Pozostały kontekst i historia", "email": "Szkic wiadomości", "originalEmail": "Oryginalna wiadomość"
+    }
+  },
   "notFound": {
     "heading": "Nie znaleziono strony",
     "body": "Pod tym adresem nic nie ma.",

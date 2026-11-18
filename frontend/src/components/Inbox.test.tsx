@@ -365,7 +365,7 @@ describe('Inbox', () => {
     expect(listedSubjects()).toEqual([])
   })
 
-  it("removes the badge and updates the count after the supervisor's decision", async () => {
+  it('keeps an awaiting inquiry read-only in the supervisor ordinary view', async () => {
     stubApi({
       'GET /api/inquiries': () => json(200, SUMMARIES),
       'GET /api/inquiries/3': () => json(200, DELTA),
@@ -394,6 +394,12 @@ describe('Inbox', () => {
     fireEvent.click(filterButton())
 
     const group = await screen.findByRole('group', { name: 'Supervisor decision' })
+    expect(within(group).getByRole('button', { name: 'Reject' })).toBeDisabled()
+    expect(within(group).getByRole('button', { name: 'Approve' })).toBeDisabled()
+    expect(screen.getByRole('link', { name: 'Open supervisor review' })).toHaveAttribute(
+      'href',
+      '/approvals/3',
+    )
     fireEvent.click(within(group).getByRole('button', { name: 'Reject' }))
     fireEvent.change(screen.getByLabelText('Reason (required)'), {
       target: { value: 'Marża za niska' },
@@ -402,14 +408,14 @@ describe('Inbox', () => {
 
     expect(
       await screen.findByRole('region', { name: 'Decision history' }),
-    ).toHaveTextContent('Rejected by supervisor')
+    ).toHaveTextContent('Awaiting supervisor approval')
     await vi.waitFor(() =>
-      expect(filterButton()).toHaveTextContent('Awaiting supervisor only (0)'),
+      expect(filterButton()).toHaveTextContent('Awaiting supervisor only (1)'),
     )
-    expect(listedSubjects()).toEqual([])
+    expect(listedSubjects()).toHaveLength(1)
     fireEvent.click(filterButton())
     const delta = screen.getByRole('link', { name: /Zamówienie ABC-100/ })
-    expect(statusBadge(delta)).toHaveTextContent('Status: Rejected')
+    expect(statusBadge(delta)).toHaveTextContent('Status: Awaiting supervisor')
   })
 
   it('fetches mail, reloads the list and marks the inquiry from the mailbox', async () => {

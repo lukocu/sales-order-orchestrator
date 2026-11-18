@@ -8,6 +8,7 @@ import App from './App'
 import InboxRoute from './components/InboxRoute'
 import NotFound from './components/NotFound'
 import SystemPage from './components/SystemPage'
+import { SupervisorQueueRoute, SupervisorReviewRoute } from './components/SupervisorRoutes'
 
 // Code-based tree: no route generator. No path starts with /api (the server keeps those).
 const rootRoute = createRootRoute({
@@ -44,8 +45,29 @@ const systemRoute = createRoute({
   component: SystemPage,
 })
 
+const approvalsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/approvals',
+  component: SupervisorQueueRoute,
+})
+
+const approvalReviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/approvals/$inquiryId',
+  component: () => <SupervisorReviewRoute />,
+})
+
+const approvalRunRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/approvals/$inquiryId/run',
+  component: () => <SupervisorReviewRoute inspectorOpen />,
+})
+
 const routeTree = rootRoute.addChildren([
   inboxRoute.addChildren([indexRoute, inquiryRoute.addChildren([inquiryRunRoute])]),
+  approvalsRoute,
+  approvalReviewRoute,
+  approvalRunRoute,
   systemRoute,
 ])
 

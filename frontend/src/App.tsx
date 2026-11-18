@@ -6,6 +6,7 @@ import AppNav from './components/AppNav'
 import AppShell from './components/AppShell'
 import LoginForm from './components/LoginForm'
 import { SessionContext, type Session } from './session'
+import { SupervisorQueueProvider } from './supervisorQueue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -86,7 +87,7 @@ function App() {
     setAttempt((n) => n + 1)
   }
 
-  return (
+  const shell = (
     <AppShell
       user={user}
       onSignOut={handleSignOut}
@@ -112,13 +113,20 @@ function App() {
           {signOutError.message ?? t('inbox.genericError')}
         </p>
       )}
-      {session !== null && (
-        <SessionContext.Provider value={session}>
-          <Outlet />
-        </SessionContext.Provider>
-      )}
+      {session !== null && <Outlet />}
     </AppShell>
   )
+
+  if (session !== null && user !== null) {
+    return (
+      <SessionContext.Provider value={session}>
+        <SupervisorQueueProvider user={user} onUnauthorized={handleSignedOut}>
+          {shell}
+        </SupervisorQueueProvider>
+      </SessionContext.Provider>
+    )
+  }
+  return shell
 }
 
 export default App

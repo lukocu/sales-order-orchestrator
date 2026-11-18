@@ -130,14 +130,31 @@ function Inbox({ selectedId = null }: Props) {
             ...current,
             inquiries: current.inquiries.map((inquiry) =>
               inquiry.id === inquiryId && !sameFacts(inquiry, facts)
-                ? { ...inquiry, ...facts }
+                ? {
+                    ...inquiry,
+                    ...facts,
+                    draft_status:
+                      inquiry.draft_status === 'awaiting_supervisor' && facts.draft_status === null
+                        ? inquiry.draft_status
+                        : facts.draft_status,
+                  }
                 : inquiry,
             ),
           },
     )
     setDetail((current) =>
       current?.kind === 'ok' && current.id === inquiryId && !sameFacts(current.inquiry, facts)
-        ? { ...current, inquiry: { ...current.inquiry, ...facts } }
+        ? {
+            ...current,
+            inquiry: {
+              ...current.inquiry,
+              ...facts,
+              draft_status:
+                current.inquiry.draft_status === 'awaiting_supervisor' && facts.draft_status === null
+                  ? current.inquiry.draft_status
+                  : facts.draft_status,
+            },
+          }
         : current,
     )
   }, [])
@@ -318,6 +335,7 @@ function Inbox({ selectedId = null }: Props) {
             key={currentDetail.inquiry.id}
             inquiryId={currentDetail.inquiry.id}
             body={currentDetail.inquiry.body}
+            awaitingSupervisor={currentDetail.inquiry.draft_status === 'awaiting_supervisor'}
             user={user}
             onUnauthorized={onUnauthorized}
             onStatusFacts={handleStatusFacts}
