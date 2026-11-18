@@ -8,7 +8,9 @@ import type {
   StepSummary,
   TaskOutcome,
 } from '../api/analysis'
-import { formatMs, formatUsd } from './format'
+import { errorMessage, formatMs, formatUsd } from './format'
+import type { ErrorDescriptor } from '../api/errorMessages'
+import { Button } from '@/components/ui/button'
 import {
   Sheet,
   SheetContent,
@@ -30,6 +32,8 @@ type Props = {
   // The analysis the inquiry view shows; null while loading or when there is none.
   analysis: Analysis | null
   loading: boolean
+  loadError?: ErrorDescriptor | null
+  onRetry?: () => void
   open: boolean
   // Called when the user closes the Sheet (Esc, close button, overlay).
   onClose: () => void
@@ -361,7 +365,7 @@ function Runs({ analysis }: { analysis: Analysis }) {
 
 // The technical layer of one inquiry: the orchestrator plan, every run's steps and totals,
 // and a grand total. Rendered by the inquiry view from the analysis it already holds.
-function RunInspector({ analysis, loading, open, onClose, returnFocusTo }: Props) {
+function RunInspector({ analysis, loading, loadError = null, onRetry, open, onClose, returnFocusTo }: Props) {
   const { t } = useTranslation()
   return (
     <Sheet
@@ -391,10 +395,16 @@ function RunInspector({ analysis, loading, open, onClose, returnFocusTo }: Props
               {t('inspector.loading')}
             </p>
           )}
-          {!loading && analysis === null && (
+          {!loading && loadError !== null && (
+            <div role="alert" className="grid justify-items-start gap-2">
+              <p className="text-sm text-destructive">{errorMessage(loadError, t)}</p>
+              {onRetry && <Button type="button" variant="outline" onClick={onRetry}>{t('common.retry')}</Button>}
+            </div>
+          )}
+          {!loading && loadError === null && analysis === null && (
             <p className="text-sm text-muted-foreground">{t('inspector.noAnalysis')}</p>
           )}
-          {!loading && analysis !== null && <Runs analysis={analysis} />}
+          {!loading && loadError === null && analysis !== null && <Runs analysis={analysis} />}
         </div>
       </SheetContent>
     </Sheet>

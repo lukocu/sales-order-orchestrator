@@ -5,7 +5,7 @@ import type {
   ReplyDraftOffer,
   ReplyDraftStatus,
 } from './analysis'
-import { isReplyDraftStatus } from './analysis'
+import { isPolicyResult, isReplyDraftStatus } from './analysis'
 import { requestJson } from './client'
 
 export type SupervisorQueueItem = {
@@ -100,7 +100,9 @@ function isReview(value: unknown): value is SupervisorReview {
     Array.isArray(value.allowed_actions) &&
     value.allowed_actions.every((action) => action === 'approve' || action === 'reject') &&
     Array.isArray(value.decisions) &&
-    typeof value.offer_unavailable === 'boolean'
+    typeof value.offer_unavailable === 'boolean' &&
+    (value.policy === null || isPolicyResult(value.policy)) &&
+    (value.context.policy === undefined || value.context.policy === null || isPolicyResult(value.context.policy))
   )
 }
 

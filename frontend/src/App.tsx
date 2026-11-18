@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fetchMe, logout, UnauthorizedError, type User } from './api/auth'
+import { describeError, type ErrorDescriptor } from './api/errorMessages'
+import { errorMessage } from './components/format'
 import AppNav from './components/AppNav'
 import AppShell from './components/AppShell'
 import LoginForm from './components/LoginForm'
@@ -14,8 +16,7 @@ type State =
   | { kind: 'loading' }
   | { kind: 'anonymous' }
   | { kind: 'authenticated'; user: User }
-  // `message` is null when the failure carried no text.
-  | { kind: 'error'; message: string | null }
+  | { kind: 'error'; error: ErrorDescriptor }
 
 // The root route's component: it stays mounted across navigation, so the session lives here.
 // Without a session every address renders sign-in in place, and the URL is kept.
@@ -27,8 +28,8 @@ function App() {
   // True once the app went authenticated -> anonymous: the sign-in heading takes focus then,
   // not on the first load.
   const [focusLogin, setFocusLogin] = useState(false)
-  // Server text, or null for the translated fallback (translated at render time).
-  const [signOutError, setSignOutError] = useState<{ message: string | null } | null>(null)
+  const [signOutError, setSignOutError] = useState<ErrorDescriptor | null>(null)
+  const [expiredError, setExpiredError] = useState<ErrorDescriptor | null>(null)
 
   // Once per mount (and per Retry): the session (GET /api/auth/me) picks the view.
   useEffect(() => {
@@ -37,11 +38,11 @@ function App() {
       (user) => setState({ kind: 'authenticated', user }),
       (error: unknown) => {
         if (controller.signal.aborted) return
-        setState(
-          error instanceof UnauthorizedError
-            ? { kind: 'anonymous' }
-            : { kind: 'error', message: error instanceof Error ? error.message : null },
-        )
+        if (error instanceof UnauthorizedError) setState({ kind: 'anonymous' })
+        else {
+          const descriptor = describeError(error)
+          if (descriptor !== null) setState({ kind: 'error', error: descriptor })
+        }
       },
     )
     return () => controller.abort()
@@ -49,6 +50,7 @@ function App() {
 
   const handleSignedIn = useCallback((user: User) => {
     setFocusLogin(false)
+    setExpiredError(null)
     setState({ kind: 'authenticated', user })
   }, [])
   // After Sign out and whenever the API answers 401 (session gone).
@@ -56,8 +58,13 @@ function App() {
     setFocusLogin(true)
     setSigningOut(false)
     setSignOutError(null)
+    setExpiredError(null)
     setState({ kind: 'anonymous' })
   }, [])
+  const handleUnauthorized = useCallback(() => {
+    handleSignedOut()
+    setExpiredError(describeError(new UnauthorizedError()))
+  }, [handleSignedOut])
 
   async function handleSignOut() {
     if (signingOut) return
@@ -68,7 +75,7 @@ function App() {
     } catch (error) {
       // A 401 means the session is already gone, which is what Sign out wants.
       if (!(error instanceof UnauthorizedError)) {
-        setSignOutError({ message: error instanceof Error ? error.message : null })
+        setSignOutError(describeError(error, 'write'))
         setSigningOut(false)
         return
       }
@@ -78,8 +85,8 @@ function App() {
 
   const user = state.kind === 'authenticated' ? state.user : null
   const session = useMemo<Session | null>(
-    () => (user === null ? null : { user, onUnauthorized: handleSignedOut }),
-    [user, handleSignedOut],
+    () => (user === null ? null : { user, onUnauthorized: handleUnauthorized }),
+    [user, handleUnauthorized],
   )
 
   function retry() {
@@ -99,7 +106,7 @@ function App() {
         <Card role="alert" className="gap-0 rounded-lg py-5 shadow-none">
           <CardContent className="grid justify-items-start gap-3">
             <p className="text-destructive">
-              {t('app.sessionError', { message: state.message ?? t('app.unknownError') })}
+              {errorMessage(state.error, t)}
             </p>
             <Button type="button" variant="outline" onClick={retry}>
               {t('app.retry')}
@@ -107,10 +114,15 @@ function App() {
           </CardContent>
         </Card>
       )}
-      {state.kind === 'anonymous' && <LoginForm onSignedIn={handleSignedIn} focusHeading={focusLogin} />}
+      {state.kind === 'anonymous' && (
+        <>
+          {expiredError && <p className="text-destructive" role="alert">{errorMessage(expiredError, t)}</p>}
+          <LoginForm onSignedIn={handleSignedIn} focusHeading={focusLogin} />
+        </>
+      )}
       {state.kind === 'authenticated' && signOutError && (
         <p className="text-destructive" role="alert">
-          {signOutError.message ?? t('inbox.genericError')}
+          {errorMessage(signOutError, t)}
         </p>
       )}
       {session !== null && <Outlet />}
@@ -120,7 +132,7 @@ function App() {
   if (session !== null && user !== null) {
     return (
       <SessionContext.Provider value={session}>
-        <SupervisorQueueProvider user={user} onUnauthorized={handleSignedOut}>
+        <SupervisorQueueProvider user={user} onUnauthorized={handleUnauthorized}>
           {shell}
         </SupervisorQueueProvider>
       </SessionContext.Provider>

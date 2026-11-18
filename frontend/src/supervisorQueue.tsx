@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { UnauthorizedError } from './api/client'
+import { describeError } from './api/errorMessages'
 import { fetchSupervisorQueue } from './api/supervisor'
 import type { User } from './api/auth'
 import type { QueueState } from './supervisorQueueContext'
@@ -47,9 +48,11 @@ export function SupervisorQueueProvider({
             onUnauthorized()
             return
           }
+          const descriptor = describeError(error)
+          if (descriptor === null) return
           setState((current) => ({
             kind: 'error',
-            error,
+            error: descriptor,
             previous: current.kind === 'ready' ? current.queue : current.kind === 'error' ? current.previous : null,
           }))
         },

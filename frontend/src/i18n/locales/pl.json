@@ -44,14 +44,78 @@
     "system": "System"
   },
   "supervisor": {
-    "nav": { "queue": "Do akceptacji" },
-    "access": { "denied": "Wymagane uprawnienia przełożonego", "explanation": "Kolejka jest dostępna tylko dla przełożonych.", "inbox": "Wróć do skrzynki" },
-    "queue": { "heading": "Kolejka akceptacji", "count_one": "{{count}} sprawa oczekuje", "count_few": "{{count}} sprawy oczekują", "count_many": "{{count}} spraw oczekuje", "count_other": "{{count}} sprawy oczekują", "refresh": "Odśwież kolejkę", "loading": "Ładowanie kolejki…", "error": "Nie udało się pobrać kolejki.", "empty": "Żadne sprawy nie czekają na decyzję.", "stale": "Wyświetlana jest ostatnia dostępna liczba", "waiting": "Oczekuje {{age}}" },
-    "age": { "minutes_one": "{{count}} minutę", "minutes_few": "{{count}} minuty", "minutes_many": "{{count}} minut", "minutes_other": "{{count}} minuty", "hours_one": "{{count}} godzinę", "hours_few": "{{count}} godziny", "hours_many": "{{count}} godzin", "hours_other": "{{count}} godziny", "days_one": "{{count}} dzień", "days_few": "{{count}} dni", "days_many": "{{count}} dni", "days_other": "{{count}} dnia" },
-    "state": { "actionable": "Gotowa do oceny", "stale": "Nieaktualna", "unavailable": "Oferta niedostępna", "not_awaiting": "Nie oczekuje już na decyzję" },
-    "lock": { "waiting": "Ta sprawa czeka na decyzję przełożonego. Edycja i ponawianie są wyłączone.", "openReview": "Otwórz ocenę przełożonego" },
+    "nav": {
+      "queue": "Do akceptacji"
+    },
+    "access": {
+      "denied": "Wymagane uprawnienia przełożonego",
+      "explanation": "Kolejka jest dostępna tylko dla przełożonych.",
+      "inbox": "Wróć do skrzynki"
+    },
+    "queue": {
+      "heading": "Kolejka akceptacji",
+      "count_one": "{{count}} sprawa oczekuje",
+      "count_few": "{{count}} sprawy oczekują",
+      "count_many": "{{count}} spraw oczekuje",
+      "count_other": "{{count}} sprawy oczekują",
+      "refresh": "Odśwież kolejkę",
+      "loading": "Ładowanie kolejki…",
+      "error": "Nie udało się pobrać kolejki.",
+      "empty": "Żadne sprawy nie czekają na decyzję.",
+      "stale": "Wyświetlana jest ostatnia dostępna liczba",
+      "waiting": "Oczekuje {{age}}"
+    },
+    "age": {
+      "minutes_one": "{{count}} minutę",
+      "minutes_few": "{{count}} minuty",
+      "minutes_many": "{{count}} minut",
+      "minutes_other": "{{count}} minuty",
+      "hours_one": "{{count}} godzinę",
+      "hours_few": "{{count}} godziny",
+      "hours_many": "{{count}} godzin",
+      "hours_other": "{{count}} godziny",
+      "days_one": "{{count}} dzień",
+      "days_few": "{{count}} dni",
+      "days_many": "{{count}} dni",
+      "days_other": "{{count}} dnia"
+    },
+    "state": {
+      "actionable": "Gotowa do oceny",
+      "stale": "Nieaktualna",
+      "unavailable": "Oferta niedostępna",
+      "not_awaiting": "Nie oczekuje już na decyzję"
+    },
+    "lock": {
+      "waiting": "Ta sprawa czeka na decyzję przełożonego. Edycja i ponawianie są wyłączone.",
+      "openReview": "Otwórz ocenę przełożonego"
+    },
     "review": {
-      "loading": "Ładowanie oceny…", "error": "Nie udało się pobrać oceny.", "back": "Wróć do kolejki", "submitted": "Przekazano {{date}}", "result": "Decyzja zakończona: {{status}}.", "attention": "Reguły wymagające uwagi", "noAttention": "Żadna reguła nie wymaga uwagi.", "offer": "Oceniana oferta", "offerUnavailable": "Dane oferty są niedostępne. Odrzuć sprawę z wyjaśnieniem, aby umożliwić jej poprawę.", "coverage": "Pokrycie", "fulfilled": "Realizacja do", "value": "Wartość oferty", "margin": "Marża", "edited": "Oferta po edycji", "decision": "Decyzja", "reasonRequired": "Podaj uzasadnienie decyzji.", "conflict": "Sprawa zmieniła się podczas oceny. Pobrano najnowsze dane; sprawdź je przed decyzją.", "networkError": "Nie udało się zapisać decyzji. Komentarz pozostał w formularzu; sprawdź sprawę przed ponowieniem.", "readAgain": "Sprawa się zmieniła. Sprawdź najnowszą ofertę i potwierdź zapoznanie się z nią przed wysłaniem decyzji.", "reviewed": "Zapoznałem się z aktualną sprawą", "confirmApprove": "Potwierdź zatwierdzenie", "confirmReject": "Potwierdź odrzucenie", "noActions": "Obecnie nie można podjąć decyzji w tej sprawie.", "context": "Pozostały kontekst i historia", "email": "Szkic wiadomości", "originalEmail": "Oryginalna wiadomość"
+      "loading": "Ładowanie oceny…",
+      "error": "Nie udało się pobrać oceny.",
+      "back": "Wróć do kolejki",
+      "submitted": "Przekazano {{date}}",
+      "result": "Decyzja zakończona: {{status}}.",
+      "attention": "Reguły wymagające uwagi",
+      "noAttention": "Żadna reguła nie wymaga uwagi.",
+      "offer": "Oceniana oferta",
+      "offerUnavailable": "Dane oferty są niedostępne. Odrzuć sprawę z wyjaśnieniem, aby umożliwić jej poprawę.",
+      "coverage": "Pokrycie",
+      "fulfilled": "Realizacja do",
+      "value": "Wartość oferty",
+      "margin": "Marża",
+      "edited": "Oferta po edycji",
+      "decision": "Decyzja",
+      "reasonRequired": "Podaj uzasadnienie decyzji.",
+      "conflict": "Sprawa zmieniła się podczas oceny. Pobrano najnowsze dane; sprawdź je przed decyzją.",
+      "networkError": "Nie udało się zapisać decyzji. Komentarz pozostał w formularzu; sprawdź sprawę przed ponowieniem.",
+      "readAgain": "Sprawa się zmieniła. Sprawdź najnowszą ofertę i potwierdź zapoznanie się z nią przed wysłaniem decyzji.",
+      "reviewed": "Zapoznałem się z aktualną sprawą",
+      "confirmApprove": "Potwierdź zatwierdzenie",
+      "confirmReject": "Potwierdź odrzucenie",
+      "noActions": "Obecnie nie można podjąć decyzji w tej sprawie.",
+      "context": "Pozostały kontekst i historia",
+      "email": "Szkic wiadomości",
+      "originalEmail": "Oryginalna wiadomość"
     }
   },
   "notFound": {
@@ -638,5 +702,112 @@
   "reply": {
     "heading": "Odpowiedź dla klienta",
     "decision": "Decyzja"
+  },
+  "business": {
+    "policy": {
+      "margin_threshold_missing": "Nie określono minimalnej marży",
+      "margin_within_minimum": "Marża osiąga wymagane minimum",
+      "margin_below_minimum": "Marża poniżej wymaganego minimum",
+      "discount_check_skipped": "Pominięto sprawdzenie rabatu",
+      "requested_discount_missing": "Brak wartości żądanego rabatu",
+      "target_price_missing": "Brak wartości ceny docelowej",
+      "target_list_price_missing": "Nie można ocenić ceny docelowej bez ceny katalogowej",
+      "standard_discount_missing": "Brak standardowego rabatu",
+      "discount_threshold_missing": "Nie określono maksymalnego rabatu",
+      "requested_discount_within_maximum": "Żądany rabat nie przekracza maksimum",
+      "requested_discount_above_maximum": "Żądany rabat przekracza maksimum",
+      "target_discount_within_maximum": "Rabat wynikający z ceny docelowej nie przekracza maksimum",
+      "target_discount_above_maximum": "Rabat wynikający z ceny docelowej przekracza maksimum",
+      "standard_discount_within_maximum": "Standardowy rabat nie przekracza maksimum",
+      "standard_discount_above_maximum": "Standardowy rabat przekracza maksimum",
+      "offered_discount_within_maximum": "Rabat w edytowanej ofercie nie przekracza maksimum",
+      "offered_discount_above_maximum": "Rabat w edytowanej ofercie przekracza maksimum",
+      "order_value_threshold_missing": "Nie określono maksymalnej wartości zamówienia",
+      "order_value_within_maximum": "Wartość zamówienia nie przekracza maksimum",
+      "order_value_above_maximum": "Wartość zamówienia przekracza maksimum",
+      "credit_check_skipped": "Pominięto sprawdzenie kredytu",
+      "credit_blocked": "Kredyt klienta jest zablokowany",
+      "credit_data_missing": "Brak limitu kredytowego lub salda",
+      "credit_within_limit": "Saldo wraz z wartością wybranej opcji mieści się w limicie",
+      "credit_over_limit": "Saldo wraz z wartością wybranej opcji przekracza limit"
+    },
+    "signal": {
+      "full_coverage": "Pokrywa całą zamówioną ilość",
+      "incomplete_coverage": "Pokrywa {{covered}} z {{requested}} szt.",
+      "incomplete_coverage_generic": "Nie pokrywa całej zamówionej ilości",
+      "deadline_met": "Realizacja w terminie klienta",
+      "no_deadline": "Zapytanie bez terminu",
+      "deadline_missed": "Realizacja {{fulfilled}} po terminie {{deadline}}",
+      "deadline_missed_generic": "Realizacja po terminie klienta",
+      "compat_full": "Zamiennik {{product}} w pełni zgodny",
+      "compat_full_generic": "Zamiennik w pełni zgodny",
+      "compat_partial": "Zamiennik {{product}} zgodny tylko częściowo",
+      "compat_partial_generic": "Zamiennik zgodny tylko częściowo",
+      "consent_confirmed": "Klient zgodził się na zamiennik",
+      "consent_unconfirmed": "Brak potwierdzenia zgody na zamiennik",
+      "history_accepted": "Klient przyjmował już zamienniki",
+      "history_declined": "Klient odrzucał już zamienniki",
+      "history_none": "Klient nie dostawał dotąd zamienników",
+      "history_mixed": "Klient raz przyjmował, raz odrzucał zamienniki",
+      "two_sources": "Brak uzupełniany z dwóch źródeł: zamiennik i dostawca",
+      "task_failed": "Nie udało się sprawdzić: {{capability}}",
+      "not_checked": "Nie sprawdzono: {{capability}}",
+      "alternative_not_checked": "Alternatywy nie sprawdzono: {{capability}}",
+      "uncertain_input": "Niepewne pole analizy: {{field}}"
+    },
+    "legacyPolicy": {
+      "margin": {
+        "pass": "Marża osiąga wymagane minimum",
+        "fail": "Marża poniżej wymaganego minimum",
+        "not_evaluated": "Nie można było ocenić marży"
+      },
+      "discount": {
+        "pass": "Rabat nie przekracza maksimum",
+        "fail": "Rabat przekracza maksimum",
+        "not_evaluated": "Nie można było ocenić rabatu"
+      },
+      "order_value": {
+        "pass": "Wartość zamówienia nie przekracza maksimum",
+        "fail": "Wartość zamówienia przekracza maksimum",
+        "not_evaluated": "Nie można było ocenić wartości zamówienia"
+      },
+      "credit": {
+        "pass": "Reguła kredytu spełniona",
+        "fail": "Reguła kredytu niespełniona",
+        "not_evaluated": "Nie można było ocenić kredytu"
+      }
+    }
+  },
+  "apiErrors": {
+    "session": "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.",
+    "credentials": "Nieprawidłowa nazwa użytkownika lub hasło. Popraw dane i spróbuj ponownie.",
+    "permission": "Nie masz uprawnień do tej czynności. Wróć do dostępnego widoku lub skontaktuj się z administratorem.",
+    "inquiryMissing": "Nie znaleziono tego zapytania. Wróć do listy i wybierz je ponownie.",
+    "resourceMissing": "Nie znaleziono tych danych. Wróć do listy i odśwież widok.",
+    "analysisMissing": "Zapytanie nie ma jeszcze analizy. Otwórz zapytanie i uruchom analizę.",
+    "validation": "Niektóre dane są nieprawidłowe lub niekompletne. Sprawdź wymagane pola i spróbuj ponownie.",
+    "invalidEdit": "Sprawdź pozycje oferty, dodatnie ilości oraz ceny z maksymalnie dwoma miejscami po przecinku. Popraw dane i zapisz ponownie.",
+    "reasonRequired": "Dodaj komentarz wyjaśniający decyzję lub zmianę, a następnie spróbuj ponownie.",
+    "changed": "Zapytanie zostało zmienione. Odśwież je i sprawdź aktualne dane przed kolejną czynnością.",
+    "awaiting": "Zapytanie czeka na decyzję przełożonego. Poczekaj na rozstrzygnięcie przed wprowadzaniem zmian.",
+    "decided": "Ta oferta ma już decyzję. Sprawdź aktualny stan zapytania.",
+    "notEditable": "Nie można teraz zmienić tej oferty. Sprawdź jej aktualny stan i dostępne czynności.",
+    "stale": "Oferta jest nieaktualna. Odśwież zapytanie i sprawdź nową ofertę przed podjęciem decyzji.",
+    "policyMissing": "Brakuje aktualnej oceny oferty. Wróć do zapytania i ponów ocenę przed zatwierdzeniem.",
+    "notAwaiting": "Ta oferta nie czeka już na decyzję przełożonego. Odśwież kolejkę i sprawdź jej stan.",
+    "ownSubmission": "Nie możesz zatwierdzić własnego zgłoszenia. Poproś innego przełożonego o ocenę.",
+    "prerequisite": "Brakuje aktualnych wyników wcześniejszego kroku. Wróć do zapytania i uzupełnij poprzednie kroki.",
+    "configuration": "Ta funkcja wymaga ustawienia przez administratora. Skontaktuj się z nim, aby kontynuować.",
+    "busy": "Logowanie jest chwilowo zajęte. Poczekaj chwilę i spróbuj ponownie.",
+    "mailboxBusy": "Pobieranie wiadomości już trwa. Poczekaj chwilę i odśwież listę.",
+    "rateLimited": "Wykonano zbyt wiele prób w krótkim czasie. Poczekaj chwilę przed kolejną próbą.",
+    "unavailable": "Aplikacja jest chwilowo niedostępna. Spróbuj ponownie za chwilę. Jeśli problem się powtarza, skontaktuj się z administratorem.",
+    "mailboxUnavailable": "Nie można teraz pobrać wiadomości. Poczekaj chwilę i sprawdź skrzynkę ponownie.",
+    "storedInvalid": "Nie można odczytać zapisanej analizy. Skontaktuj się z administratorem.",
+    "processingFailed": "Nie udało się ukończyć tego kroku. Odśwież zapytanie i sprawdź jego aktualny stan. Jeśli problem się powtarza, skontaktuj się z administratorem.",
+    "network": "Nie udało się połączyć z aplikacją. Sprawdź połączenie i ponów odczyt.",
+    "invalidResponse": "Nie można odczytać odpowiedzi aplikacji. Odśwież widok. Jeśli problem się powtarza, skontaktuj się z administratorem.",
+    "generic": "Nie udało się ukończyć czynności. Odśwież widok i sprawdź aktualny stan. Jeśli problem się powtarza, skontaktuj się z administratorem.",
+    "writeUncertain": "Nie udało się potwierdzić wyniku czynności. Mogła zostać zapisana. Najpierw odśwież zapytanie i sprawdź aktualny stan, zanim spróbujesz ponownie."
   }
 }

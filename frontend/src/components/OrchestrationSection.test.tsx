@@ -326,7 +326,7 @@ describe('OrchestrationSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Re-run orchestrator' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Nothing to orchestrate')
+    expect(alert).toHaveTextContent('Current results from an earlier step are missing.')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()

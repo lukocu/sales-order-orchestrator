@@ -250,7 +250,7 @@ describe('PolicySection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Re-run policy' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Re-running the policy failed: Nothing to evaluate')
+    expect(alert).toHaveTextContent('Current results from an earlier step are missing.')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByText('No approval needed')).toBeInTheDocument()

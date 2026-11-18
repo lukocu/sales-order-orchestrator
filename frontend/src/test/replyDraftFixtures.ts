@@ -159,6 +159,7 @@ export const ACME_EDITED_DRAFT: ReplyDraftView = {
         threshold: '20.00',
         unit: 'percent',
         reason: 'Margin below the minimum',
+        reason_code: 'margin_below_minimum',
       },
       {
         code: 'discount',
@@ -167,6 +168,7 @@ export const ACME_EDITED_DRAFT: ReplyDraftView = {
         threshold: '15.00',
         unit: 'percent',
         reason: 'Offered discount above the maximum',
+        reason_code: 'offered_discount_above_maximum',
       },
       ACME_POLICY.rules[2],
       ACME_POLICY.rules[3],

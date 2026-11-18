@@ -20,6 +20,8 @@ import LoginForm from './components/LoginForm'
 import SystemPage from './components/SystemPage'
 import SupervisorQueue from './components/SupervisorQueue'
 import SupervisorReview from './components/SupervisorReview'
+import PolicySection from './components/PolicySection'
+import VariantComparison from './components/VariantComparison'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -180,35 +182,6 @@ function supervisorReviewOf(
     decisions: [DELTA_SUBMITTED],
     ...overrides,
   }
-}
-
-const SUPERVISOR_REVIEWS: Record<number, SupervisorReviewData> = {
-  31: supervisorReviewOf(31, {
-    offer: { ...DELTA_AWAITING.offer, edited: true },
-    policy: {
-      ...DELTA_AWAITING.policy!,
-      rules: DELTA_AWAITING.policy!.rules.map((rule) =>
-        rule.code === 'margin' ? { ...rule, verdict: 'fail' } : rule,
-      ),
-    },
-  }),
-  32: supervisorReviewOf(32, { submitted_by: SUPERVISOR.id, allowed_actions: ['reject'] }),
-  33: supervisorReviewOf(33, { review_state: 'stale', allowed_actions: ['reject'] }),
-  34: supervisorReviewOf(34, { review_state: 'unavailable', allowed_actions: ['reject'], offer: null, offer_unavailable: true }),
-  35: supervisorReviewOf(35, {
-    draft_status: 'ready_to_send',
-    review_state: 'not_awaiting',
-    allowed_actions: [],
-    submitted_by: null,
-    decisions: [DELTA_SUBMITTED, ACME_APPROVED],
-  }),
-  36: supervisorReviewOf(36, {
-    draft_status: 'rejected',
-    review_state: 'not_awaiting',
-    allowed_actions: [],
-    submitted_by: null,
-    decisions: [DELTA_SUBMITTED, DELTA_SUPERVISOR_REJECTED],
-  }),
 }
 
 // A partial orchestration: the supplier agent failed twice, the rest of the plan ran.
@@ -387,14 +360,67 @@ function PanelCell({ panel }: { panel: PanelCase }) {
   )
 }
 
+// Compatibility examples use their own historical data, never current analysis fields.
+const LEGACY_POLICY = {
+  ...DELTA_POLICY,
+  rules: DELTA_POLICY.rules.map((rule) => ({ ...rule, reason_code: undefined })),
+}
+const LEGACY_RECOMMENDATION = {
+  ...ACME_RECOMMENDATION,
+  options: ACME_RECOMMENDATION.options.map((option) => ({
+    ...option,
+    signals: option.signals.map(({ code, polarity, label }) => ({ code, polarity, label })),
+  })),
+}
+const UNKNOWN_POLICY = {
+  ...ACME_POLICY,
+  rules: [{ ...ACME_POLICY.rules[0], reason_code: 'future_margin', reason: 'Historyczna uwaga biznesowa' }],
+}
+const UNKNOWN_RECOMMENDATION = {
+  ...ACME_RECOMMENDATION,
+  options: ACME_RECOMMENDATION.options.map((option) => ({
+    ...option,
+    signals: [...option.signals, { code: 'future_business_signal', polarity: 'info' as const, label: 'Oryginalna uwaga o ofercie' }],
+  })),
+}
+
 // --- fetch stub -----------------------------------------------------------------------
 // Every request gets a reply from `scope` when one is set, else from DEFAULTS. A scope is set
 // only while a scenario's own code runs synchronously: around its components' mount effects
 // (<Stub>) and around a driven click or submit (`withReplies`). The API modules call `fetch`
 // synchronously from both, so no reply can reach another cell.
 
-type Reply = { status: number; body?: unknown } | 'pending'
+type Reply = { status: number; body?: unknown } | 'pending' | 'network-error'
 type Replies = Record<string, Reply>
+
+const SUPERVISOR_REVIEWS: Record<number, SupervisorReviewData> = {
+  31: supervisorReviewOf(31, {
+    offer: { ...DELTA_AWAITING.offer, edited: true },
+    policy: {
+      ...DELTA_AWAITING.policy!,
+      rules: DELTA_AWAITING.policy!.rules.map((rule) =>
+        rule.code === 'margin' ? { ...rule, verdict: 'fail' } : rule,
+      ),
+    },
+  }),
+  32: supervisorReviewOf(32, { submitted_by: SUPERVISOR.id, allowed_actions: ['reject'] }),
+  33: supervisorReviewOf(33, { review_state: 'stale', allowed_actions: ['reject'] }),
+  34: supervisorReviewOf(34, { review_state: 'unavailable', allowed_actions: ['reject'], offer: null, offer_unavailable: true }),
+  35: supervisorReviewOf(35, {
+    draft_status: 'ready_to_send',
+    review_state: 'not_awaiting',
+    allowed_actions: [],
+    submitted_by: null,
+    decisions: [DELTA_SUBMITTED, ACME_APPROVED],
+  }),
+  36: supervisorReviewOf(36, {
+    draft_status: 'rejected',
+    review_state: 'not_awaiting',
+    allowed_actions: [],
+    submitted_by: null,
+    decisions: [DELTA_SUBMITTED, DELTA_SUPERVISOR_REJECTED],
+  }),
+}
 
 const DEFAULTS: Replies = {
   'GET /api/auth/me': { status: 200, body: SUPERVISOR },
@@ -415,6 +441,8 @@ const DEFAULTS: Replies = {
   ...Object.fromEntries(
     INQUIRIES.map((item): [string, Reply] => [`GET /api/inquiries/${item.id}`, { status: 200, body: detail(item) }]),
   ),
+  'GET /api/inquiries/60/analysis': { status: 200, body: null },
+  'GET /api/inquiries/61/analysis': { status: 200, body: null },
   'GET /api/inquiries/1/analysis': { status: 200, body: analysisOf(1) },
   'GET /api/inquiries/2/analysis': 'pending',
   'GET /api/inquiries/3/analysis': { status: 200, body: null },
@@ -439,6 +467,7 @@ window.fetch = (input, init) => {
   const key = `${init?.method ?? 'GET'} ${path}`
   const reply = scope?.[key] ??
     DEFAULTS[key] ?? { status: 404, body: { detail: `Not stubbed in the kitchen sink: ${key}` } }
+  if (reply === 'network-error') return Promise.reject(new TypeError('Simulated lost response'))
   if (reply === 'pending') {
     return new Promise((_, reject) => {
       init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
@@ -476,9 +505,10 @@ function ScopeClose() {
 }
 
 function Stub({ replies, children }: { replies: Replies; children: ReactNode }) {
+  const [initialReplies] = useState(() => replies)
   return (
     <>
-      <ScopeOpen replies={replies} />
+      <ScopeOpen replies={initialReplies} />
       {children}
       <ScopeClose />
     </>
@@ -596,7 +626,7 @@ async function clickFetchMail(root: HTMLElement, reply: Reply) {
 
 function Driven({ drive, children }: { drive: (root: HTMLElement) => Promise<void>; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  // Once per mount (the page remounts every cell when the language changes).
+  // Once per mount; changing language keeps existing errors and does not repeat requests.
   const [first] = useState(() => drive)
   useEffect(() => {
     if (ref.current) first(ref.current).catch((error: unknown) => console.error(error))
@@ -689,7 +719,7 @@ function Row({ className }: { className?: string }) {
 // --- Page -------------------------------------------------------------------------------
 
 function KitchenSink() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -697,9 +727,8 @@ function KitchenSink() {
         <p className="font-semibold">Kitchen sink · 7-state matrix</p>
         <LanguageSwitch />
       </div>
-      {/* Keyed on the language: every cell remounts and is driven again, so messages the
-          components keep in state (e.g. the login error) are produced in the new language. */}
-      <main key={i18n.resolvedLanguage} className="mx-auto grid max-w-7xl gap-10 px-4 py-6">
+      {/* Existing descriptors translate on render without remounting or repeating requests. */}
+      <main className="mx-auto grid max-w-7xl gap-10 px-4 py-6">
         <Section state="default" caption="Signed out (login) and signed in (inbox list with every badge it shows: the seven statuses and E-mail), plus the ui primitives.">
           <Cell label="Header logged out + login" shell>
             <AppShell user={null}>
@@ -756,6 +785,14 @@ function KitchenSink() {
           </Cell>
           <PanelCell panel={PANEL_CASES.needsInput} />
           <PanelCell panel={PANEL_CASES.standard} />
+          <Cell id="business-legacy" label="Business messages: historical records without metadata (generic translated descriptions)" wide>
+            <PolicySection inquiryId={50} policy={LEGACY_POLICY} recommendation={LEGACY_RECOMMENDATION} disabled={false} running={false} onRerun={async () => {}} onUnauthorized={() => {}} />
+            <VariantComparison recommendation={LEGACY_RECOMMENDATION} expectedDeadline="2026-11-06" />
+          </Cell>
+          <Cell id="business-unknown" label="Business messages: unknown codes preserve original business text" wide>
+            <PolicySection inquiryId={51} policy={UNKNOWN_POLICY} recommendation={UNKNOWN_RECOMMENDATION} disabled={false} running={false} onRerun={async () => {}} onUnauthorized={() => {}} />
+            <VariantComparison recommendation={UNKNOWN_RECOMMENDATION} expectedDeadline="2026-11-06" />
+          </Cell>
           <PanelCell panel={PANEL_CASES.manyVariants} />
           <PanelCell panel={PANEL_CASES.noDeadline} />
           <PanelCell panel={PANEL_CASES.lateRecommended} />
@@ -840,7 +877,38 @@ function KitchenSink() {
           />
         </Section>
 
-        <Section state="error" caption="Error text next to the field or action that failed.">
+        <Section state="error" caption="Error text next to the field or action that failed. Switch PL/EN while an error is visible: existing state is preserved without repeating requests.">
+          <Cell id="error-permission" label="Permission denied (403); Retry reloads successfully" wide>
+            <Stub replies={{ 'GET /api/inquiries': { status: 403, body: { code: 'SUPERVISOR_REQUIRED', detail: 'Supervisor role required' } } }}>
+              <Routed><Inbox /></Routed>
+            </Stub>
+          </Cell>
+          <Cell id="error-validation" label="Login validation (422); entered fields stay available" shell>
+            <Driven drive={(root) => signIn(root, { status: 422, body: { code: 'VALIDATION_ERROR', detail: [{ msg: 'Private validator diagnostic' }] } })}>
+              <AppShell user={null}><LoginForm onSignedIn={() => {}} /></AppShell>
+            </Driven>
+          </Cell>
+          <Cell id="error-unknown" label="Unknown code and private detail: safe translated fallback" wide>
+            <Stub replies={{ 'GET /api/inquiries': { status: 500, body: { code: 'FUTURE_CODE', detail: 'SQL private exception diagnostic' } } }}>
+              <Routed><Inbox /></Routed>
+            </Stub>
+          </Cell>
+          <Cell id="error-conflict" label="Concurrent change (409); read current state first" wide>
+            <Driven drive={async (root) => {
+              const button = await find<HTMLButtonElement>(root, '[role="tabpanel"] button')
+              withReplies({ 'POST /api/inquiries/60/analysis': { status: 409, body: { code: 'DRAFT_CHANGED', detail: 'Draft changed, reload' } } }, () => button.click())
+            }}>
+              <Routed><AnalysisPanel inquiryId={60} body={MAIL_BODY} user={SALES} onUnauthorized={() => {}} /></Routed>
+            </Driven>
+          </Cell>
+          <Cell id="error-write-uncertain" label="Lost response after write; never assume it was not saved" wide>
+            <Driven drive={async (root) => {
+              const button = await find<HTMLButtonElement>(root, '[role="tabpanel"] button')
+              withReplies({ 'POST /api/inquiries/61/analysis': 'network-error' }, () => button.click())
+            }}>
+              <Routed><AnalysisPanel inquiryId={61} body={MAIL_BODY} user={SALES} onUnauthorized={() => {}} /></Routed>
+            </Driven>
+          </Cell>
           <Cell label="Supervisor queue refresh failed; the last count stays visible" wide>
             <Driven drive={async (root) => {
               const refresh = await find<HTMLButtonElement>(root, 'button')
@@ -850,7 +918,7 @@ function KitchenSink() {
             </Driven>
           </Cell>
           <Cell label="Login: invalid credentials (401)" shell>
-            <Driven drive={(root) => signIn(root, { status: 401, body: { detail: 'Invalid credentials' } })}>
+            <Driven drive={(root) => signIn(root, { status: 401, body: { detail: 'Invalid username or password', code: 'INVALID_CREDENTIALS' } })}>
               <AppShell user={null}>
                 <LoginForm onSignedIn={() => {}} />
               </AppShell>

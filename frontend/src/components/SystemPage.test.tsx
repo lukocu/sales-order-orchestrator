@@ -53,7 +53,7 @@ describe('SystemPage', () => {
 
     const status = screen.getByRole('status')
     expect(await within(status).findByText('Unavailable')).toBeInTheDocument()
-    expect(within(status).getByText('API unreachable')).toBeInTheDocument()
+    expect(within(status).getByText('The application could not be reached. Check your connection and try loading the information again.')).toBeInTheDocument()
     expect(screen.queryByText('Migration')).not.toBeInTheDocument()
   })
 

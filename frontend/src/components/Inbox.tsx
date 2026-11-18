@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { ApiError, UnauthorizedError } from '../api/auth'
+import { UnauthorizedError } from '../api/auth'
 import {
   fetchInquiries,
   fetchInquiry,
@@ -10,13 +10,14 @@ import {
   type InquirySummary,
 } from '../api/inquiries'
 import { fetchMail, type FetchResult } from '../api/mailbox'
+import { describeError, type ErrorDescriptor } from '../api/errorMessages'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useSession } from '../session'
 import AnalysisPanel from './AnalysisPanel'
-import { formatDate } from './format'
+import { errorMessage, formatDate } from './format'
 import { inquiryStatus, STATUS_VARIANT, type InquiryStatusFacts } from './inquiryStatus'
 
 type Props = {
@@ -24,18 +25,17 @@ type Props = {
   selectedId?: number | null
 }
 
-// State keeps raw results and server text; `t()` runs at render time, so a language
-// switch re-translates messages already on screen. A null message means "no server text".
+// Keep descriptors in state; visible messages follow the current UI language.
 type ListState =
   | { kind: 'loading' }
   | { kind: 'ok'; inquiries: InquirySummary[] }
-  | { kind: 'error'; message: string | null }
+  | { kind: 'error'; error: ErrorDescriptor }
 
 type DetailState =
   | { id: number; kind: 'ok'; inquiry: InquiryDetail }
-  | { id: number; kind: 'error'; message: string | null }
+  | { id: number; kind: 'error'; error: ErrorDescriptor }
 
-type FetchStatus = { kind: 'ok'; result: FetchResult } | { kind: 'error'; error: unknown }
+type FetchStatus = { kind: 'ok'; result: FetchResult } | { kind: 'error'; error: ErrorDescriptor }
 
 function sameFacts(a: InquiryStatusFacts, b: InquiryStatusFacts): boolean {
   return a.analyzed === b.analyzed && a.outcome === b.outcome && a.draft_status === b.draft_status
@@ -53,10 +53,6 @@ function StatusBadge({ facts }: { facts: InquiryStatusFacts }) {
   )
 }
 
-function errorText(error: unknown): string | null {
-  return error instanceof Error ? error.message : null
-}
-
 // "2 new, 3 already in inbox, 1 skipped"; `fetched` is the sum and adds nothing.
 function fetchSummary({ created, duplicates, skipped }: FetchResult, t: TFunction): string {
   const parts: string[] = []
@@ -67,18 +63,6 @@ function fetchSummary({ created, duplicates, skipped }: FetchResult, t: TFunctio
   }
   if (skipped > 0) parts.push(t('inbox.fetchSkipped', { count: skipped }))
   return parts.join(', ')
-}
-
-// The server's detail names the mailbox failure ("Mailbox not configured", "Mailbox
-// login failed"); only the cases a retry can fix get a hint.
-function fetchErrorMessage(error: unknown, t: TFunction): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return t('inbox.fetchInProgress')
-    if (error.status === 502 && error.message === 'Mailbox unavailable') {
-      return t('inbox.mailboxUnavailable')
-    }
-  }
-  return errorText(error) ?? t('inbox.genericError')
 }
 
 function Inbox({ selectedId = null }: Props) {
@@ -99,7 +83,10 @@ function Inbox({ selectedId = null }: Props) {
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else setList({ kind: 'error', message: errorText(error) })
+        else {
+          const descriptor = describeError(error)
+          if (descriptor !== null) setList({ kind: 'error', error: descriptor })
+        }
       },
     )
     return () => controller.abort()
@@ -113,7 +100,10 @@ function Inbox({ selectedId = null }: Props) {
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else setDetail({ id: selectedId, kind: 'error', message: errorText(error) })
+        else {
+          const descriptor = describeError(error)
+          if (descriptor !== null) setDetail({ id: selectedId, kind: 'error', error: descriptor })
+        }
       },
     )
     return () => controller.abort()
@@ -178,7 +168,8 @@ function Inbox({ selectedId = null }: Props) {
         onUnauthorized()
         return
       }
-      setFetchStatus({ kind: 'error', error })
+      const descriptor = describeError(error, 'write')
+      if (descriptor !== null) setFetchStatus({ kind: 'error', error: descriptor })
     } finally {
       setFetching(false)
     }
@@ -226,7 +217,7 @@ function Inbox({ selectedId = null }: Props) {
               >
                 {fetchStatus.kind === 'ok'
                   ? fetchSummary(fetchStatus.result, t)
-                  : fetchErrorMessage(fetchStatus.error, t)}
+                  : errorMessage(fetchStatus.error, t)}
               </p>
             )}
           </div>
@@ -235,7 +226,7 @@ function Inbox({ selectedId = null }: Props) {
           )}
           {list.kind === 'error' && (
             <div role="alert" className="grid justify-items-start gap-2">
-              <p className="text-destructive">{list.message ?? t('inbox.genericError')}</p>
+              <p className="text-destructive">{errorMessage(list.error, t)}</p>
               <Button type="button" variant="outline" onClick={retryList}>
                 {t('inbox.retry')}
               </Button>
@@ -312,7 +303,7 @@ function Inbox({ selectedId = null }: Props) {
         )}
         {currentDetail?.kind === 'error' && (
           <p className="error" role="alert">
-            {currentDetail.message ?? t('inbox.genericError')}
+            {errorMessage(currentDetail.error, t)}
           </p>
         )}
         {currentDetail?.kind === 'ok' && (

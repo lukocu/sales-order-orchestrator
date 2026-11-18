@@ -96,8 +96,8 @@ describe('VariantComparison', () => {
 
     const cells = within(screen.getByRole('row', { name: /^Risks/ })).getAllByRole('cell')
     expect(cells[0]).toHaveTextContent('none')
-    expect(cells[1]).toHaveTextContent('Pokrywa 50 z 80 szt.')
-    expect(cells[1]).not.toHaveTextContent('Realizacja w terminie klienta')
+    expect(cells[1]).toHaveTextContent('Covers 50 of 80 pcs')
+    expect(cells[1]).not.toHaveTextContent('Delivery meets the customer’s deadline')
   })
 
   it('has one details per variant, the recommended one open with cited marks', () => {
@@ -111,7 +111,7 @@ describe('VariantComparison', () => {
     expect(details[0]).toHaveTextContent('Cost: 6900.00 PLN')
     expect(details[0].textContent).toContain('· cited')
     expect(details[1].textContent).not.toContain('· cited')
-    expect(details[2]).toHaveTextContent('Realizacja 2026-11-09 po terminie 2026-11-06')
+    expect(details[2]).toHaveTextContent('Delivery on 9 Nov 2026 is after the deadline of 6 Nov 2026')
   })
 
   it('tells two substitutes apart by name', () => {

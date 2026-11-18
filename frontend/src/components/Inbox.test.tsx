@@ -486,7 +486,7 @@ describe('Inbox', () => {
     await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
     fireEvent.click(fetchButton())
 
-    expect(await screen.findByText('Mailbox not configured')).toHaveClass('text-destructive')
+    expect(await screen.findByText('An administrator needs to set up this feature. Contact them to continue.')).toHaveClass('text-destructive')
     expect(listedSubjects()).toHaveLength(3)
   })
 

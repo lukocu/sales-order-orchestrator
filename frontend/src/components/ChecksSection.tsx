@@ -13,6 +13,7 @@ import {
   type StockCheck,
 } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
+import { describeError, type ErrorDescriptor } from '../api/errorMessages'
 import { Button } from '@/components/ui/button'
 import { errorMessage, formatDate, formatPercent, formatPln } from './format'
 
@@ -274,7 +275,7 @@ function ChecksSection({
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorDescriptor | null>(null)
   const checks = analysis.checks
   const headingId = `checks-${inquiryId}-heading`
 
@@ -284,7 +285,7 @@ function ChecksSection({
       await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure, t))
+      else setError(describeError(failure, 'write'))
     }
   }
 
@@ -311,7 +312,7 @@ function ChecksSection({
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">{t('checks.rerunFailed', { message: error })}</p>
+          <p className="error">{errorMessage(error, t)}</p>
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             {t('common.retry')}
           </Button>

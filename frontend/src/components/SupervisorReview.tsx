@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ApiError, UnauthorizedError } from '../api/client'
+import { describeError, localError, type ErrorDescriptor } from '../api/errorMessages'
 import { fetchAnalysis } from '../api/analysis'
 import { decideAsSupervisor, type Analysis, type ReplyDraftStatus } from '../api/analysis'
 import { fetchSupervisorReview, type SupervisorReview as ReviewData } from '../api/supervisor'
@@ -10,8 +11,9 @@ import { useSupervisorQueue } from '../useSupervisorQueue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { formatDate, formatPercent, formatPln, sourceText } from './format'
+import { errorMessage, formatDate, formatPercent, formatPln, sourceText } from './format'
 import { RULE_LABEL, VERDICT_LABEL } from './policyLabels'
+import { policyReason } from './businessMessages'
 import { DecisionHistory } from './ReplyDraftSection'
 import RunInspector from './RunInspector'
 
@@ -19,7 +21,7 @@ type Props = { inquiryId: number; inspectorOpen?: boolean }
 type LoadState =
   | { key: string; kind: 'loading' }
   | { key: string; kind: 'ready'; data: ReviewData }
-  | { key: string; kind: 'error'; message: string | null }
+  | { key: string; kind: 'error'; error: ErrorDescriptor }
 type Decision = 'approve' | 'reject'
 
 function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
@@ -34,17 +36,15 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
   const [action, setAction] = useState<Decision | null>(null)
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
-  const [alertKey, setAlertKey] = useState<
-    | 'supervisor.review.reasonRequired'
-    | 'supervisor.review.conflict'
-    | 'supervisor.review.networkError'
-    | null
-  >(null)
+  const [actionError, setActionError] = useState<ErrorDescriptor | null>(null)
+  const [refreshError, setRefreshError] = useState<ErrorDescriptor | null>(null)
+  const [inspectorError, setInspectorError] = useState<ErrorDescriptor | null>(null)
   const [requiresReview, setRequiresReview] = useState(false)
   const [inspectorResult, setInspectorResult] = useState<{
     inquiryId: number
     analysis: Analysis | null
   } | null>(null)
+  const [inspectorAttempt, setInspectorAttempt] = useState(0)
   const analysis = inspectorResult?.inquiryId === inquiryId ? inspectorResult.analysis : null
   const analysisLoading = inspectorOpen && inspectorResult?.inquiryId !== inquiryId
   const inspectorTrigger = useRef<HTMLButtonElement>(null)
@@ -63,7 +63,10 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
     load(loadKey, controller.signal).catch((error: unknown) => {
       if (controller.signal.aborted) return
       if (error instanceof UnauthorizedError) onUnauthorized()
-      else setState({ key: loadKey, kind: 'error', message: error instanceof Error ? error.message : null })
+      else {
+        const descriptor = describeError(error)
+        if (descriptor !== null) setState({ key: loadKey, kind: 'error', error: descriptor })
+      }
     })
     return () => controller.abort()
   }, [load, loadKey, onUnauthorized])
@@ -71,16 +74,20 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
   useEffect(() => {
     if (!inspectorOpen) return
     let active = true
-    fetchAnalysis(inquiryId).then(
+    const controller = new AbortController()
+    fetchAnalysis(inquiryId, controller.signal).then(
       (value) => { if (active) setInspectorResult({ inquiryId, analysis: value }) },
       (error: unknown) => {
         if (!active) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else setInspectorResult({ inquiryId, analysis: null })
+        else {
+          setInspectorError(describeError(error))
+          setInspectorResult({ inquiryId, analysis: null })
+        }
       },
     )
-    return () => { active = false }
-  }, [inquiryId, inspectorOpen, onUnauthorized])
+    return () => { active = false; controller.abort() }
+  }, [inquiryId, inspectorOpen, inspectorAttempt, onUnauthorized])
 
   const focusResult = visibleState.kind === 'ready' && visibleState.data.review_state === 'not_awaiting'
   useEffect(() => {
@@ -88,13 +95,14 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
   }, [focusResult])
 
   async function submitDecision() {
-    if (visibleState.kind !== 'ready' || action === null || visibleState.data.draft_updated_at === null) return
+    if (visibleState.kind !== 'ready' || action === null || visibleState.data.draft_updated_at === null || !visibleState.data.allowed_actions.includes(action)) return
     if (!reason.trim()) {
-      setAlertKey('supervisor.review.reasonRequired')
+      setActionError(localError('supervisor.review.reasonRequired'))
       return
     }
     setSaving(true)
-    setAlertKey(null)
+    setActionError(null)
+    setRefreshError(null)
     try {
       const updated = await decideAsSupervisor(inquiryId, visibleState.data.draft_updated_at, action, reason.trim())
       const status: ReplyDraftStatus | null = updated.draft?.status ?? (action === 'approve' ? 'ready_to_send' : 'rejected')
@@ -111,22 +119,25 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
         setState({ key: loadKey, kind: 'ready', data: latest })
       } catch (error) {
         if (error instanceof UnauthorizedError) onUnauthorized()
+        else setRefreshError(describeError(error))
       }
     } catch (error) {
       if (error instanceof UnauthorizedError) {
         onUnauthorized()
       } else if (error instanceof ApiError && error.status === 409) {
-        setAlertKey('supervisor.review.conflict')
+        setActionError(describeError(error, 'write'))
         try {
           const previous = visibleState.data.draft_updated_at
           const latest = await load(loadKey)
           if (latest.draft_updated_at !== previous) setRequiresReview(true)
+          if (!latest.allowed_actions.includes(action)) setAction(null)
           void refresh(true)
         } catch (refreshError) {
           if (refreshError instanceof UnauthorizedError) onUnauthorized()
+          else setRefreshError(describeError(refreshError))
         }
       } else {
-        setAlertKey('supervisor.review.networkError')
+        setActionError(describeError(error, 'write'))
       }
     } finally {
       setSaving(false)
@@ -142,7 +153,7 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
     return (
       <Card role="alert" className="gap-0 rounded-lg py-4 shadow-none">
         <CardContent className="grid justify-items-start gap-3">
-          <p className="text-destructive">{visibleState.message ?? t('supervisor.review.error')}</p>
+          <p className="text-destructive">{errorMessage(visibleState.error, t)}</p>
           <Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}>{t('common.retry')}</Button>
           <Link className="text-primary underline underline-offset-4" to="/approvals">{t('supervisor.review.back')}</Link>
         </CardContent>
@@ -163,6 +174,8 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
         <Link className="text-primary underline underline-offset-4" to="/approvals">{t('supervisor.review.back')}</Link>
         <Button ref={inspectorTrigger} type="button" variant="outline" onClick={openInspector}>{t('inspector.open')}</Button>
       </div>
+      {refreshError && <p role="alert" className="text-destructive">{errorMessage(refreshError, t)}</p>}
+      {actionError && <p role="alert" className="text-destructive">{errorMessage(actionError, t)}</p>}
       <Card className="gap-0 rounded-lg shadow-none">
         <CardContent className="grid min-w-0 gap-3 p-4">
           <header className="grid gap-1">
@@ -191,7 +204,7 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
                 {attention.map((rule) => <li key={rule.code} className="grid content-start gap-1 rounded-md border p-2 text-sm">
                   <span className="font-medium">{t(RULE_LABEL[rule.code])}</span>{' '}
                   <span className="text-destructive">{t(VERDICT_LABEL[rule.verdict].key)}</span>{' '}
-                  <span>{rule.reason}</span>
+                  <span>{policyReason(rule, t)}</span>
                 </li>)}
               </ul>
             )}
@@ -227,7 +240,6 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
                 <Label htmlFor="supervisor-reason">{t('draft.form.reasonRequired')}</Label>
                 <textarea id="supervisor-reason" required rows={3} className="min-h-20 resize-y rounded-md border border-input bg-background px-3 py-2" value={reason} onChange={(event) => setReason(event.target.value)} />
                 {requiresReview && <p className="text-sm text-destructive">{t('supervisor.review.readAgain')}</p>}
-                {alertKey && <p role="alert" className="text-destructive">{t(alertKey)}</p>}
                 <Button type="submit" disabled={saving || !reason.trim() || requiresReview}>
                   {saving ? t('common.saving') : t(action === 'approve' ? 'supervisor.review.confirmApprove' : 'supervisor.review.confirmReject')}
                 </Button>
@@ -244,7 +256,7 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
                 {review.policy.rules.map((rule) => <li key={rule.code} className="flex flex-wrap gap-x-2">
                   <span className="font-medium">{t(RULE_LABEL[rule.code])}</span>
                   <span>{t(VERDICT_LABEL[rule.verdict].key)}</span>
-                  <span>{rule.reason}</span>
+                  <span>{policyReason(rule, t)}</span>
                 </li>)}
               </ul>}
               {review.offer_body && <details><summary className="cursor-pointer">{t('supervisor.review.email')}</summary><div className="grid gap-2 pt-2"><p className="font-medium">{review.offer_subject}</p><p className="whitespace-pre-wrap">{review.offer_body}</p></div></details>}
@@ -257,7 +269,7 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
           </details>
         </CardContent>
       </Card>
-      <RunInspector analysis={analysis} loading={analysisLoading} open={inspectorOpen} onClose={() => void navigate({ to: '/approvals/$inquiryId', params: { inquiryId: String(inquiryId) } })} returnFocusTo={inspectorTrigger} />
+      <RunInspector analysis={analysis} loading={analysisLoading} loadError={inspectorError} onRetry={() => { setInspectorError(null); setInspectorResult(null); setInspectorAttempt((value) => value + 1) }} open={inspectorOpen} onClose={() => { setInspectorError(null); void navigate({ to: '/approvals/$inquiryId', params: { inquiryId: String(inquiryId) } }) }} returnFocusTo={inspectorTrigger} />
     </div>
   )
 }

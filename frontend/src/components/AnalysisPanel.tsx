@@ -6,7 +6,6 @@ import {
   analyzeInquiry,
   decideAsSupervisor,
   decideDraft,
-  DRAFT_CHANGED,
   editDraft,
   fetchAnalysis,
   regenerateDraft,
@@ -25,6 +24,7 @@ import {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { ApiError, UnauthorizedError } from '../api/client'
+import { describeError, localError, type ErrorDescriptor } from '../api/errorMessages'
 import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
 import { errorMessage, formatDate } from './format'
@@ -58,8 +58,7 @@ type Props = {
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'ok'; analysis: Analysis | null }
-  // null: the error had no message of its own; shown as the generic one.
-  | { kind: 'error'; message: string | null }
+  | { kind: 'error'; error: ErrorDescriptor }
 
 type Substitute = 'yes' | 'no' | 'unknown'
 
@@ -112,7 +111,7 @@ type NoticeKey =
 // The draft was written since it was read (another decision, a regenerated draft or a new
 // recommendation); every other 409 of a decision is shown at its form.
 function draftChanged(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 409 && error.message === DRAFT_CHANGED
+  return error instanceof ApiError && error.status === 409 && error.code === 'DRAFT_CHANGED'
 }
 
 // As the inbox lists it: the outcome only while the result matches the current analysis.
@@ -161,17 +160,16 @@ function sameDraft(a: Draft, b: Draft): boolean {
 function buildFields(
   draft: Draft,
   current: ParsedFields,
-  t: TFunction,
-): { fields: ParsedFields } | { error: string } {
+): { fields: ParsedFields } | { error: ErrorDescriptor } {
   const quantity = draft.quantity.trim()
   if (quantity !== '' && !/^\d+$/.test(quantity)) {
-    return { error: t('analysis.error.quantityWhole') }
+    return { error: localError('analysis.error.quantityWhole') }
   }
   let priceValue: string | null = null
   if (VALUED_PRICE_KINDS.includes(draft.price_kind)) {
     priceValue = draft.price_value.trim().replace(',', '.')
-    if (priceValue === '') return { error: t('analysis.error.priceValueRequired') }
-    if (!/^\d+(\.\d+)?$/.test(priceValue)) return { error: t('analysis.error.priceValueNumber') }
+    if (priceValue === '') return { error: localError('analysis.error.priceValueRequired') }
+    if (!/^\d+(\.\d+)?$/.test(priceValue)) return { error: localError('analysis.error.priceValueNumber') }
   }
   return {
     fields: {
@@ -293,8 +291,8 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
     | 'deciding'
     | null
   >(null)
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [analyzeError, setAnalyzeError] = useState<ErrorDescriptor | null>(null)
+  const [formError, setFormError] = useState<ErrorDescriptor | null>(null)
   const [notice, setNotice] = useState<NoticeKey | null>(null)
   const [confirming, setConfirming] = useState(false)
   // The step whose panel is shown; it follows the active step unless the user opens a done one.
@@ -332,11 +330,10 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
       (error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof UnauthorizedError) onUnauthorized()
-        else
-          setLoad({
-            kind: 'error',
-            message: error instanceof Error ? error.message : null,
-          })
+        else {
+          const descriptor = describeError(error)
+          if (descriptor !== null) setLoad({ kind: 'error', error: descriptor })
+        }
       },
     )
     return () => controller.abort()
@@ -497,7 +494,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
       show(await analyzeInquiry(inquiryId))
     } catch (error) {
       if (error instanceof UnauthorizedError) onUnauthorized()
-      else setAnalyzeError(errorMessage(error, t))
+      else setAnalyzeError(describeError(error, 'write'))
     } finally {
       setBusy(null)
     }
@@ -510,7 +507,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
 
   async function save() {
     if (analysis === null || draft === null) return
-    const built = buildFields(draft, analysis.fields, t)
+    const built = buildFields(draft, analysis.fields)
     if ('error' in built) {
       setFormError(built.error)
       return
@@ -526,8 +523,9 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
       if (error instanceof UnauthorizedError) onUnauthorized()
       else if (error instanceof ApiError && error.status === 409) {
         setNotice('analysis.reloaded')
+        setFormError(describeError(error, 'write'))
         reload()
-      } else setFormError(errorMessage(error, t))
+      } else setFormError(describeError(error, 'write'))
     } finally {
       setBusy(null)
     }
@@ -720,7 +718,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
         <div role="group" aria-label={t('steps.actions')} className="sticky bottom-0 z-10 border-t border-border bg-background py-3 grid gap-2">
           {formError && (
             <p className="error" role="alert">
-              {formError}
+              {errorMessage(formError, t)}
             </p>
           )}
           <div className="analysis__actions">
@@ -971,7 +969,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
         {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
         {load.kind === 'error' && (
           <div role="alert" className="analysis__problem">
-            <p className="error">{load.message ?? t('common.genericError')}</p>
+            <p className="error">{errorMessage(load.error, t)}</p>
             <Button type="button" variant="outline" onClick={reload}>
               {t('common.retry')}
             </Button>
@@ -979,7 +977,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
         )}
         {analyzeError && (
           <div role="alert" className="analysis__problem">
-            <p className="error">{analyzeError}</p>
+            <p className="error">{errorMessage(analyzeError, t)}</p>
             <Button
               type="button"
               variant="outline"
@@ -996,6 +994,8 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
       <RunInspector
         analysis={analysis}
         loading={load.kind === 'loading'}
+        loadError={load.kind === 'error' ? load.error : null}
+        onRetry={reload}
         open={inspecting !== undefined}
         onClose={() =>
           void navigate({

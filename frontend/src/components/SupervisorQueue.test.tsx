@@ -256,14 +256,14 @@ describe('Supervisor queue and review routes', () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Reviewed offer' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
-    expect(await screen.findByText(/This inquiry changed while you were reviewing it/)).toBeInTheDocument()
+    expect(await screen.findByText(/This inquiry has changed. Refresh it and review the current details/)).toBeInTheDocument()
     expect(await screen.findByText(/Review the latest offer/)).toBeInTheDocument()
     expect(decisionCalls).toBe(1)
     fireEvent.click(screen.getByRole('button', { name: 'I reviewed the latest inquiry' }))
     expect(screen.getByRole('button', { name: 'Confirm approval' })).toBeEnabled()
   })
 
-  it('keeps a decision comment after a network error', async () => {
+  it('keeps a decision comment when a server response cannot confirm the write', async () => {
     decisionStatus = 500
     await renderWithRouter('/approvals/17')
     fireEvent.click(await screen.findByRole('button', { name: 'Reject' }))
@@ -271,7 +271,7 @@ describe('Supervisor queue and review routes', () => {
     fireEvent.change(reason, { target: { value: 'Please check the margin.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Your comment is still here/)
+    expect(await screen.findByRole('alert')).toHaveTextContent('The result of this action could not be confirmed. It may have been saved.')
     expect(reason).toHaveValue('Please check the margin.')
     expect(decisionCalls).toBe(1)
   })

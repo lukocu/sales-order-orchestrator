@@ -44,7 +44,9 @@
     "system": "System"
   },
   "supervisor": {
-    "nav": { "queue": "To approve" },
+    "nav": {
+      "queue": "To approve"
+    },
     "access": {
       "denied": "Supervisor access required",
       "explanation": "This review queue is only available to supervisors.",
@@ -700,5 +702,112 @@
   "reply": {
     "heading": "Reply to the customer",
     "decision": "Decision"
+  },
+  "business": {
+    "policy": {
+      "margin_threshold_missing": "No minimum margin threshold",
+      "margin_within_minimum": "Margin at or above the minimum",
+      "margin_below_minimum": "Margin below the minimum",
+      "discount_check_skipped": "Discount check skipped",
+      "requested_discount_missing": "Requested discount missing",
+      "target_price_missing": "Target price missing",
+      "target_list_price_missing": "Target price without a list price",
+      "standard_discount_missing": "No standard discount",
+      "discount_threshold_missing": "No maximum discount threshold",
+      "requested_discount_within_maximum": "Requested discount within the maximum",
+      "requested_discount_above_maximum": "Requested discount above the maximum",
+      "target_discount_within_maximum": "Discount implied by the target price within the maximum",
+      "target_discount_above_maximum": "Discount implied by the target price above the maximum",
+      "standard_discount_within_maximum": "Standard discount within the maximum",
+      "standard_discount_above_maximum": "Standard discount above the maximum",
+      "offered_discount_within_maximum": "Offered discount within the maximum",
+      "offered_discount_above_maximum": "Offered discount above the maximum",
+      "order_value_threshold_missing": "No maximum order value threshold",
+      "order_value_within_maximum": "Order value within the maximum",
+      "order_value_above_maximum": "Order value above the maximum",
+      "credit_check_skipped": "Credit check skipped",
+      "credit_blocked": "Customer credit blocked",
+      "credit_data_missing": "Credit limit or balance missing",
+      "credit_within_limit": "Balance + selected option value within limit",
+      "credit_over_limit": "Balance + selected option value over limit"
+    },
+    "signal": {
+      "full_coverage": "Covers the entire requested quantity",
+      "incomplete_coverage": "Covers {{covered}} of {{requested}} pcs",
+      "incomplete_coverage_generic": "Does not cover the entire requested quantity",
+      "deadline_met": "Delivery meets the customer’s deadline",
+      "no_deadline": "No deadline in the inquiry",
+      "deadline_missed": "Delivery on {{fulfilled}} is after the deadline of {{deadline}}",
+      "deadline_missed_generic": "Delivery is after the customer’s deadline",
+      "compat_full": "Substitute {{product}} is fully compatible",
+      "compat_full_generic": "The substitute is fully compatible",
+      "compat_partial": "Substitute {{product}} is only partly compatible",
+      "compat_partial_generic": "The substitute is only partly compatible",
+      "consent_confirmed": "The customer agreed to a substitute",
+      "consent_unconfirmed": "Consent to a substitute has not been confirmed",
+      "history_accepted": "The customer has accepted substitutes before",
+      "history_declined": "The customer has rejected substitutes before",
+      "history_none": "The customer has not received substitutes before",
+      "history_mixed": "The customer has both accepted and rejected substitutes",
+      "two_sources": "The shortage is supplied from two sources: a substitute and a supplier",
+      "task_failed": "Could not check: {{capability}}",
+      "not_checked": "Not checked: {{capability}}",
+      "alternative_not_checked": "Alternative not checked: {{capability}}",
+      "uncertain_input": "Uncertain analysis field: {{field}}"
+    },
+    "legacyPolicy": {
+      "margin": {
+        "pass": "Margin at or above the minimum",
+        "fail": "Margin below the minimum",
+        "not_evaluated": "Margin could not be evaluated"
+      },
+      "discount": {
+        "pass": "Discount within the maximum",
+        "fail": "Discount above the maximum",
+        "not_evaluated": "Discount could not be evaluated"
+      },
+      "order_value": {
+        "pass": "Order value within the maximum",
+        "fail": "Order value above the maximum",
+        "not_evaluated": "Order value could not be evaluated"
+      },
+      "credit": {
+        "pass": "Credit rule satisfied",
+        "fail": "Credit rule not satisfied",
+        "not_evaluated": "Credit could not be evaluated"
+      }
+    }
+  },
+  "apiErrors": {
+    "session": "Your session has ended. Sign in again to continue.",
+    "credentials": "The username or password is incorrect. Check your details and try again.",
+    "permission": "You do not have permission for this action. Return to an available view or contact your administrator.",
+    "inquiryMissing": "This inquiry could not be found. Return to the list and select it again.",
+    "resourceMissing": "These details could not be found. Return to the list and refresh the view.",
+    "analysisMissing": "This inquiry has not been analysed yet. Open the inquiry and start the analysis.",
+    "validation": "Some details are invalid or incomplete. Check the required fields and try again.",
+    "invalidEdit": "Check the offer items, positive quantities and prices with no more than two decimal places. Correct the details and save again.",
+    "reasonRequired": "Add a comment explaining the decision or change, then try again.",
+    "changed": "This inquiry has changed. Refresh it and review the current details before continuing.",
+    "awaiting": "This inquiry is awaiting a supervisor's decision. Wait for the decision before making changes.",
+    "decided": "This offer already has a decision. Check the inquiry's current status.",
+    "notEditable": "This offer cannot be changed now. Check its current status and available actions.",
+    "stale": "This offer is out of date. Refresh the inquiry and review the updated offer before deciding.",
+    "policyMissing": "The offer needs a current policy assessment. Return to the inquiry and run the assessment before approving.",
+    "notAwaiting": "This offer is no longer awaiting a supervisor's decision. Refresh the queue and check its status.",
+    "ownSubmission": "You cannot approve your own submission. Ask another supervisor to review it.",
+    "prerequisite": "Current results from an earlier step are missing. Return to the inquiry and complete the preceding steps.",
+    "configuration": "An administrator needs to set up this feature. Contact them to continue.",
+    "busy": "Sign-in is temporarily busy. Wait a moment and try again.",
+    "mailboxBusy": "Messages are already being fetched. Wait a moment and refresh the list.",
+    "rateLimited": "Too many attempts were made in a short time. Wait a moment before trying again.",
+    "unavailable": "The application is temporarily unavailable. Try again shortly. If the problem continues, contact your administrator.",
+    "mailboxUnavailable": "Messages cannot be fetched right now. Wait a moment and check the inbox again.",
+    "storedInvalid": "The saved analysis cannot be read. Contact your administrator.",
+    "processingFailed": "This step could not be completed. Refresh the inquiry and check its current status. If the problem continues, contact your administrator.",
+    "network": "The application could not be reached. Check your connection and try loading the information again.",
+    "invalidResponse": "The application's response could not be read. Refresh the view. If the problem continues, contact your administrator.",
+    "generic": "The action could not be completed. Refresh the view and check the current status. If the problem continues, contact your administrator.",
+    "writeUncertain": "The result of this action could not be confirmed. It may have been saved. First refresh the inquiry and check its current status before trying again."
   }
 }

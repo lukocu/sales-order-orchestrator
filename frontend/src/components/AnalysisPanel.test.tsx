@@ -350,7 +350,7 @@ describe('AnalysisPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save corrections' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Input should be greater than or equal to 1',
+      'Some details are invalid or incomplete. Check the required fields and try again.',
     )
   })
 
@@ -431,9 +431,9 @@ describe('AnalysisPanel', () => {
   })
 
   it.each([
-    [502, 'Analysis failed, try again'],
-    [503, 'LLM rate limit reached, try again later'],
-  ])('shows the API message when analysis fails with %i', async (status, detail) => {
+    [502, 'Analysis failed, try again', 'The result of this action could not be confirmed.'],
+    [503, 'LLM rate limit reached, try again later', 'Too many attempts were made in a short time.'],
+  ])('shows a safe next step when analysis fails with %i', async (status, detail, message) => {
     stubApi({
       [`GET ${PATH}`]: () => json(200, null),
       [`POST ${PATH}`]: [() => json(status, { detail }), () => json(200, analysis())],
@@ -443,7 +443,8 @@ describe('AnalysisPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Analyze request' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent(detail)
+    expect(alert).toHaveTextContent(message)
+    expect(alert).not.toHaveTextContent(detail)
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
     expect(await screen.findByLabelText('Customer')).toHaveValue('ACME Sp. z o.o.')
   })
@@ -622,7 +623,7 @@ describe('AnalysisPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Re-run orchestrator' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Re-running the orchestrator failed: Database unavailable')
+    expect(alert).toHaveTextContent('The result of this action could not be confirmed. It may have been saved.')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByText('Additional checks: completed')).toBeInTheDocument()

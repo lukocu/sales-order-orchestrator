@@ -5,7 +5,7 @@ import { useSupervisorQueue } from '../useSupervisorQueue'
 import { RULE_LABEL } from './policyLabels'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatDate } from './format'
+import { errorMessage, formatDate } from './format'
 
 function waitAge(date: string, t: ReturnType<typeof useTranslation>['t']): string {
   const elapsed = Math.max(0, Date.now() - Date.parse(date))
@@ -49,7 +49,7 @@ function SupervisorQueue() {
       {state.kind === 'error' && (
         <Card role="alert" className="gap-0 rounded-lg py-4 shadow-none">
           <CardContent className="grid justify-items-start gap-3">
-            <p className="text-destructive">{t('supervisor.queue.error')}</p>
+            <p className="text-destructive">{errorMessage(state.error, t)}</p>
             <Button type="button" variant="outline" onClick={() => void refresh(true)}>
               {t('common.retry')}
             </Button>

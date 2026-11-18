@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fetchHealth, type HealthResult } from '../api/health'
+import { errorMessage } from './format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -50,7 +51,7 @@ function SystemPage() {
                   {t(`health.${state.kind}`)}
                 </Badge>
                 {state.kind === 'error' && (
-                  <p className="text-sm text-muted-foreground">{state.message}</p>
+                  <p className="text-sm text-muted-foreground">{errorMessage(state.error, t)}</p>
                 )}
               </div>
             </div>

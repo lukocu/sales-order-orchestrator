@@ -178,8 +178,8 @@ describe('RecommendationSection', () => {
     ])
     expect(cells('Risks')).toEqual([
       'none',
-      'Pokrywa 50 z 80 szt.',
-      'Realizacja 2026-11-09 po terminie 2026-11-06',
+      'Covers 50 of 80 pcs',
+      'Delivery on 9 Nov 2026 is after the deadline of 6 Nov 2026',
     ])
 
     expectNoTechnicalText()
@@ -199,15 +199,15 @@ describe('RecommendationSection', () => {
         .map((cell) => cell.textContent),
     ).toEqual(['2026-11-10, no deadline', '2026-11-03, no deadline'])
     const details = document.querySelector('details[open]') as HTMLElement
-    expect(items(details, 'Positive')).toEqual(['✓ Zamiennik ABC-110 w pełni zgodny · cited'])
+    expect(items(details, 'Positive')).toEqual(['✓ Substitute ABC-110 is fully compatible · cited'])
     expect(items(details, 'Risks')).toEqual([
-      '⚠ Pokrywa 290 z 500 szt. · cited',
-      '⚠ Brak potwierdzenia zgody na zamiennik · cited',
-      '⚠ Brak uzupełniany z dwóch źródeł: zamiennik i dostawca · cited',
+      '⚠ Covers 290 of 500 pcs · cited',
+      '⚠ Consent to a substitute has not been confirmed · cited',
+      '⚠ The shortage is supplied from two sources: a substitute and a supplier · cited',
     ])
     expect(items(details, 'Information')).toEqual([
-      'ℹ Zapytanie bez terminu',
-      'ℹ Klient nie dostawał dotąd zamienników',
+      'ℹ No deadline in the inquiry',
+      'ℹ The customer has not received substitutes before',
     ])
   })
 
@@ -333,7 +333,7 @@ describe('RecommendationSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Re-run recommendation' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Nothing to recommend')
+    expect(alert).toHaveTextContent('Current results from an earlier step are missing.')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByText('Recommendation: Completed')).toBeInTheDocument()

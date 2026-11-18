@@ -716,3 +716,31 @@ the `/api` router first and serves the SPA for every other path, so unknown `/ap
 stay JSON 404s. The database layer is SQLModel/SQLAlchemy on psycopg 3 with Alembic
 migrations, configured from a single `DATABASE_URL`. The same image runs in `docker compose`,
 is built in CI and is deployed to Render.
+
+## Business messages and API errors
+
+Business descriptions are translated in the browser by stable codes. Policy rules
+add optional `reason_code`; recommendation signals add optional `params` for
+quantities, dates and product codes. Existing `reason` and `label` text stays stored
+unchanged, including drafts and decision snapshots. Old recognized records receive
+an accurate general translation when details are missing; unknown business codes
+show the original text. Mail, draft text, human comments and model justifications
+are never translated by this mechanism. See
+[`backend/app/policy/message-codes.md`](backend/app/policy/message-codes.md).
+
+API failures preserve their HTTP status and `detail` and add `code` (and optional
+safe `params` when needed). The catalogue is
+[`backend/app/api/error-codes.md`](backend/app/api/error-codes.md). The shared client
+retains diagnostic messages internally and temporarily recognizes known exact
+legacy details. UI state stores descriptors, with PL/EN text resolved on render:
+changing language never repeats the failed action. Unknown API codes and ordinary
+exceptions get a safe localized explanation, without displaying private details.
+A lost response to a write may mean the action was saved: check the latest inquiry
+state before another attempt. Writes are never retried automatically. Cancellation
+is silent, missing analysis remains a valid empty state, and session expiration
+returns to sign-in. Stored technical stage errors remain visible in the inspector.
+
+The dev-only `/kitchen-sink.html` includes permission, validation, concurrent-change,
+unknown-error and uncertain-write examples. Switch PL/EN on an existing error, use
+Retry to recover an inbox read, and check narrow/light/dark layouts. This page is
+excluded from the production build.

@@ -232,33 +232,33 @@ Brak migracji danych: nowe pola są opcjonalne z domyślnymi wartościami. Zacho
 
 #### Automated
 
-- [x] 1.1 Wszystkie gałęzie polityki i dynamiczne sygnały mają poprawne kody/parametry bez zmiany wyników liczbowych i werdyktów.
-- [x] 1.2 Stare i nowe JSONB rekomendacji, polityki, szkiców i historii decyzji są odczytywane; odczyt nie zmienia zapisanych danych.
-- [x] 1.3 Błędy API zachowują status/detail, dodają poprawne kody i nie ujawniają w params poufnych danych; walidacja, auth i wylogowanie mają pokrycie.
-- [x] 1.4 Pełne bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`.
+- [x] 1.1 Wszystkie gałęzie polityki i dynamiczne sygnały mają poprawne kody/parametry bez zmiany wyników liczbowych i werdyktów. — 87dee2b
+- [x] 1.2 Stare i nowe JSONB rekomendacji, polityki, szkiców i historii decyzji są odczytywane; odczyt nie zmienia zapisanych danych. — 87dee2b
+- [x] 1.3 Błędy API zachowują status/detail, dodają poprawne kody i nie ujawniają w params poufnych danych; walidacja, auth i wylogowanie mają pokrycie. — 87dee2b
+- [x] 1.4 Pełne bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`. — 87dee2b
 
 ### Phase 2: Tłumaczenie komunikatów biznesowych
 
 #### Automated
 
-- [ ] 2.1 Testy PL/EN obejmują wszystkie kody powodów i sygnałów, dynamiczne parametry, niepełne stare zapisy i fallback nieznanych kodów.
-- [ ] 2.2 Zmiana języka aktualizuje tabelę polityki, uwagę przełożonego oraz obie prezentacje ryzyk bez zapisu lub ponownego pobrania danych.
-- [ ] 2.3 Bramki frontendu przechodzą: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; zgodność kluczy PL/EN jest zachowana.
+- [x] 2.1 Testy PL/EN obejmują wszystkie kody powodów i sygnałów, dynamiczne parametry, niepełne stare zapisy i fallback nieznanych kodów.
+- [x] 2.2 Zmiana języka aktualizuje tabelę polityki, uwagę przełożonego oraz obie prezentacje ryzyk bez zapisu lub ponownego pobrania danych.
+- [x] 2.3 Bramki frontendu przechodzą: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; zgodność kluczy PL/EN jest zachowana.
 
 #### Manual
 
-- [ ] 2.4 W obu językach sprawdzenia, rekomendacja i ocena edytowanej oferty pokazują właściwe ilości, daty i produkty; mail, szkic, komentarz i uzasadnienie modelu zachowują treść.
+- [x] 2.4 W obu językach sprawdzenia, rekomendacja i ocena edytowanej oferty pokazują właściwe ilości, daty i produkty; mail, szkic, komentarz i uzasadnienie modelu zachowują treść. — potwierdzone w podglądzie PL/EN
 
 ### Phase 3: Zrozumiałe błędy w interfejsie
 
 #### Automated
 
-- [ ] 3.1 Testy klienta pokrywają kody i stare detail, błędne JSON, sieć, anulowanie, 401 logowania/sesji, 403, 404, 409, 422, 429 i 5xx oraz nieznany kod bez ujawnienia raw message.
-- [ ] 3.2 Testy widoków zachowują stany puste, konflikty i bezpieczne odświeżanie oraz aktualizują widoczny błąd po PL/EN bez ponowienia żądania.
-- [ ] 3.3 Testy decyzji, korekty i przekazania nie powtarzają zapisów po utracie odpowiedzi; nie mylą błędów walidacji, roli i serwera z siecią.
-- [ ] 3.4 Pełne bramki backendu i frontendu przechodzą; skan tokenów z AGENTS.md nie wykazuje naruszeń, a kitchen sink jest poza buildem.
+- [x] 3.1 Testy klienta pokrywają kody i stare detail, błędne JSON, sieć, anulowanie, 401 logowania/sesji, 403, 404, 409, 422, 429 i 5xx oraz nieznany kod bez ujawnienia raw message. — 35 testów API
+- [x] 3.2 Testy widoków zachowują stany puste, konflikty i bezpieczne odświeżanie oraz aktualizują widoczny błąd po PL/EN bez ponowienia żądania. — testy komponentów i próba w przeglądarce
+- [x] 3.3 Testy decyzji, korekty i przekazania nie powtarzają zapisów po utracie odpowiedzi; nie mylą błędów walidacji, roli i serwera z siecią. — pełna suita frontendu
+- [x] 3.4 Pełne bramki backendu i frontendu przechodzą; skan tokenów z AGENTS.md nie wykazuje naruszeń, a kitchen sink jest poza buildem. — backend 1092, frontend 588; lint, typy, build i skan tokenów OK
 
 #### Manual
 
-- [ ] 3.5 Osoba nietechniczna otrzymuje opis i następny krok dla błędnego logowania, utraty sesji, braku uprawnień, zmienionej sprawy, oczekiwania na przełożonego i problemu połączenia; treść nie zawiera HTTP, SQL, JSON ani nazw wyjątków.
-- [ ] 3.6 W PL/EN i obu motywach alerty są czytelne przy 1440×900 i 375 px; klawiatura i ogłaszanie błędów działają, przełącznik aktualizuje istniejący błąd, a ponowienie odczytu pozwala kontynuować pracę.
+- [x] 3.5 Osoba nietechniczna otrzymuje opis i następny krok dla błędnego logowania, utraty sesji, braku uprawnień, zmienionej sprawy, oczekiwania na przełożonego i problemu połączenia; treść nie zawiera HTTP, SQL, JSON ani nazw wyjątków. — sprawdzone w przeglądarce w PL/EN
+- [x] 3.6 W PL/EN i obu motywach alerty są czytelne przy 1440×900 i 375 px; klawiatura i ogłaszanie błędów działają, przełącznik aktualizuje istniejący błąd, a ponowienie odczytu pozwala kontynuować pracę. — cztery kombinacje rozmiaru/motywu, `role=alert`, Enter, ponowienie odczytu i brak refetch przy zmianie języka

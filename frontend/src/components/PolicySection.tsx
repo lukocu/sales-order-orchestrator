@@ -3,8 +3,10 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type { PolicyResult, PolicyView, RecommendationView, ReplyDraftView } from '../api/analysis'
 import { UnauthorizedError } from '../api/client'
+import { describeError, type ErrorDescriptor } from '../api/errorMessages'
 import { Button } from '@/components/ui/button'
 import { errorMessage, formatDate } from './format'
+import { policyReason } from './businessMessages'
 import {
   OUTCOME_LABEL,
   policyRerunOffered,
@@ -58,7 +60,7 @@ function PolicySection({
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorDescriptor | null>(null)
   const headingId = `policy-${inquiryId}-heading`
 
   async function rerun() {
@@ -67,7 +69,7 @@ function PolicySection({
       await onRerun()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure, t))
+      else setError(describeError(failure, 'write'))
     }
   }
 
@@ -100,7 +102,7 @@ function PolicySection({
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">{t('policy.rerunFailed', { message: error })}</p>
+          <p className="error">{errorMessage(error, t)}</p>
           <Button type="button" variant="outline" onClick={rerun} disabled={disabled}>
             {t('common.retry')}
           </Button>
@@ -145,7 +147,7 @@ function RulesTable({ rules, caption }: { rules: PolicyResult['rules']; caption:
                     {t(verdictKey)}
                   </span>
                 </td>
-                <td>{rule.reason}</td>
+                <td>{policyReason(rule, t)}</td>
               </tr>
             )
           })}

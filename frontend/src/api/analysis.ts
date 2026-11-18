@@ -296,7 +296,8 @@ export type OptionLine = {
 export type Signal = {
   code: string // e.g. full_coverage, task_failed:customer-history
   polarity: SignalPolarity
-  label: string // Polish text from the backend
+  label: string // Original text for an unknown business code
+  params?: Record<string, string | number> // absent in legacy payloads
 }
 
 export type RecommendationOption = {
@@ -355,6 +356,7 @@ export type RuleResult = {
   threshold: string | null
   unit: RuleUnit
   reason: string
+  reason_code?: string | null // absent/null in legacy payloads
 }
 
 export type PolicyView = {
@@ -912,7 +914,10 @@ function isSignal(value: unknown): value is Signal {
   return (
     typeof value.code === 'string' &&
     isOneOf(value.polarity, POLARITIES) &&
-    typeof value.label === 'string'
+    typeof value.label === 'string' &&
+    (value.params === undefined ||
+      (isObject(value.params) && Object.values(value.params).every((param) =>
+        typeof param === 'string' || (typeof param === 'number' && Number.isFinite(param)))))
   )
 }
 
@@ -978,7 +983,8 @@ function isRuleResult(value: unknown): value is RuleResult {
     isStringOrNull(value.actual) &&
     isStringOrNull(value.threshold) &&
     isOneOf(value.unit, RULE_UNITS) &&
-    typeof value.reason === 'string'
+    typeof value.reason === 'string' &&
+    (value.reason_code === undefined || isStringOrNull(value.reason_code))
   )
 }
 
@@ -996,7 +1002,7 @@ export function isPolicyView(value: unknown): value is PolicyView {
   )
 }
 
-function isPolicyResult(value: unknown): value is PolicyResult {
+export function isPolicyResult(value: unknown): value is PolicyResult {
   if (!isObject(value)) return false
   return (
     typeof value.option_id === 'string' &&

@@ -279,17 +279,18 @@ describe('App', () => {
     await renderWithRouter('/')
     fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Logout failed')
+    expect(await screen.findByRole('alert')).toHaveTextContent('The result of this action could not be confirmed. It may have been saved.')
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled()
     expect(screen.getByText('Anna Nowak')).toBeInTheDocument()
   })
 
-  it('returns to the sign-in form when the inbox answers 401', async () => {
+  it('explains session expiry when the inbox answers 401', async () => {
     stubApi({ ...SIGNED_IN_INBOX, 'GET /api/inquiries': UNAUTHORIZED })
 
     await renderWithRouter('/')
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Your session has ended. Sign in again to continue.')
   })
 
   it('returns to the sign-in form when an inquiry answers 401', async () => {
@@ -338,7 +339,7 @@ describe('App', () => {
 
     await renderWithRouter('/')
 
-    expect(await screen.findByText(/Database unavailable/)).toBeInTheDocument()
+    expect(await screen.findByText(/The application is temporarily unavailable/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })

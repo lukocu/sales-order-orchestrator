@@ -316,7 +316,7 @@ describe('ReplyDraftSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Regenerate draft' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Regenerating the draft failed: Nothing to draft')
+    expect(alert).toHaveTextContent('Current results from an earlier step are missing.')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByText('Draft')).toBeInTheDocument()
@@ -448,7 +448,7 @@ describe('ReplyDraftSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Policy verdict missing')
+    expect(await screen.findByRole('alert')).toHaveTextContent('The offer needs a current policy assessment.')
     expect(screen.getByRole('button', { name: 'Confirm approval' })).toBeEnabled()
   })
 
@@ -543,7 +543,7 @@ describe('ReplyDraftSection', () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Powód' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save edit' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Quantity must be at least 1')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check the offer items, positive quantities and prices')
     expect(screen.getByRole('form', { name: 'Edit offer' })).toBeInTheDocument()
   })
 
@@ -716,7 +716,7 @@ describe("ReplyDraftSection: the supervisor's decision", () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'OK' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot approve your own submission')
+    expect(await screen.findByRole('alert')).toHaveTextContent('You cannot approve your own submission. Ask another supervisor to review it.')
     expect(screen.getByRole('form', { name: 'Approve as supervisor' })).toBeInTheDocument()
   })
 

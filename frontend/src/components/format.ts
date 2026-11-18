@@ -48,10 +48,7 @@ export function formatMs(ms: number): string {
   return `${ms < 10 ? ms.toFixed(1) : Math.round(ms)} ms`
 }
 
-// The text of an error shown in a section; an error without a message reads as a generic one.
-export function errorMessage(error: unknown, t: TFunction): string {
-  return error instanceof Error ? error.message : t('common.genericError')
-}
+export { errorMessage } from '../api/errorMessages'
 
 export function deadlineText(meets: boolean | null, t: TFunction): string {
   if (meets === null) return t('common.deadline.none')

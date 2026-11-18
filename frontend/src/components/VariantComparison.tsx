@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPercent, formatPln, sourceText } from "./format";
 import { variantName } from "./variantName";
+import { signalMessage } from "./businessMessages";
 
 type Props = {
   recommendation: RecommendationView;
@@ -30,7 +31,7 @@ type Props = {
 // The attribute column stays in view while the variants scroll; opaque so nothing shows through.
 const STICKY = "sticky left-0 z-10 bg-card";
 
-// Signal lists in this order; the signal texts come from the backend, in Polish.
+// Resolve signal codes in the current UI language, preserving unknown original labels.
 const POLARITIES: [SignalPolarity, string][] = [
   ["positive", "✓"],
   ["risk", "⚠"],
@@ -69,15 +70,15 @@ function SignalLists({
               className={`recommendation__signal-list recommendation__signal-list--${polarity}`}
               aria-label={title}
             >
-              {items.map((signal) => {
+              {items.map((signal, index) => {
                 const isCited = cited.includes(signal.code);
                 return (
                   <li
-                    key={signal.code}
+                    key={`${signal.code}-${index}`}
                     className={isCited ? "recommendation__cited" : undefined}
                   >
                     <span aria-hidden="true">{mark} </span>
-                    {signal.label}
+                    {signalMessage(signal, t)}
                     {isCited && (
                       <span className="recommendation__cited-tag">
                         {" · "}
@@ -204,7 +205,7 @@ function VariantComparison({ recommendation, expectedDeadline }: Props) {
         );
         return risks.length === 0
           ? t("variants.noRisks")
-          : risks.map((s) => s.label).join("\n");
+          : risks.map((s) => signalMessage(s, t)).join("\n");
       },
     },
     {

@@ -11,6 +11,7 @@ import type {
 } from '../api/analysis'
 import type { User } from '../api/auth'
 import { UnauthorizedError } from '../api/client'
+import { describeError, localError, type ErrorDescriptor } from '../api/errorMessages'
 import { Button } from '@/components/ui/button'
 import { errorMessage, formatDate, formatPercent, formatPln, sourceText } from './format'
 import { ACTION_KEY, STATUS } from './draftLabels'
@@ -92,7 +93,7 @@ function ReplyDraftSection({
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorDescriptor | null>(null)
   const [mode, setMode] = useState<Mode | null>(null)
   const headingId = `draft-${inquiryId}-heading`
 
@@ -103,7 +104,7 @@ function ReplyDraftSection({
       await onRegenerate()
     } catch (failure) {
       if (failure instanceof UnauthorizedError) onUnauthorized()
-      else setError(errorMessage(failure, t))
+      else setError(describeError(failure, 'write'))
     }
   }
 
@@ -158,7 +159,7 @@ function ReplyDraftSection({
       )}
       {error && (
         <div role="alert" className="analysis__problem">
-          <p className="error">{t('draft.regenerateFailed', { message: error })}</p>
+          <p className="error">{errorMessage(error, t)}</p>
           <Button type="button" variant="outline" onClick={regenerate} disabled={disabled}>
             {t('common.retry')}
           </Button>
@@ -348,8 +349,7 @@ type FormProps<T> = {
 async function send<T>(
   props: FormProps<T>,
   value: T,
-  setError: (error: string | null) => void,
-  t: TFunction,
+  setError: (error: ErrorDescriptor | null) => void,
 ): Promise<void> {
   setError(null)
   try {
@@ -357,7 +357,7 @@ async function send<T>(
     props.onDone()
   } catch (failure) {
     if (failure instanceof UnauthorizedError) props.onUnauthorized()
-    else setError(errorMessage(failure, t))
+    else setError(describeError(failure, 'write'))
   }
 }
 
@@ -374,7 +374,7 @@ function DecisionForm(
   const { t } = useTranslation()
   const { action, supervisor = false, toSupervisor = false, disabled, saving, onDone } = props
   const [reason, setReason] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorDescriptor | null>(null)
   const approve = action === 'approve'
   const required = supervisor || !approve
   const id = supervisor ? `draft-supervisor-${action}-reason` : `draft-${action}-reason`
@@ -383,11 +383,11 @@ function DecisionForm(
     const text = reason.trim()
     if (required && text === '') {
       setError(
-        approve ? t('draft.form.approvalReasonRequired') : t('draft.form.rejectionReasonRequired'),
+        localError(approve ? 'draft.form.approvalReasonRequired' : 'draft.form.rejectionReasonRequired'),
       )
       return
     }
-    void send(props, text === '' ? null : text, setError, t)
+    void send(props, text === '' ? null : text, setError)
   }
 
   return (
@@ -422,7 +422,7 @@ function DecisionForm(
       />
       {error && (
         <p className="error" role="alert">
-          {error}
+          {errorMessage(error, t)}
         </p>
       )}
       <div className="analysis__actions">
@@ -467,7 +467,7 @@ function EditForm(props: EditProps) {
   const [optionId, setOptionId] = useState(offer.option_id)
   const [lines, setLines] = useState<LineDraft[]>(lineDrafts(offer.lines))
   const [reason, setReason] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorDescriptor | null>(null)
 
   const option = options.find((item) => item.id === optionId)
   // The current offer's lines carry its list prices; another option's only its own prices.
@@ -498,11 +498,11 @@ function EditForm(props: EditProps) {
       const quantity = line.quantity.trim()
       const price = line.unit_price.trim().replace(',', '.')
       if (!/^\d+$/.test(quantity)) {
-        setError(t('draft.form.quantityWhole'))
+        setError(localError('draft.form.quantityWhole'))
         return
       }
       if (!/^\d+(\.\d{1,2})?$/.test(price)) {
-        setError(t('draft.form.unitPriceInvalid'))
+        setError(localError('draft.form.unitPriceInvalid'))
         return
       }
       built.push({
@@ -513,10 +513,10 @@ function EditForm(props: EditProps) {
     }
     const text = reason.trim()
     if (text === '') {
-      setError(t('draft.form.editReasonRequired'))
+      setError(localError('draft.form.editReasonRequired'))
       return
     }
-    void send(props, { option_id: optionId, lines: built, reason: text }, setError, t)
+    void send(props, { option_id: optionId, lines: built, reason: text }, setError)
   }
 
   const id = (name: string) => `draft-edit-${name}`
@@ -601,7 +601,7 @@ function EditForm(props: EditProps) {
       />
       {error && (
         <p className="error" role="alert">
-          {error}
+          {errorMessage(error, t)}
         </p>
       )}
       <div className="analysis__actions">

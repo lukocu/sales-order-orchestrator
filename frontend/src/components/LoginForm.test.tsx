@@ -24,7 +24,7 @@ describe('LoginForm', () => {
     render(<LoginForm onSignedIn={onSignedIn} />)
     fillAndSubmit()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid username or password')
+    expect(await screen.findByRole('alert')).toHaveTextContent('The username or password is incorrect. Check your details and try again.')
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled()
     expect(onSignedIn).not.toHaveBeenCalled()
   })
@@ -47,7 +47,7 @@ describe('LoginForm', () => {
     await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalledWith(user))
   })
 
-  it('shows the API message for other failures', async () => {
+  it('shows a safe connection message for other failures', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
@@ -58,6 +58,6 @@ describe('LoginForm', () => {
     render(<LoginForm onSignedIn={vi.fn()} />)
     fillAndSubmit()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('API unreachable')
+    expect(await screen.findByRole('alert')).toHaveTextContent('The application could not be reached. Check your connection')
   })
 })

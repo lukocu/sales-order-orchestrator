@@ -1,50 +1,39 @@
-// Mirrors HealthResponse in backend/app/api/health.py (GET /api/health).
+import { ApiError, isAbortError, request } from './client'
+import { describeError, type ErrorDescriptor } from './errorMessages'
+
 export type Health = {
   status: 'ok' | 'degraded'
   database: 'ok' | 'error'
   migration: string | null
 }
-
 export type HealthResult =
   | { kind: 'ok'; health: Health }
   | { kind: 'degraded'; health: Health }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; error: ErrorDescriptor }
 
 function isHealth(value: unknown): value is Health {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>
-  return (
-    (v.status === 'ok' || v.status === 'degraded') &&
+  return (v.status === 'ok' || v.status === 'degraded') &&
     (v.database === 'ok' || v.database === 'error') &&
     (typeof v.migration === 'string' || v.migration === null)
-  )
 }
 
-// The backend answers 200 when healthy and 503 (with the same body) when the
-// database is unreachable; anything else, including a network failure, is an error.
+// Both generations of the degraded 503 body are valid. Shared request() handles all
+// other failures, preserving cancellation and the same code contract as protected APIs.
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResult> {
-  let response: Response
   try {
-    response = await fetch('/api/health', { signal })
+    const response = await request('/api/health', { signal }, [503])
+    let body: unknown
+    try { body = await response.json() } catch (error) {
+      if (signal?.aborted || isAbortError(error)) throw error
+      throw new ApiError('Invalid response body', response.status, 'INVALID_RESPONSE')
+    }
+    if (!isHealth(body)) throw new ApiError('Invalid response body', response.status, 'INVALID_RESPONSE')
+    return body.status === 'ok' && response.status === 200
+      ? { kind: 'ok', health: body } : { kind: 'degraded', health: body }
   } catch (error) {
-    if (signal?.aborted) throw error
-    return { kind: 'error', message: 'API unreachable' }
+    if (signal?.aborted || isAbortError(error)) throw error
+    return { kind: 'error', error: describeError(error)! }
   }
-
-  if (response.status !== 200 && response.status !== 503) {
-    return { kind: 'error', message: `Unexpected response: HTTP ${response.status}` }
-  }
-
-  let body: unknown
-  try {
-    body = await response.json()
-  } catch {
-    return { kind: 'error', message: 'Invalid response body' }
-  }
-  if (!isHealth(body)) {
-    return { kind: 'error', message: 'Invalid response body' }
-  }
-  return body.status === 'ok' && response.status === 200
-    ? { kind: 'ok', health: body }
-    : { kind: 'degraded', health: body }
 }

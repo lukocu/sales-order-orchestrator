@@ -54,6 +54,7 @@ export const ACME_POLICY: PolicyView = {
       threshold: '20.00',
       unit: 'percent',
       reason: 'Margin at or above the minimum',
+      reason_code: 'margin_within_minimum',
     },
     {
       code: 'discount',
@@ -62,6 +63,7 @@ export const ACME_POLICY: PolicyView = {
       threshold: '15.00',
       unit: 'percent',
       reason: 'Standard discount within the maximum',
+      reason_code: 'standard_discount_within_maximum',
     },
     {
       code: 'order_value',
@@ -70,6 +72,7 @@ export const ACME_POLICY: PolicyView = {
       threshold: '30000.00',
       unit: 'PLN',
       reason: 'Order value within the maximum',
+      reason_code: 'order_value_within_maximum',
     },
     {
       code: 'credit',
@@ -78,6 +81,7 @@ export const ACME_POLICY: PolicyView = {
       threshold: '30000.00',
       unit: 'PLN',
       reason: 'Balance + selected option value within limit',
+      reason_code: 'credit_within_limit',
     },
   ],
   outcome: 'no_approval_needed',
@@ -99,6 +103,7 @@ export const DELTA_POLICY: PolicyView = {
       threshold: '20.00',
       unit: 'percent',
       reason: 'Margin below the minimum',
+      reason_code: 'margin_below_minimum',
     },
     {
       code: 'discount',
@@ -107,6 +112,7 @@ export const DELTA_POLICY: PolicyView = {
       threshold: '15.00',
       unit: 'percent',
       reason: 'Requested discount above the maximum',
+      reason_code: 'requested_discount_above_maximum',
     },
     {
       code: 'order_value',
@@ -115,6 +121,7 @@ export const DELTA_POLICY: PolicyView = {
       threshold: '30000.00',
       unit: 'PLN',
       reason: 'Order value above the maximum',
+      reason_code: 'order_value_above_maximum',
     },
     {
       code: 'credit',
@@ -123,6 +130,7 @@ export const DELTA_POLICY: PolicyView = {
       threshold: '50000.00',
       unit: 'PLN',
       reason: 'Balance + selected option value within limit',
+      reason_code: 'credit_within_limit',
     },
   ],
   outcome: 'requires_supervisor',
@@ -140,4 +148,5 @@ export const CREDIT_NOT_EVALUATED: RuleResult = {
   threshold: null,
   unit: 'PLN',
   reason: 'Credit check skipped',
+  reason_code: 'credit_check_skipped',
 }

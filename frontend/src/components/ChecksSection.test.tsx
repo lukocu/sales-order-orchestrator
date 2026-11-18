@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -11,6 +11,7 @@ import {
 } from '../api/analysis'
 import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import ChecksSection from './ChecksSection'
+import i18n from '@/i18n'
 
 const CHECKS_PATH = '/api/inquiries/7/checks'
 
@@ -364,7 +365,7 @@ describe('ChecksSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Re-run checks' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Database unavailable')
+    expect(alert).toHaveTextContent('The result of this action could not be confirmed. It may have been saved.')
     fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }))
 
     expect(
@@ -380,5 +381,36 @@ describe('ChecksSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Re-run checks' }))
 
     await vi.waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+})
+
+
+describe('ChecksSection existing reason-code translations', () => {
+  it('keeps all reason codes and dynamic customer names translated on PL/EN switching without requests', async () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    renderSection(analysis({
+      ...NEEDS_INPUT,
+      reasons: ['customer_missing', 'customer_not_found', 'customer_ambiguous',
+        'product_missing', 'product_not_found', 'quantity_missing'],
+      results: {
+        ...NEEDS_INPUT.results,
+        customer: { ...NEEDS_INPUT.results.customer, candidates: ['ACME <A>', 'ACME <B>'] },
+        stock: { ...NEEDS_INPUT.results.stock, product_code: null },
+      },
+    }))
+    for (const reason of [
+      'Customer missing — no name in the inquiry and the sender’s e-mail domain is not in records',
+      'Customer not found in records', 'Customer matches several records: ACME <A>, ACME <B>',
+      'Product code missing', 'Product not found in the catalogue', 'Quantity missing',
+    ]) expect(screen.getByText(reason)).toBeInTheDocument()
+    await act(async () => { await i18n.changeLanguage('pl') })
+    for (const reason of [
+      'Brak klienta — w zapytaniu nie ma nazwy, a domeny e-mail nadawcy nie ma w rejestrze',
+      'Nie znaleziono klienta w rejestrze', 'Klient pasuje do kilku wpisów: ACME <A>, ACME <B>',
+      'Brak kodu produktu', 'Nie znaleziono produktu w katalogu', 'Brak ilości',
+    ]) expect(screen.getByText(reason)).toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
+    expect(document.querySelector('a')).toBeNull()
   })
 })

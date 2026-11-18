@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { login, UnauthorizedError, type User } from '../api/auth'
+import { login, type User } from '../api/auth'
+import { describeError, type ErrorDescriptor } from '../api/errorMessages'
+import { errorMessage } from './format'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -22,7 +24,7 @@ function LoginForm({ onSignedIn, focusHeading = false }: Props) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorDescriptor | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -32,13 +34,7 @@ function LoginForm({ onSignedIn, focusHeading = false }: Props) {
       const user = await login(username, password)
       onSignedIn(user)
     } catch (err) {
-      setError(
-        err instanceof UnauthorizedError
-          ? t('login.invalidCredentials')
-          : err instanceof Error
-            ? err.message
-            : t('login.failed'),
-      )
+      setError(describeError(err, 'login'))
       setSubmitting(false)
     }
   }
@@ -79,7 +75,7 @@ function LoginForm({ onSignedIn, focusHeading = false }: Props) {
           </div>
           {error && (
             <p className="text-sm text-destructive" role="alert">
-              {error}
+              {errorMessage(error, t)}
             </p>
           )}
           <Button type="submit" className="justify-self-start" disabled={submitting}>

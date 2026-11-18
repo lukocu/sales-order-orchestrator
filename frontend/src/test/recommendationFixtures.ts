@@ -82,7 +82,7 @@ export const ACME_STOCK_OPTION: RecommendationOption = {
   margin_percent: '26.32',
   band: 'LOW',
   signals: [
-    { code: 'incomplete_coverage', polarity: 'risk', label: 'Pokrywa 50 z 80 szt.' },
+    { code: 'incomplete_coverage', polarity: 'risk', label: 'Pokrywa 50 z 80 szt.', params: { covered: 50, requested: 80 } },
     { code: 'deadline_met', polarity: 'positive', label: 'Realizacja w terminie klienta' },
   ],
 }
@@ -114,7 +114,7 @@ export const ACME_SUBSTITUTE_OPTION: RecommendationOption = {
   signals: [
     { code: 'full_coverage', polarity: 'positive', label: 'Pokrywa całą zamówioną ilość' },
     { code: 'deadline_met', polarity: 'positive', label: 'Realizacja w terminie klienta' },
-    { code: 'compat_full', polarity: 'positive', label: 'Zamiennik ABC-110 w pełni zgodny' },
+    { code: 'compat_full', polarity: 'positive', label: 'Zamiennik ABC-110 w pełni zgodny', params: { product_code: 'ABC-110' } },
     {
       code: 'consent_confirmed',
       polarity: 'positive',
@@ -156,7 +156,7 @@ export const ACME_SUPPLIER_OPTION: RecommendationOption = {
     {
       code: 'deadline_missed',
       polarity: 'risk',
-      label: 'Realizacja 2026-11-09 po terminie 2026-11-06',
+      label: 'Realizacja 2026-11-09 po terminie 2026-11-06', params: { fulfilled_on: '2026-11-09', deadline: '2026-11-06' },
     },
   ],
 }
@@ -203,7 +203,7 @@ export const ACME_SECOND_SUBSTITUTE_OPTION: RecommendationOption = {
   band: 'MEDIUM',
   signals: [
     { code: 'full_coverage', polarity: 'positive', label: 'Pokrywa całą zamówioną ilość' },
-    { code: 'compat_partial', polarity: 'risk', label: 'Zamiennik ABC-120 częściowo zgodny' },
+    { code: 'compat_partial', polarity: 'risk', label: 'Zamiennik ABC-120 częściowo zgodny', params: { product_code: 'ABC-120' } },
   ],
 }
 
@@ -223,7 +223,7 @@ export const ACME_COMBINED_OPTION: RecommendationOption = {
   margin_percent: '24.44',
   signals: [
     { code: 'full_coverage', polarity: 'positive', label: 'Pokrywa całą zamówioną ilość' },
-    { code: 'deadline_missed', polarity: 'risk', label: 'Realizacja 2026-11-09 po terminie 2026-11-06' },
+    { code: 'deadline_missed', polarity: 'risk', label: 'Realizacja 2026-11-09 po terminie 2026-11-06', params: { fulfilled_on: '2026-11-09', deadline: '2026-11-06' } },
     { code: 'two_sources', polarity: 'risk', label: 'Brak uzupełniany z dwóch źródeł: zamiennik i dostawca' },
   ],
 }
@@ -274,7 +274,7 @@ export const DELTA_STOCK_OPTION: RecommendationOption = {
   margin_percent: '22.22',
   band: 'LOW',
   signals: [
-    { code: 'incomplete_coverage', polarity: 'risk', label: 'Pokrywa 50 z 500 szt.' },
+    { code: 'incomplete_coverage', polarity: 'risk', label: 'Pokrywa 50 z 500 szt.', params: { covered: 50, requested: 500 } },
     { code: 'no_deadline', polarity: 'info', label: 'Zapytanie bez terminu' },
   ],
 }
@@ -315,9 +315,9 @@ export const DELTA_COMBINED_OPTION: RecommendationOption = {
   margin_percent: '14.29',
   band: 'LOW',
   signals: [
-    { code: 'incomplete_coverage', polarity: 'risk', label: 'Pokrywa 290 z 500 szt.' },
+    { code: 'incomplete_coverage', polarity: 'risk', label: 'Pokrywa 290 z 500 szt.', params: { covered: 290, requested: 500 } },
     { code: 'no_deadline', polarity: 'info', label: 'Zapytanie bez terminu' },
-    { code: 'compat_full', polarity: 'positive', label: 'Zamiennik ABC-110 w pełni zgodny' },
+    { code: 'compat_full', polarity: 'positive', label: 'Zamiennik ABC-110 w pełni zgodny', params: { product_code: 'ABC-110' } },
     {
       code: 'consent_unconfirmed',
       polarity: 'risk',
