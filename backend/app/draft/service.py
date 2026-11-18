@@ -950,6 +950,13 @@ def _policy_in_force(
         return None
 
 
+def policy_in_force(
+    session: Session, analysis: InquiryAnalysis, row: InquiryDraft, result: DraftResult
+) -> PolicyResult | None:
+    """The policy used by decisions, shared with the supervisor's read projections."""
+    return _policy_in_force(session, analysis, row, result)
+
+
 def _decide(
     session: Session,
     row: InquiryDraft,

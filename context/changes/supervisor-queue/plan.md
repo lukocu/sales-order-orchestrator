@@ -282,10 +282,10 @@ Backend i frontend trafiają do jednego obrazu zgodnie z istniejącym wdrożenie
 
 #### Automated
 
-- [ ] 2.1 Testy API kolejki potwierdzają 401/403, pustą listę, poprawny licznik, unikalność wierszy i kolejność według przekazania z deterministycznym remisem.
-- [ ] 2.2 Testy odczytu obejmują edytowaną ofertę, reguły `not_evaluated`, nieaktualne i nieczytelne szkice oraz fallback daty bez ukrywania zgłoszeń.
-- [ ] 2.3 Testy szczegółu obejmują wynik po decyzji, brak oczekiwania, brak danych oferty, 404/422 oraz brak skutków ubocznych odczytu.
-- [ ] 2.4 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`.
+- [x] 2.1 Testy API kolejki potwierdzają 401/403, pustą listę, poprawny licznik, unikalność wierszy i kolejność według przekazania z deterministycznym remisem.
+- [x] 2.2 Testy odczytu obejmują edytowaną ofertę, reguły `not_evaluated`, nieaktualne i nieczytelne szkice oraz fallback daty bez ukrywania zgłoszeń.
+- [x] 2.3 Testy szczegółu obejmują wynik po decyzji, brak oczekiwania, brak danych oferty, 404/422 oraz brak skutków ubocznych odczytu.
+- [x] 2.4 Bramki backendu przechodzą: `docker compose run --rm backend sh check.sh`.
 
 ### Phase 3: Kolejka, licznik i ekran decyzji
 
