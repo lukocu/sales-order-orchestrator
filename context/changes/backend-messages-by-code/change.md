@@ -1,7 +1,7 @@
 ---
 change_id: backend-messages-by-code
 title: Backend messages by code
-status: implemented
+status: impl_reviewed
 created: 2026-11-18
 updated: 2026-11-18
 archived_at: null
