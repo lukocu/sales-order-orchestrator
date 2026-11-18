@@ -29,6 +29,7 @@ from app.checks.models import InquiryChecks, Product
 from app.checks.schema import CheckResults
 from app.checks.service import analysis_version, current_checks, lock_analysis
 from app.draft.drafter import Drafter
+from app.inquiries.mutations import MutationConflict, check_mutation, mutating_inquiry
 from app.orchestration.agents import AgentInput
 from app.orchestration.executor import PlanItem, execute
 from app.orchestration.models import InquiryOrchestration
@@ -85,6 +86,7 @@ class _Inputs:
     agent_input: AgentInput
 
 
+@mutating_inquiry
 def run_orchestration(
     engine: Engine,
     inquiry_id: int,
@@ -120,6 +122,7 @@ def run_orchestration(
     _store(engine, inquiry_id, inputs, traced.id, _status(result), result)
 
 
+@mutating_inquiry
 def orchestrate_after_checks(
     engine: Engine,
     inquiry_id: int,
@@ -131,7 +134,7 @@ def orchestrate_after_checks(
 
     Runs inside the analysis and correction requests, so the planner gets a single attempt:
     a transient planner error ends in `failed` and "Re-run orchestrator" retries it.
-    Never raises: unexpected errors are logged (class and inquiry id only) and leave the
+    Processing conflicts propagate; other unexpected errors are logged and leave the
     stored orchestration as it was. Then the recommendation follows the orchestration: it
     runs again, or is dropped when there is no current orchestration to recommend from.
     """
@@ -140,6 +143,8 @@ def orchestrate_after_checks(
             run_orchestration(engine, inquiry_id, planner, planner_attempts=1)
     except NothingToOrchestrate:
         pass  # the analysis or its checks changed meanwhile; that newer run decides
+    except MutationConflict:
+        raise
     except Exception as error:
         logger.warning("Orchestration failed for inquiry %s: %s", inquiry_id, type(error).__name__)
     recommend_after_orchestration(engine, inquiry_id, recommender, drafter)
@@ -395,6 +400,7 @@ def _store(
     )
     with Session(engine) as session:
         current = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if current is None or analysis_version(current) != inputs.version:
             return  # replaced or corrected meanwhile: that newer version gets its own run
         checks = current_checks(session, inquiry_id, inputs.version)
@@ -415,6 +421,7 @@ def _drop_unless_exception(engine: Engine, inquiry_id: int) -> bool:
     """
     with Session(engine) as session:
         analysis = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             return False
         checks = current_checks(session, inquiry_id, analysis_version(analysis))

@@ -25,6 +25,7 @@ from sqlmodel import Session, col, select
 
 from app.checks.schema import CheckResults
 from app.checks.service import analysis_version, current_checks, lock_analysis
+from app.inquiries.mutations import MutationConflict, check_mutation, mutating_inquiry
 from app.parsing.models import InquiryAnalysis
 from app.policy.models import InquiryPolicyVerdict, PolicyRule
 from app.policy.rules import PolicyInputs, PolicyThresholds, evaluate
@@ -62,6 +63,7 @@ class _Inputs:
     thresholds: PolicyThresholds
 
 
+@mutating_inquiry
 def run_policy(engine: Engine, inquiry_id: int) -> None:
     """Evaluate the current recommendation's chosen option in a new run and store the verdict
     if the recommendation is still the same.
@@ -85,16 +87,19 @@ def run_policy(engine: Engine, inquiry_id: int) -> None:
     _store(engine, inquiry_id, inputs, traced.id, result)
 
 
+@mutating_inquiry
 def policy_after_recommendation(engine: Engine, inquiry_id: int) -> None:
     """After a recommendation attempt: evaluate the policy, else drop a verdict of old data.
 
-    Never raises: unexpected errors are logged (class and inquiry id only) and leave the
+    Processing conflicts propagate; other unexpected errors are logged and leave the
     stored verdict as it was.
     """
     try:
         run_policy(engine, inquiry_id)
     except NothingToEvaluate:
         pass  # run_policy already dropped a verdict of old data
+    except MutationConflict:
+        raise
     except Exception as error:
         logger.warning(
             "Policy evaluation failed for inquiry %s: %s", inquiry_id, type(error).__name__
@@ -232,6 +237,7 @@ def _store(
     )
     with Session(engine) as session:
         analysis = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             return  # the inquiry was deleted meanwhile
         recommendation = session.exec(
@@ -261,6 +267,7 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
     """
     with Session(engine) as session:
         analysis = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             return  # the inquiry was deleted; its verdict cascades
         verdict = session.exec(

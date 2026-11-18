@@ -31,6 +31,7 @@ from app.checks.rules import (
 )
 from app.checks.schema import CheckResults, ExceptionType, NeedsInputReason, Outcome
 from app.inquiries.models import Inquiry
+from app.inquiries.mutations import check_mutation, mutating_inquiry
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
 from app.tracing import run
@@ -88,6 +89,7 @@ def current_checks(session: Session, inquiry_id: int, version: datetime) -> Inqu
     ).first()
 
 
+@mutating_inquiry
 def run_checks(engine: Engine, inquiry_id: int) -> None:
     """Check the current analysis in a new run and store the result if it is still current.
 
@@ -146,6 +148,7 @@ def run_checks(engine: Engine, inquiry_id: int) -> None:
             .where(col(InquiryAnalysis.inquiry_id) == inquiry_id)
             .with_for_update()
         ).first()
+        check_mutation(session, inquiry_id)
         if current is None or analysis_version(current) != version:
             return  # replaced or corrected meanwhile: that newer version gets its own run
         session.exec(statement)

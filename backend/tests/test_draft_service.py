@@ -46,6 +46,7 @@ from app.draft.service import (
     supervisor_decide,
 )
 from app.inquiries.models import Inquiry
+from app.inquiries.mutations import AwaitingSupervisor
 from app.policy.models import InquiryPolicyVerdict, PolicyRule
 from app.recommendation.models import InquiryRecommendation
 from app.tracing.models import StepKind, TraceRun, TraceStep
@@ -614,7 +615,8 @@ def test_draft_written_during_the_call_is_not_overwritten(
             )
             session.commit()
 
-    generate_draft(migrated_engine, acme.id, StubDrafter(on_write=drafted_meanwhile))
+    with pytest.raises(AwaitingSupervisor):
+        generate_draft(migrated_engine, acme.id, StubDrafter(on_write=drafted_meanwhile))
 
     row = _stored(migrated_engine, acme)
     assert row is not None
@@ -721,13 +723,19 @@ def test_decided_draft_cannot_be_regenerated(
     _analyze(auth_client, acme)
     _set_draft(migrated_engine, acme, status=status)
 
-    with pytest.raises(DraftDecided):
+    error = AwaitingSupervisor if status == "awaiting_supervisor" else DraftDecided
+    with pytest.raises(error):
         regenerate_draft(migrated_engine, acme.id, FakeDrafter())
 
     response = auth_client.post(_path(acme.id))
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Draft already decided"}
+    detail = (
+        "Inquiry awaiting supervisor decision"
+        if status == "awaiting_supervisor"
+        else "Draft already decided"
+    )
+    assert response.json() == {"detail": detail}
     row = _stored(migrated_engine, acme)
     assert row is not None
     assert row.status == status
@@ -1257,7 +1265,8 @@ def test_decided_draft_cannot_be_changed(
     draft = _analyze(auth_client, acme)["draft"]
     _set_draft(migrated_engine, acme, status=status)
 
-    with pytest.raises(DraftNotEditable):
+    error = AwaitingSupervisor if status == "awaiting_supervisor" else DraftNotEditable
+    with pytest.raises(error):
         decide(
             migrated_engine,
             acme.id,
@@ -1266,7 +1275,7 @@ def test_decided_draft_cannot_be_changed(
             action="reject",
             reason="Za późno",
         )
-    with pytest.raises(DraftNotEditable):
+    with pytest.raises(error):
         edit_draft(
             migrated_engine,
             acme.id,
@@ -1767,22 +1776,30 @@ def test_supervisor_decision_on_a_changed_draft_is_refused(
     assert len(_decisions(migrated_engine, awaiting)) == 1
 
 
-def test_supervisor_decision_on_a_stale_draft_is_refused(
+def test_supervisor_can_reject_but_not_approve_a_stale_draft(
     auth_client: TestClient,
     migrated_engine: Engine,
     awaiting: Inquiry,
     supervisor: User,
 ) -> None:
-    _set_draft(migrated_engine, awaiting, recommended_at=datetime(2020, 1, 1, tzinfo=UTC))
-
-    for action in ("approve", "reject"):
-        with pytest.raises(DraftStale):
-            _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action=action)
+    # Keep the submission pin intact but make its recommendation no longer current.
+    with Session(migrated_engine) as session:
+        session.execute(
+            update(InquiryRecommendation)
+            .where(col(InquiryRecommendation.inquiry_id) == awaiting.id)
+            .values(recommended_at=datetime(2020, 1, 1, tzinfo=UTC))
+        )
+        session.commit()
+    with pytest.raises(DraftStale):
+        _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="approve")
+    _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="reject")
 
     row = _stored(migrated_engine, awaiting)
     assert row is not None
-    assert row.status == "awaiting_supervisor"
-    assert len(_decisions(migrated_engine, awaiting)) == 1
+    assert row.status == "rejected"
+    submission, rejection = _decisions(migrated_engine, awaiting)
+    assert rejection.snapshot == submission.snapshot
+    assert rejection.action == "supervisor_reject"
 
 
 def test_supervisor_cannot_approve_their_own_submission(
@@ -1899,7 +1916,7 @@ def test_supervisor_approve_is_ready_to_send_whatever_the_verdict_in_force(
     assert snapshot.policy_outcome == "no_approval_needed"
 
 
-def test_supervisor_decision_without_a_verdict_in_force_is_refused(
+def test_missing_verdict_blocks_approval_but_allows_return_to_sales(
     auth_client: TestClient,
     migrated_engine: Engine,
     awaiting: Inquiry,
@@ -1913,10 +1930,10 @@ def test_supervisor_decision_without_a_verdict_in_force_is_refused(
 
     with pytest.raises(PolicyMissing):
         _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="approve")
-    with pytest.raises(DraftStale):
-        _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="reject")
-
-    assert len(_decisions(migrated_engine, awaiting)) == 1
+    _supervisor_decide(migrated_engine, auth_client, awaiting, supervisor, action="reject")
+    submission, rejection = _decisions(migrated_engine, awaiting)
+    assert rejection.snapshot == submission.snapshot
+    assert rejection.status_after == "rejected"
 
 
 def test_draft_rejected_by_the_supervisor_can_be_regenerated(

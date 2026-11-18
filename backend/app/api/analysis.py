@@ -23,6 +23,7 @@ from app.draft.service import (
     PolicyMissing,
     ReasonRequired,
 )
+from app.inquiries.mutations import MutationConflict
 from app.orchestration.planning import Planner, get_planner
 from app.orchestration.service import NothingToOrchestrate
 from app.parsing.extractor import (
@@ -197,6 +198,8 @@ def analyze(
     """Analyze the inquiry, replacing its analysis and corrections; on failure nothing changes."""
     try:
         return analyze_inquiry(engine, extractor, inquiry_id, user, planner, recommender, drafter)
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except ExtractionError as error:
@@ -240,6 +243,8 @@ def correct(
         )
     except AnalysisNotFound:
         raise _no_analysis() from None
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:  # deleted right after the corrections were saved
         raise _inquiry_not_found() from None
     except AnalysisChanged:
@@ -264,6 +269,8 @@ def recheck(
     """Run the checks again for the current analysis (after a stale or failed result)."""
     try:
         return recheck_inquiry(engine, inquiry_id, planner, recommender, drafter)
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except NoAnalysis:
@@ -289,6 +296,8 @@ def reorchestrate(
     recommendation."""
     try:
         return reorchestrate_inquiry(engine, inquiry_id, planner, recommender, drafter)
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -316,6 +325,8 @@ def rerecommend(
     """Run only the recommendation again (after a stale or failed result)."""
     try:
         return rerecommend_inquiry(engine, inquiry_id, recommender, drafter)
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -342,6 +353,8 @@ def reevaluate_policy(
     """Evaluate only the policy again (after a stale verdict or a changed threshold)."""
     try:
         return reevaluate_policy_inquiry(engine, inquiry_id, drafter)
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -368,6 +381,8 @@ def regenerate(
     """Draft the current recommendation again: the offer as recommended, status `draft`."""
     try:
         return redraft_inquiry(engine, inquiry_id, drafter)
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -466,6 +481,8 @@ def edit(
             lines=request.lines,
             reason=request.reason,
         )
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -498,6 +515,8 @@ def decide_draft(
             action=request.action,
             reason=request.reason,
         )
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:
@@ -532,6 +551,8 @@ def supervisor_decide_draft(
             action=request.action,
             reason=request.reason,
         )
+    except MutationConflict as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from None
     except InquiryNotFound:
         raise _inquiry_not_found() from None
     except AnalysisNotFound:

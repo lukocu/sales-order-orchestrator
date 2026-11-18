@@ -37,6 +37,7 @@ from app.draft.service import (
     supervisor_decide,
 )
 from app.inquiries.models import Inquiry
+from app.inquiries.mutations import MutationConflict, check_mutation, mutating_inquiry
 from app.orchestration.planning import Planner
 from app.orchestration.service import (
     OrchestrationView,
@@ -135,6 +136,7 @@ def changed_fields(before: ParsedFields, after: ParsedFields) -> list[FieldName]
     ]
 
 
+@mutating_inquiry
 def analyze_inquiry(
     engine: Engine,
     extractor: InquiryExtractor,
@@ -191,6 +193,11 @@ def analyze_inquiry(
         set_={name: statement.excluded[name] for name in values if name != "inquiry_id"},
     )
     with Session(engine) as session:
+        session.exec(
+            select(Inquiry).where(col(Inquiry.id) == inquiry_id).with_for_update(key_share=True)
+        ).first()
+        _find(session, inquiry_id, for_update=True)
+        check_mutation(session, inquiry_id)
         session.exec(statement)
         session.commit()
     _run_checks_after_save(engine, inquiry_id, planner, recommender, drafter)
@@ -208,6 +215,7 @@ def get_analysis(engine: Engine, inquiry_id: int) -> AnalysisView | None:
         return None
 
 
+@mutating_inquiry
 def save_corrections(
     engine: Engine,
     inquiry_id: int,
@@ -228,6 +236,7 @@ def save_corrections(
     with Session(engine) as session:
         # Locked, so a concurrent re-analysis cannot slip in between check and write.
         analysis = _find(session, inquiry_id, for_update=True)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             raise AnalysisNotFound
         if analysis.analyzed_at != analyzed_at:
@@ -247,6 +256,7 @@ def save_corrections(
     return _current_view(engine, inquiry_id)
 
 
+@mutating_inquiry
 def recheck_inquiry(
     engine: Engine,
     inquiry_id: int,
@@ -271,6 +281,7 @@ def recheck_inquiry(
     return _current_view(engine, inquiry_id)
 
 
+@mutating_inquiry
 def reorchestrate_inquiry(
     engine: Engine,
     inquiry_id: int,
@@ -294,6 +305,7 @@ def reorchestrate_inquiry(
     return _current_view(engine, inquiry_id)
 
 
+@mutating_inquiry
 def rerecommend_inquiry(
     engine: Engine, inquiry_id: int, recommender: Recommender, drafter: Drafter
 ) -> AnalysisView:
@@ -312,12 +324,18 @@ def rerecommend_inquiry(
             raise AnalysisNotFound
     try:
         run_recommendation(engine, inquiry_id, recommender)
-    finally:
+    except MutationConflict:
+        raise
+    except BaseException:
         policy_after_recommendation(engine, inquiry_id)
         draft_after_policy(engine, inquiry_id, drafter)
+        raise
+    policy_after_recommendation(engine, inquiry_id)
+    draft_after_policy(engine, inquiry_id, drafter)
     return _current_view(engine, inquiry_id)
 
 
+@mutating_inquiry
 def reevaluate_policy_inquiry(engine: Engine, inquiry_id: int, drafter: Drafter) -> AnalysisView:
     """Evaluate only the policy again in a new run for the current recommendation, then
     follow with the draft: an existing draft of the current recommendation is kept, a
@@ -333,11 +351,16 @@ def reevaluate_policy_inquiry(engine: Engine, inquiry_id: int, drafter: Drafter)
             raise AnalysisNotFound
     try:
         run_policy(engine, inquiry_id)
-    finally:
+    except MutationConflict:
+        raise
+    except BaseException:
         draft_after_policy(engine, inquiry_id, drafter)
+        raise
+    draft_after_policy(engine, inquiry_id, drafter)
     return _current_view(engine, inquiry_id)
 
 
+@mutating_inquiry
 def redraft_inquiry(engine: Engine, inquiry_id: int, drafter: Drafter) -> AnalysisView:
     """Draft the current recommendation again ("Regenerate draft"), resetting the offer.
 
@@ -443,6 +466,8 @@ def _run_checks_after_save(
     """
     try:
         run_checks(engine, inquiry_id)
+    except MutationConflict:
+        raise
     except Exception as error:
         # Class and inquiry id only: the message could quote inquiry content.
         logger.warning("Checks failed for inquiry %s: %s", inquiry_id, type(error).__name__)

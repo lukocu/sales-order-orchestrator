@@ -30,6 +30,7 @@ from app.checks.schema import CheckResults
 from app.checks.service import CHECK_INPUTS, analysis_version, current_checks, lock_analysis
 from app.draft.drafter import Drafter
 from app.draft.service import draft_after_policy
+from app.inquiries.mutations import MutationConflict, check_mutation, mutating_inquiry
 from app.orchestration.models import InquiryOrchestration, SupplierOffer
 from app.orchestration.schema import (
     OrchestrationResult,
@@ -97,6 +98,7 @@ class _Inputs:
     inputs: RecommendationInputs
 
 
+@mutating_inquiry
 def run_recommendation(
     engine: Engine,
     inquiry_id: int,
@@ -126,6 +128,7 @@ def run_recommendation(
     _store(engine, inquiry_id, inputs, traced.id, status, result)
 
 
+@mutating_inquiry
 def recommend_after_orchestration(
     engine: Engine, inquiry_id: int, recommender: Recommender, drafter: Drafter
 ) -> None:
@@ -133,7 +136,7 @@ def recommend_after_orchestration(
 
     Runs inside the analysis, correction and orchestration requests, so the recommender gets
     a single attempt: a transient error ends in `failed` and "Re-run recommendation" retries
-    it. Never raises: unexpected errors are logged (class and inquiry id only) and leave the
+    it. Processing conflicts propagate; other unexpected errors are logged and leave the
     stored recommendation as it was. Then the policy follows the recommendation: it is
     evaluated again, or its verdict is dropped when there is no current recommendation with
     a chosen option; and the draft follows the policy (`draft_after_policy`).
@@ -142,6 +145,8 @@ def recommend_after_orchestration(
         run_recommendation(engine, inquiry_id, recommender, attempts=1)
     except NothingToRecommend:
         pass  # run_recommendation already dropped a recommendation of old data
+    except MutationConflict:
+        raise
     except Exception as error:
         logger.warning("Recommendation failed for inquiry %s: %s", inquiry_id, type(error).__name__)
     policy_after_recommendation(engine, inquiry_id)
@@ -405,6 +410,7 @@ def _store(
     )
     with Session(engine) as session:
         current = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if current is None or analysis_version(current) != inputs.version:
             return  # replaced or corrected meanwhile: that newer version gets its own run
         checks = current_checks(session, inquiry_id, inputs.version)
@@ -430,6 +436,7 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
     """
     with Session(engine) as session:
         analysis = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             return  # the inquiry was deleted; its recommendation cascades
         row = session.exec(

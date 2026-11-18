@@ -67,6 +67,7 @@ from app.draft.schema import (
     TextSource,
 )
 from app.inquiries.models import Inquiry
+from app.inquiries.mutations import MutationConflict, check_mutation, mutating_inquiry
 from app.parsing.models import InquiryAnalysis
 from app.parsing.schema import ParsedFields
 from app.policy.models import InquiryPolicyVerdict
@@ -182,6 +183,7 @@ class _Inputs:
     draft: _StoredDraft | None  # the stored draft when the inputs were read
 
 
+@mutating_inquiry
 def generate_draft(
     engine: Engine,
     inquiry_id: int,
@@ -203,13 +205,14 @@ def generate_draft(
     _generate(engine, inquiry_id, drafter, inputs, attempts, retry_delay_s, replacing=None)
 
 
+@mutating_inquiry
 def draft_after_policy(engine: Engine, inquiry_id: int, drafter: Drafter) -> None:
     """After a policy evaluation: draft a new recommendation, else drop a draft of old data.
 
     A draft of the current recommendation is kept as it is (its edit or decision survives a
     re-run of the policy). Runs inside the chain's requests, so the drafter gets a single
-    attempt. Never raises: unexpected errors are logged (class and inquiry id only) and leave
-    the stored draft as it was.
+    attempt. Processing conflicts propagate to stop the chain; other unexpected errors are
+    logged (class and inquiry id only) and leave the stored draft as it was.
     """
     try:
         inputs = _inputs_or_drop(engine, inquiry_id)
@@ -218,10 +221,13 @@ def draft_after_policy(engine: Engine, inquiry_id: int, drafter: Drafter) -> Non
         _generate(engine, inquiry_id, drafter, inputs, 1, DRAFTER_RETRY_DELAY_S, replacing=None)
     except NothingToDraft:
         pass  # a draft of old data was already dropped
+    except MutationConflict:
+        raise
     except Exception as error:
         logger.warning("Drafting failed for inquiry %s: %s", inquiry_id, type(error).__name__)
 
 
+@mutating_inquiry
 def regenerate_draft(
     engine: Engine,
     inquiry_id: int,
@@ -356,37 +362,79 @@ def supervisor_decide(
     the supervisor's override of the policy); reject sets `rejected`. Both need a reason. The
     four-eyes rule only binds approve: the user who passed the draft to the supervisor cannot
     approve it, but may reject it (the way out when there is no other supervisor). The role is
-    not checked here; the API is the boundary. Raises `ReasonRequired`, `NothingToDraft`
+    not checked here; the API is the boundary. Stale/unreadable pending drafts can be rejected
+    with the submission's historical snapshot. Raises `ReasonRequired`, `NothingToDraft`
     without a draft, `DraftChanged`, `NotAwaitingSupervisor`, `DraftStale`, `OwnSubmission`
     and `PolicyMissing` (approve without a verdict in force); nothing is written then.
     """
     reason = _required(reason)
     with Session(engine) as session:
+        if action == "reject":
+            _reject_pending(session, inquiry_id, user, updated_at, reason)
+            return
         analysis, row, result, _ = _locked_draft(
             session, inquiry_id, updated_at, status="awaiting_supervisor"
         )
         # Read under the same lock as the status: while the draft awaits the supervisor, its
         # last decision is the Approve that put it there.
-        if action == "approve" and _submitted_by(session, row) == user.id:
+        if _submitted_by(session, row) == user.id:
             raise OwnSubmission
         policy = _policy_in_force(session, analysis, row, result)
         if policy is None:
-            raise PolicyMissing if action == "approve" else DraftStale
-        if action == "approve":
-            _decide(
-                session,
-                row,
-                user,
-                "supervisor_approve",
-                "ready_to_send",
-                reason,
-                result.offer,
-                policy,
+            raise PolicyMissing
+        _decide(
+            session,
+            row,
+            user,
+            "supervisor_approve",
+            "ready_to_send",
+            reason,
+            result.offer,
+            policy,
+        )
+
+
+def _reject_pending(
+    session: Session, inquiry_id: int, user: AuthUser, updated_at: datetime, reason: str
+) -> None:
+    """Return even an unreadable/stale pending submission to the salesperson.
+
+    Current data keeps the normal decision snapshot. Recovery uses the historical submission
+    snapshot verbatim; it never manufactures current offer or policy facts.
+    """
+    _analysis, row = _locked_draft_row(
+        session, inquiry_id, updated_at, status="awaiting_supervisor"
+    )
+    try:
+        analysis, row, result, _ = _locked_draft(
+            session, inquiry_id, updated_at, status="awaiting_supervisor"
+        )
+        policy = _policy_in_force(session, analysis, row, result)
+        if policy is None:
+            raise DraftStale
+    except DraftStale, ValidationError:
+        submission = session.exec(
+            select(InquiryDraftDecision)
+            .where(
+                col(InquiryDraftDecision.inquiry_id) == inquiry_id,
+                col(InquiryDraftDecision.recommended_at) == row.recommended_at,
+                col(InquiryDraftDecision.action) == "approve",
+                col(InquiryDraftDecision.status_after) == "awaiting_supervisor",
             )
-        else:
-            _decide(
-                session, row, user, "supervisor_reject", "rejected", reason, result.offer, policy
-            )
+            .order_by(col(InquiryDraftDecision.id).desc())
+            .limit(1)
+        ).first()
+        _record_decision(
+            session,
+            row,
+            user,
+            "supervisor_reject",
+            "rejected",
+            reason,
+            {} if submission is None else submission.snapshot,
+        )
+    else:
+        _decide(session, row, user, "supervisor_reject", "rejected", reason, result.offer, policy)
 
 
 def get_draft_view(session: Session, analysis: InquiryAnalysis) -> DraftView | None:
@@ -726,6 +774,7 @@ def _store(
     )
     with Session(engine) as session:
         analysis = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             return  # the inquiry was deleted meanwhile
         recommendation = _recommendation(session, inquiry_id)
@@ -761,6 +810,7 @@ def _drop_outdated(engine: Engine, inquiry_id: int) -> None:
     """
     with Session(engine) as session:
         analysis = lock_analysis(session, inquiry_id)
+        check_mutation(session, inquiry_id)
         if analysis is None:
             return  # the inquiry was deleted; its draft cascades
         draft = session.exec(
@@ -811,19 +861,9 @@ def _locked_draft(
 
     Another status raises `NotAwaitingSupervisor` when `awaiting_supervisor` is expected
     (the supervisor's path) and `DraftNotEditable` otherwise (the salesperson's path).
+    A pending draft raises `AwaitingSupervisor` on the salesperson's mutation path.
     """
-    analysis = lock_analysis(session, inquiry_id)
-    if analysis is None:
-        raise NothingToDraft
-    row = session.exec(
-        select(InquiryDraft).where(col(InquiryDraft.inquiry_id) == inquiry_id)
-    ).first()
-    if row is None:
-        raise NothingToDraft
-    if row.updated_at != updated_at:
-        raise DraftChanged
-    if row.status != status:
-        raise NotAwaitingSupervisor if status == "awaiting_supervisor" else DraftNotEditable
+    analysis, row = _locked_draft_row(session, inquiry_id, updated_at, status=status)
     recommendation = _recommendation(session, inquiry_id)
     if (
         recommendation is None
@@ -846,6 +886,27 @@ def _locked_draft(
     return analysis, row, result, recommended
 
 
+def _locked_draft_row(
+    session: Session, inquiry_id: int, updated_at: datetime, *, status: DraftStatus
+) -> tuple[InquiryAnalysis, InquiryDraft]:
+    """Check only the raw status and optimistic token under the shared analysis lock."""
+    analysis = lock_analysis(session, inquiry_id)
+    if status == "draft":
+        check_mutation(session, inquiry_id)
+    if analysis is None:
+        raise NothingToDraft
+    row = session.exec(
+        select(InquiryDraft).where(col(InquiryDraft.inquiry_id) == inquiry_id)
+    ).first()
+    if row is None:
+        raise NothingToDraft
+    if row.updated_at != updated_at:
+        raise DraftChanged
+    if row.status != status:
+        raise NotAwaitingSupervisor if status == "awaiting_supervisor" else DraftNotEditable
+    return analysis, row
+
+
 def _edited_offer_policy(
     session: Session, analysis: InquiryAnalysis, offer: DraftOffer
 ) -> PolicyResult | None:
@@ -855,10 +916,12 @@ def _edited_offer_policy(
     checks = current_checks(session, analysis.inquiry_id, analysis_version(analysis))
     if checks is None:
         return None
-    return evaluate(
-        offer_policy_inputs(offer, CheckResults.model_validate(checks.results)),
-        load_thresholds(session),
-    )
+    try:
+        results = CheckResults.model_validate(checks.results)
+    except ValidationError:
+        logger.error("Stored checks of inquiry %s do not match the schema", analysis.inquiry_id)
+        return None
+    return evaluate(offer_policy_inputs(offer, results), load_thresholds(session))
 
 
 def _policy_in_force(
@@ -898,7 +961,6 @@ def _decide(
     policy: PolicyResult | None,
 ) -> None:
     """Set the draft's new status and token and append the decision, in one commit."""
-    now = datetime.now(UTC)
     rules = [] if policy is None else policy.rules
     snapshot = DecisionSnapshot(
         offer=offer,
@@ -906,6 +968,22 @@ def _decide(
         failing_rules=[rule.code for rule in rules if rule.verdict == "fail"],
         not_evaluated_rules=[rule.code for rule in rules if rule.verdict == "not_evaluated"],
     )
+    _record_decision(
+        session, row, user, action, status_after, reason, snapshot.model_dump(mode="json")
+    )
+
+
+def _record_decision(
+    session: Session,
+    row: InquiryDraft,
+    user: AuthUser,
+    action: DecisionAction,
+    status_after: DraftStatus,
+    reason: str | None,
+    snapshot: dict[str, Any],
+) -> None:
+    """Store status, token and the available decision evidence atomically."""
+    now = datetime.now(UTC)
     row.status = status_after
     row.updated_at = now
     session.add(row)
@@ -918,7 +996,7 @@ def _decide(
             reason=reason,
             decided_by=user.id,
             decided_at=now,
-            snapshot=snapshot.model_dump(mode="json"),
+            snapshot=snapshot,
         )
     )
     session.commit()
