@@ -39,7 +39,7 @@ Decided 2026-11-16 and introduced in F-03 (`design-system-i18n-foundation`); ans
 - **i18n:** react-i18next with bundled PL and EN resources (`frontend/src/i18n`). Polish is the default; tests are pinned to English.
 - **Constraints:**
   - No `baseUrl` (TypeScript 7). The `@/` alias comes from tsconfig `paths` plus Vite `resolve.tsconfigPaths`.
-  - Dark mode follows the OS (`prefers-color-scheme`); there is no `.dark` class or theme toggle.
+  - Theme: light, dark or system (the default, following `prefers-color-scheme`), chosen in `ThemeSwitch` and applied as `data-theme` on `<html>` by `src/theme.ts`; there is no `.dark` class.
   - The old stylesheet lives in `frontend/src/styles/legacy.css`, in a `legacy` cascade layer, until S-12 removes it.
 - **Parked:** sonner (S-14), TanStack Query (data-fetching rework, parked in the roadmap).
 

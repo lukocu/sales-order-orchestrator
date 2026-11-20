@@ -160,6 +160,12 @@
   "system": {
     "title": "System"
   },
+  "theme": {
+    "label": "Motyw",
+    "light": "Jasny",
+    "dark": "Ciemny",
+    "system": "Systemowy"
+  },
   "language": {
     "label": "Język",
     "pl": "Polski",

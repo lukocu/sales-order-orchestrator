@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { User } from '../api/auth'
 import { Button } from '@/components/ui/button'
 import LanguageSwitch from './LanguageSwitch'
+import ThemeSwitch from './ThemeSwitch'
 
 type Props = {
   user: User | null
@@ -50,7 +51,10 @@ function AppShell({ user, onSignOut, signingOut = false, nav, crumb, children }:
         <header className="border-b bg-card">
           <div className="mx-auto box-content flex h-14 max-w-lg items-center justify-between gap-4 px-4">
             <Brand />
-            <LanguageSwitch />
+            <div className="flex items-center gap-3">
+              <ThemeSwitch />
+              <LanguageSwitch />
+            </div>
           </div>
         </header>
         <main className="mx-auto box-content grid max-w-lg gap-6 px-4 py-10">{children}</main>
@@ -79,6 +83,7 @@ function AppShell({ user, onSignOut, signingOut = false, nav, crumb, children }:
             )}
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <ThemeSwitch />
             <LanguageSwitch />
             <div className="flex items-center gap-3 border-s ps-4">
               <div className="text-end text-xs leading-tight">

@@ -1,7 +1,6 @@
 /* Colour values live in index.css (:root tokens + legacy aliases --text, --muted, --bg, --ok, --warn, --error). */
 :root {
   font: 16px/1.5 var(--font-sans);
-  color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
 }
