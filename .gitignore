@@ -25,3 +25,7 @@ backend/static/
 # curl cookie jar from the README login example
 cookies.txt
 .claude
+.agents
+.codex
+.playwright-cli
+skills-lock.json
