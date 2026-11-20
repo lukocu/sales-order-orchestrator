@@ -9,7 +9,7 @@ main_goal: quality
 top_blocker: skills
 milestone_id: ux-driven-redesign
 milestone_seq: 2
-milestone_status: open # open | done
+milestone_status: done # open | done
 ---
 
 # Roadmap: Intelligent Sales Order Orchestration System
@@ -21,7 +21,7 @@ milestone_status: open # open | done
 
 ## Milestone
 
-**M-2: Przebudowa interfejsu wokół pracy handlowca** — Status: open
+**M-2: Przebudowa interfejsu wokół pracy handlowca** — Status: done
 
 - **Intent:** Handlowiec i przełożony podejmują decyzję o zapytaniu bez przedzierania się przez diagnostykę: proces zapytania jest podzielony na kroki z jedną główną akcją, warstwa techniczna (plan, agenci, tokeny, koszt, stan systemu) jest dostępna na żądanie, przełożony ma własną kolejkę, a interfejs działa po polsku i angielsku na jednym systemie projektowym zgodnym z WCAG 2.2 AA. Wymagania funkcjonalne M-1 nie zmieniają się — zmienia się to, gdzie i w jakiej kolejności użytkownik je widzi.
 - **Source materials:** `context/foundation/prd.md` (v2), audyt `context/audits/ux/2026-11-16-prism-analysis-flow.md`
@@ -151,7 +151,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Zmiana uprawnień dotyka backendu (dziś przełożony może poprawiać i ponownie analizować); po S-14, bo kolejka opiera się na statusach.
-- **Status:** proposed
+- **Status:** done
 
 ### S-16: Komunikaty systemu w wybranym języku
 
@@ -214,6 +214,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Milestone History
 
 - **M-1: MVP przepływu wyjątku** (`exception-flow-mvp`) — closed 2026-11-16. Zapytanie z wyjątkiem przechodzi cały przepływ od odczytu skrzynki do decyzji człowieka, zapytanie standardowe kończy się bez agentów, a ewaluacja porównuje workflow z orchestratorem.
+- **M-2: Przebudowa interfejsu wokół pracy handlowca** (`ux-driven-redesign`) — closed 2026-11-20. Wszystkie F-03 i S-11 – S-17 są `done`; na 1440×900 główna akcja każdego kroku jest widoczna bez przewijania (belka decyzji kończy się na 888 px, „Analizuj zapytanie” na 638 px), przełożony ma własną kolejkę, a interfejs działa po polsku i angielsku.
 
 ## Done
 
@@ -236,3 +237,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-14: użytkownik widzi status zapytania na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji (ogłaszany czytnikom ekranu); gdy polityka wymaga akceptacji, akcja nazywa się „Send to supervisor”, a nie „Approve”.** — Archived 2026-11-17 → `context/archive/2026-11-17-status-and-honest-actions/`. Lesson: —.
 - **S-16: użytkownik widzi wyniki sprawdzeń, powody reguł polityki i sygnały pewności w języku wybranym przełącznikiem PL | EN; tłumaczenie dzieje się przy wyświetlaniu po stabilnych kodach, a zapisane dane, mail klienta, szkic odpowiedzi i uzasadnienie napisane przez model nie zmieniają się.** — Archived 2026-11-18 → `context/archive/2026-11-18-backend-messages-by-code/`. Lesson: —.
 - **S-17: użytkownik odświeża lub wysyła komuś link do zapytania z aktywnym krokiem, do inspektora przebiegu, kolejki przełożonego i strony systemowej; wejście bez sesji prowadzi do logowania i wraca pod ten sam adres.** — Archived 2026-11-20 → `context/archive/2026-11-19-shareable-urls/`. Lesson: —.
+- **S-15: przełożony otwiera kolejkę „Do akceptacji” z licznikiem w nawigacji; widok zapytania zaczyna się od reguł, które nie przeszły, rekomendowanego wariantu i akcji Zatwierdź / Odrzuć z komentarzem; na zapytaniu czekającym na jego decyzję przełożony nie poprawia pól, nie uruchamia ponownej analizy i nie edytuje szkicu (także po stronie API).** — Archived 2026-11-20 → `context/archive/2026-11-18-supervisor-queue/`. Lesson: —.
