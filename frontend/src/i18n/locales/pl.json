@@ -687,6 +687,7 @@
       "not_needed": "niepotrzebny"
     },
     "backMessage": "Wracamy do kroku „{{step}}”: {{reason}}.",
+    "unavailableLink": "Kroku z tego linku nie można otworzyć. Wyświetlamy „{{step}}”.",
     "back": {
       "draftRejected": "szkic odpowiedzi został odrzucony",
       "analysisReplaced": "zapytanie przeanalizowano ponownie",
