@@ -230,14 +230,37 @@ def test_new_failure_on_a_pair_unstable_in_the_baseline_is_noise() -> None:
 
 
 def test_pair_unstable_only_in_the_current_report_is_new_instability() -> None:
-    # 2/3 -> 2/3 on a pair that was stable at 0/3 and is now split 2/1: hits grow, no block
+    # 0/3 -> 2/3: the pair was stable at 0/3 and is now split, so it is an improvement too
     baseline = _report(_with(_stable(), acme=[MISS, MISS, MISS]))
     current = _report(_with(_stable(), acme=[HIT, HIT, MISS]))
 
     result = compare(baseline, current)
 
     assert _pairs(result.new_instability) == [(CASE, "orchestrator")]
+    assert _pairs(result.improvements) == [(CASE, "orchestrator")]
     assert not result.blocking
+
+
+def test_a_pair_with_another_number_of_runs_is_a_regression() -> None:
+    # 3/3 against 2/2: the hits hold, but a truncated pair cannot be compared hit for hit
+    current = _report(_with(_stable(), acme=[HIT, HIT]))
+
+    result = compare(_report(_stable()), current)
+
+    assert _pairs(result.regressions) == [(CASE, "orchestrator")]
+    assert (result.regressions[0].current_hits, result.regressions[0].current_total) == (2, 2)
+    assert result.blocking
+
+
+def test_a_pair_unstable_in_the_baseline_that_falls_to_no_hit_blocks() -> None:
+    baseline = _report(_with(_stable(), acme=[HIT, HIT, MISS]))
+    current = _report(_with(_stable(), acme=[MISS, MISS, MISS]))
+
+    result = compare(baseline, current)
+
+    assert _pairs(result.regressions) == [(CASE, "orchestrator")]
+    assert result.noise == []
+    assert result.blocking
 
 
 def test_more_hits_is_an_improvement() -> None:
@@ -543,6 +566,46 @@ def test_out_writes_the_markdown_that_goes_to_stdout(
     assert out_path.read_text(encoding="utf-8") == out
 
 
+def test_exit_2_when_the_out_file_cannot_be_written(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    _write(tmp_path, "new.json", _report(_stable(), **_day(1)))
+
+    # a directory cannot be written as a file
+    code, _ = _run(capsys, "--reports-dir", tmp_path, "--out", tmp_path)
+
+    assert code == 2
+    assert "Cannot write" in caplog.text
+
+
+def test_exit_2_when_baseline_and_current_are_the_same_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    report = _write(tmp_path, "only.json", _report(_stable()))
+
+    assert _run(capsys, "--baseline", report, "--current", report)[0] == 2
+
+
+def test_a_report_with_a_naive_started_at_is_ordered_with_aware_ones(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))  # aware
+    _write(tmp_path, "new.json", _report(_stable(), started_at=datetime(2026, 11, 21, 18, 0, 0)))
+
+    code, _ = _run(capsys, "--reports-dir", tmp_path)
+
+    assert code == 0
+
+
+def test_a_report_that_is_not_utf8_is_unreadable_and_named(tmp_path: Path) -> None:
+    broken = tmp_path / "latin.json"
+    broken.write_bytes(b"\xff\xfe")
+
+    with pytest.raises(ValueError, match="latin.json"):
+        load_report(broken)
+
+
 def test_markdown_has_every_section_and_says_when_one_is_empty(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -579,7 +642,7 @@ def test_cost_warning_appears_in_the_markdown(
     assert "duration_ms_mean" not in out
 
 
-@pytest.mark.parametrize("factor", ["1", "0.5", "abc"])
+@pytest.mark.parametrize("factor", ["1", "0.5", "abc", "nan", "inf"])
 def test_a_cost_factor_of_one_or_less_is_rejected(
     factor: str, capsys: pytest.CaptureFixture[str]
 ) -> None:

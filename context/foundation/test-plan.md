@@ -175,9 +175,9 @@ Prompt draftu (`backend/app/draft/llm_drafter.py`) nie wpływa na wynik: w eval 
 1. Pełny eval: `python -m app.eval --repeats 3`. Zapisuje raport w `backend/eval_reports/`.
 2. Porównanie: `python -m app.eval.compare`. Bieżący raport to najnowszy w katalogu, baza to najnowszy starszy raport z tym samym `cases_sha256` (`--current` i `--baseline` wskazują pliki jawnie, `--out` zapisuje Markdown).
 3. Przeczytaj sekcje wyniku:
-   - **Regressions**: mniej pełnych trafień w parze (przypadek, ramię) niż w bazie (np. 3/3 → 2/3) albo brak przebiegów pary. Blokuje.
+   - **Regressions**: mniej pełnych trafień w parze (przypadek, ramię) niż w bazie (np. 3/3 → 2/3), inna liczba przebiegów pary niż w bazie albo brak przebiegów pary. Blokuje.
    - **New failures**: kod porażki przebiegu (poza `orchestration_partial`), którego baza nie ma dla tej pary. Blokuje, nawet gdy liczba trafień się nie zmieniła.
-   - **Noise**: spadki i nowe porażki na parach niestabilnych już w bazie. Nie blokuje; sprawdź, czy skala jest podobna do bazy.
+   - **Noise**: spadki i nowe porażki na parach niestabilnych już w bazie. Nie blokuje, chyba że para spadła do 0 trafień (to regresja); sprawdź, czy skala jest podobna do bazy.
    - **New instability**: para stabilna w bazie, która teraz daje różne decyzje. Nie blokuje, ale to sygnał do przeglądu (ryzyko #5).
    - **Improvements**: więcej trafień niż w bazie.
    - **Cost and time**: ostrzeżenie, gdy średni koszt albo czas przebiegu orkiestratora (`orchestrated`) przekracza bazę o czynnik 1,5 (`--cost-factor`). Tylko ostrzeżenie; pomijane, gdy koszt jest niepełny po którejś stronie.

@@ -3,13 +3,15 @@
 `compare` is a pure function over two `EvalReport`s, so it needs neither the database nor a
 provider. The unit is a pair (case, arm): its hits are the repeats with a full hit.
 
-- A *regression* (blocking) is a pair with fewer hits than in the baseline, or a baseline
-  pair without any run in the current report.
+- A *regression* (blocking) is a pair with fewer hits than in the baseline, a different number
+  of runs than in the baseline (a baseline pair without any run included), or a pair unstable in
+  the baseline that fell to no hit at all.
 - A *new failure* (blocking) is a run failure code (`observation.failure`) in the current
   runs of a pair that the baseline runs of that pair do not carry. `orchestration_partial`
   is only noted by the scoring, so it never counts here.
-- A pair unstable in the baseline is *noise*: its hit drops and new failures are listed
-  apart and never block. A pair unstable only in the current report is `new_instability`.
+- A pair unstable in the baseline is *noise*: its hit drops (short of zero hits) and new
+  failures are listed apart and never block. A pair unstable only in the current report is
+  `new_instability`.
 - *Improvements* and cost and time *warnings* are informational.
 
 Two reports are comparable only when they ran the same case set with the same number of
@@ -28,7 +30,9 @@ failure) or 2 (incompatible reports, no baseline, unreadable report or bad usage
 import argparse
 import json
 import logging
+import math
 import sys
+from datetime import UTC
 from pathlib import Path
 from typing import Any, Literal
 
@@ -102,9 +106,12 @@ def load_report(path: Path) -> EvalReport:
     """Read a JSON report. Raises `ValueError` naming the file when it is not a valid report."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return EvalReport.model_validate(_without_computed_rates(data))
-    except (json.JSONDecodeError, ValidationError) as error:
+        report = EvalReport.model_validate(_without_computed_rates(data))
+    except (json.JSONDecodeError, UnicodeDecodeError, ValidationError) as error:
         raise ValueError(f"{path} is not a valid evaluation report: {error}") from error
+    if report.run.started_at.tzinfo is None:  # naive and aware times cannot be ordered together
+        report.run.started_at = report.run.started_at.replace(tzinfo=UTC)
+    return report
 
 
 def _without_computed_rates(node: Any) -> Any:
@@ -145,10 +152,13 @@ def compare(
         noisy = pair in base_unstable
         base_hits, cur_hits = _hits(before), _hits(after)
 
-        if not after:
+        if not after or len(after) != len(before):
+            # a pair that lost runs cannot be compared hit for hit
             result.regressions.append(_change(pair, before, after))
         elif cur_hits < base_hits:
-            (result.noise if noisy else result.regressions).append(_change(pair, before, after))
+            # a flaky pair may wobble, but not collapse to no hit at all
+            blocking = not noisy or cur_hits == 0
+            (result.regressions if blocking else result.noise).append(_change(pair, before, after))
         elif cur_hits > base_hits:
             result.improvements.append(_change(pair, before, after))
 
@@ -251,8 +261,8 @@ class _Unusable(Exception):
 
 def _cost_factor(value: str) -> float:
     factor = float(value)
-    if factor <= 1:
-        raise argparse.ArgumentTypeError("must be greater than 1")
+    if not math.isfinite(factor) or factor <= 1:
+        raise argparse.ArgumentTypeError("must be a finite number greater than 1")
     return factor
 
 
@@ -303,8 +313,12 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("Current: %s; baseline: %s", current_path, baseline_path)
     sys.stdout.write(markdown)
     if args.out is not None:
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(markdown, encoding="utf-8")
+        try:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(markdown, encoding="utf-8")
+        except OSError as error:
+            logger.error("Cannot write %s: %s", args.out, error)
+            return EXIT_UNUSABLE
 
     if comparison.incompatibilities:
         return EXIT_UNUSABLE
@@ -332,6 +346,10 @@ def _select(args: argparse.Namespace) -> tuple[Path, EvalReport, Path, EvalRepor
         raise _Unusable(f"No evaluation report found in {args.reports_dir}.")
 
     if args.baseline is not None:
+        if args.baseline.resolve() == current_path.resolve():
+            raise _Unusable(
+                f"The baseline and the current report are the same file: {args.baseline}."
+            )
         return current_path, current, args.baseline, _read(args.baseline)
 
     candidates = [
