@@ -666,6 +666,22 @@ Image:
 docker build .
 ```
 
+Eval regression gate: run it locally before merging a change to prompts, recommendation,
+policy, checks, orchestration, `cases.json` or the model. CI does not run it (no LLM key; a full
+run takes about 36 minutes) and only checks that the newest report in `backend/eval_reports/`
+matches `cases.json`. Needs an LLM provider and the local database:
+
+```sh
+docker compose run --rm backend uv run python -m app.eval --repeats 3
+docker compose run --rm backend uv run python -m app.eval.compare
+```
+
+`compare` checks the newest report against the newest older one of the same case set and exits
+`0` (no regression), `1` (a case got worse or a new run failure appeared) or `2` (reports not
+comparable, no baseline or bad usage). After a deliberate model or provider change add
+`--allow-model-change`. Procedure, how to read the sections and when to refresh
+the baseline: `context/foundation/test-plan.md` §6.3.
+
 ## Deploy
 
 Production runs at zero cost: [Render](https://render.com) free web service (Docker) and a

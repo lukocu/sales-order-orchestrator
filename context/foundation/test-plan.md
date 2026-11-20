@@ -77,7 +77,7 @@ orchestrator updates Status as artifacts appear on disk.
 | --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------- | ----------- | ------------- |
 | 1   | Eval dataset expansion           | Zbiór przypadków pokazuje, które typy wyjątków orkiestrator myli; etykiety wynikają z reguł, nie z wyniku systemu  | #1, #3, #6     | labelled eval cases (incl. adversarial)     | implemented | context/changes/testing-eval-dataset-expansion/ |
 | 2   | Parser field eval                | Jakość odczytu każdego pola jest mierzona osobno i taniej niż pełny przepływ                                        | #4             | field-level eval                            | not started | —             |
-| 3   | Eval regression gate             | Zmiana w orkiestracji nie trafia na main bez porównania per przypadek z linią bazową (regresje, niestabilność, koszt) | #2, #5, #7     | baseline comparison + gate                  | not started | —             |
+| 3   | Eval regression gate             | Zmiana w orkiestracji nie trafia na main bez porównania per przypadek z linią bazową (regresje, niestabilność, koszt) | #2, #5, #7     | baseline comparison + gate                  | implemented | context/changes/testing-eval-regression-gate/ |
 | 4   | Two critical e2e flows           | Dwa testy E2E: przekazanie wyjątku do przełożonego oraz główna akcja widoczna bez przewijania                       | #8, #9         | e2e (Playwright, deterministic model stub)  | not started | —             |
 
 Faza 2 może iść równolegle z fazą 1. Faza 3 potrzebuje rozszerzonego zbioru z fazy 1. Faza 4 jest niezależna, ale ma najniższy priorytet.
@@ -114,7 +114,7 @@ phase lands; before that, the gate is `planned`.
 | --------------------------------- | --------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
 | lint + format + typecheck         | local + CI                                    | required                                           | składnia, typy, format (ruff, mypy, oxlint, tsc)           |
 | unit + integration                | local + CI                                    | required                                           | regresje logiki i API                                      |
-| eval regression vs baseline       | przed merge zmian w orkiestracji (miejsce ustali research fazy 3) | required after §3 Phase 3          | regresje decyzji, niestabilność, skok kosztu               |
+| eval regression vs baseline       | komenda `python -m app.eval.compare` lokalnie przed merge zmian w orkiestracji + test CI spójności bazy z cases.json | required (od §3 Phase 3)           | regresje decyzji, niestabilność, skok kosztu               |
 | e2e on two critical flows         | CI on PR                                      | required after §3 Phase 4                          | zepsute przekazanie do przełożonego, akcja pod przewijaniem |
 
 ## 6. Cookbook Patterns
@@ -159,7 +159,35 @@ Etykieta: `exception · substitute · no_approval_needed`.
 
 ### 6.3 Changing a prompt, model or orchestration step
 
-- TBD — see §3 Phase 3 (wzorzec: przebieg ewaluacji przed merge, czytanie przejść trafiony → błędny i przypadków niestabilnych).
+Bramka działa lokalnie, przed merge zmiany, która może zmienić wynik eval. CI nie ma sekretów LLM i nie uruchamia pełnego eval (ok. 36 min, klucz API), więc pilnuje tylko spójności bazy z `cases.json` (test `test_latest_report_matches_the_case_file`).
+
+**Kiedy uruchomić.** Po zmianie któregokolwiek z plików, które wpływają na wynik eval:
+
+- prompty LLM: `backend/app/orchestration/llm_planner.py`, `backend/app/recommendation/llm_recommender.py`, `backend/app/parsing/openai_compatible.py`;
+- logika decyzji: `backend/app/recommendation/{options,recommender,confidence}.py`, `backend/app/policy`, `backend/app/checks`, `backend/app/orchestration/*`;
+- zbiór przypadków: `backend/app/eval/cases.json`;
+- **model lub dostawca w konfiguracji** (`LLM_PROVIDER`, `LLM_MODEL`): nie zmienia żadnego pliku, więc filtr po ścieżkach by go pominął. Pilnuje go porównanie metadanych raportów.
+
+Prompt draftu (`backend/app/draft/llm_drafter.py`) nie wpływa na wynik: w eval drafterem jest `FakeDrafter`.
+
+**Procedura** (z `backend/`; pełny przebieg wymaga dostawcy LLM i lokalnej bazy):
+
+1. Pełny eval: `python -m app.eval --repeats 3`. Zapisuje raport w `backend/eval_reports/`.
+2. Porównanie: `python -m app.eval.compare`. Bieżący raport to najnowszy w katalogu, baza to najnowszy starszy raport z tym samym `cases_sha256` (`--current` i `--baseline` wskazują pliki jawnie, `--out` zapisuje Markdown).
+3. Przeczytaj sekcje wyniku:
+   - **Regressions**: mniej pełnych trafień w parze (przypadek, ramię) niż w bazie (np. 3/3 → 2/3) albo brak przebiegów pary. Blokuje.
+   - **New failures**: kod porażki przebiegu (poza `orchestration_partial`), którego baza nie ma dla tej pary. Blokuje, nawet gdy liczba trafień się nie zmieniła.
+   - **Noise**: spadki i nowe porażki na parach niestabilnych już w bazie. Nie blokuje; sprawdź, czy skala jest podobna do bazy.
+   - **New instability**: para stabilna w bazie, która teraz daje różne decyzje. Nie blokuje, ale to sygnał do przeglądu (ryzyko #5).
+   - **Improvements**: więcej trafień niż w bazie.
+   - **Cost and time**: ostrzeżenie, gdy średni koszt albo czas przebiegu orkiestratora (`orchestrated`) przekracza bazę o czynnik 1,5 (`--cost-factor`). Tylko ostrzeżenie; pomijane, gdy koszt jest niepełny po którejś stronie.
+4. Kody wyjścia: `0` brak regresji ani nowych porażek; `1` regresja albo nowa porażka; `2` raporty niezgodne (inny `cases_sha256`, `repeats`, a bez `--allow-model-change` także `provider`, `model`, `extractor`, `planners`, `recommender`), brak bazy, nieczytelny raport albo błąd użycia.
+
+**Zmiana modelu lub dostawcy.** Zakładana zmiana zmienia metadane, więc zwykłe porównanie kończy się kodem 2. Uruchom `python -m app.eval.compare --allow-model-change`: porównanie obejmuje wtedy trafność i porażki, ale nie sprawdza już tożsamości modelu. Nowy model mierzy się z bazą starego, więc różnice czytaj jako cenę zmiany, nie jako szum.
+
+**Odświeżanie bazy.** Raport zacommitowany staje się bazą (najnowszy z tym samym `cases_sha256`), więc nie commituj raportu z regresją, chyba że zmiana jest zamierzona i opisana w PR (co pogorszyło się, co poprawiło, dlaczego to akceptujesz). Nową bazę zapisuje się świadomie: po zmianie `cases.json` (test CI wymusza nowy raport), po zamierzonej zmianie promptu, modelu lub logiki decyzji. Czysta baza z regresją po cichu obniża poprzeczkę dla następnych zmian.
+
+**Próg kosztu i czasu.** Czynnik 1,5× jest zgadnięty: baza to jeden przebieg i nie ma danych o zmienności kosztu i czasu między przebiegami tej samej konfiguracji. Skoryguj go po kilku przebiegach.
 
 ### 6.4 Adding an e2e test
 

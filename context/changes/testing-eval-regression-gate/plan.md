@@ -237,10 +237,10 @@ Brak migracji danych. Baza porównania to istniejący raport z 2026-11-20. Nowy 
 
 #### Automated
 
-- [ ] 3.1 Pełna bramka backendu przechodzi (check.sh)
-- [ ] 3.2 Test spójności najnowszego raportu z cases.json przechodzi
-- [ ] 3.3 Kontrola celowego zepsucia: test spójności zawodzi po zmianie cases.json
+- [x] 3.1 Pełna bramka backendu przechodzi (check.sh)
+- [x] 3.2 Test spójności najnowszego raportu z cases.json przechodzi
+- [x] 3.3 Kontrola celowego zepsucia: test spójności zawodzi po zmianie cases.json
 
 #### Manual
 
-- [ ] 3.4 test-plan §3, §5, §6.3 i README opisują ten sam przepływ
+- [x] 3.4 test-plan §3, §5, §6.3 i README opisują ten sam przepływ

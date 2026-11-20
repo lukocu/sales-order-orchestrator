@@ -7,20 +7,17 @@ from typing import Any
 
 import pytest
 
-from app.eval.cases import ExpectedDecision
+from app.eval.cases import CASES_PATH, ExpectedDecision
 from app.eval.compare import Comparison, compare, load_report, main
 from app.eval.report import EvalReport, build_report
-from app.eval.runner import EvalRun
+from app.eval.runner import EvalRun, cases_sha256
 from app.eval.scoring import ArmName, ArmRun, Observation, Score
 
 STARTED = datetime(2026, 11, 20, 18, 0, 0, tzinfo=UTC)
 CASE = "acme-substitute"
 OTHER = "beta-partial"
-REAL_REPORT = (
-    Path(__file__).parents[1]
-    / "eval_reports"
-    / "2026-11-20-openrouter-qwen-qwen3-30b-a3b-instruct-2507.json"
-)
+REPORTS_DIR = Path(__file__).parents[1] / "eval_reports"
+REAL_REPORT = REPORTS_DIR / "2026-11-20-openrouter-qwen-qwen3-30b-a3b-instruct-2507.json"
 
 # one repeat: (full hit, failure code)
 Repeat = tuple[bool, str | None]
@@ -608,3 +605,28 @@ def test_exit_1_for_the_real_report_with_one_hit_lowered(
 
     assert code == 1
     assert f"`{lowered.case_id}` ({lowered.arm})" in out
+
+
+# --- Consistency of the committed baseline -----------------------------------------------
+
+
+def test_latest_report_matches_the_case_file() -> None:
+    """The newest committed report must have been run on the current cases.json.
+
+    It is what `python -m app.eval.compare` picks as the baseline, so a change to cases.json
+    without a new report stops CI on purpose.
+    """
+    reports: list[tuple[Path, EvalReport]] = []
+    for path in sorted(REPORTS_DIR.glob("*.json")):
+        try:
+            reports.append((path, load_report(path)))
+        except ValueError:  # a report in an older format; `compare` skips it too
+            continue
+    assert reports, f"No evaluation report in {REPORTS_DIR}: run `python -m app.eval --repeats 3`."
+
+    path, latest = max(reports, key=lambda item: item[1].run.started_at)
+
+    assert latest.run.cases_sha256 == cases_sha256(CASES_PATH), (
+        f"cases.json changed since the latest report ({path.name}): run "
+        "`python -m app.eval --repeats 3` and commit the new report."
+    )
