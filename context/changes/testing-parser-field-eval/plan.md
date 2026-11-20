@@ -287,11 +287,11 @@ None: no schema, no `ParsedFields` change (the JSONB lesson in `context/foundati
 - [x] 3.1 Runner, report and CLI tests pass with a stub extractor — 688f244
 - [x] 3.2 Smoke run on the built-in set writes both files — 688f244
 - [x] 3.3 Lint, format and types pass — 688f244
-- [x] 3.4 Full backend gate passes on a temporary database
+- [x] 3.4 Full backend gate passes on a temporary database — 688f244
 
 #### Manual
 
-- [x] 3.5 Smoke-run Markdown is readable and silent errors are easy to find
+- [x] 3.5 Smoke-run Markdown is readable and silent errors are easy to find — 688f244
 
 ### Phase 4: Documentation and first baseline
 
