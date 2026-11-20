@@ -162,11 +162,11 @@ Dotychczasowe ścieżki pozostają poprawne. Link bez `step` rozwiązuje się do
 
 #### Automated
 
-- [ ] 2.1 Testy frontendu potwierdzają zachowanie kroku przy otwarciu inspektora, zamknięciu bezpośrednio otwartego inspektora oraz obsługę starszych adresów /run.
-- [ ] 2.2 Testy frontendu potwierdzają odtworzenie adresu po zalogowaniu i wygaśnięciu sesji oraz poprawną odmowę dostępu do kolejki dla handlowca.
-- [ ] 2.3 Przechodzą npm run lint, npm run typecheck, npm test i npm run build w katalogu frontend.
+- [x] 2.1 Testy frontendu potwierdzają zachowanie kroku przy otwarciu inspektora, zamknięciu bezpośrednio otwartego inspektora oraz obsługę starszych adresów /run. — ff001f1
+- [x] 2.2 Testy frontendu potwierdzają odtworzenie adresu po zalogowaniu i wygaśnięciu sesji oraz poprawną odmowę dostępu do kolejki dla handlowca. — ff001f1
+- [x] 2.3 Przechodzą npm run lint, npm run typecheck, npm test i npm run build w katalogu frontend. — ff001f1
 
 #### Manual
 
-- [ ] 2.4 W zbudowanej aplikacji otwórz i odśwież adresy skrzynki, zapytania, inspektora, kolejki i strony systemowej. W nowym oknie bez sesji sprawdź powrót do kroku po logowaniu oraz dostęp do kolejki dla obu ról.
-- [ ] 2.5 Zamknij inspektor otwarty z zapytania przyciskiem lub Escape i sprawdź panel oraz fokus. Powtórz z adresem inspektora wklejonym do nowej karty.
+- [x] 2.4 W zbudowanej aplikacji otwórz i odśwież adresy skrzynki, zapytania, inspektora, kolejki i strony systemowej. W nowym oknie bez sesji sprawdź powrót do kroku po logowaniu oraz dostęp do kolejki dla obu ról. — ff001f1
+- [x] 2.5 Zamknij inspektor otwarty z zapytania przyciskiem lub Escape i sprawdź panel oraz fokus. Powtórz z adresem inspektora wklejonym do nowej karty. — ff001f1
