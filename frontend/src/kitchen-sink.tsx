@@ -269,6 +269,7 @@ type PanelCase = {
   user: User
   // null: not analysed; 'pending': never answers (loading)
   analysis: Partial<Analysis> | null | 'pending'
+  path?: string
 }
 
 const PANEL_CASES = {
@@ -348,12 +349,17 @@ const PANEL_CASES = {
     id: 19, anchor: 'step-ready-to-send', label: 'Step view: ready_to_send (Reply)', user: SALES,
     analysis: { ...AT_APPROVAL, draft: { ...ACME_DRAFT, status: 'ready_to_send' }, decisions: [ACME_APPROVED] },
   },
+  unavailableStepLink: {
+    id: 23, anchor: 'step-unavailable-link', label: 'Step URL: unavailable Reply link falls back to Inquiry', user: SALES,
+    analysis: { checks: STANDARD_CHECKS, orchestration: null, recommendation: null, policy: null, draft: null },
+    path: '/inquiries/23?step=reply',
+  },
 } satisfies Record<string, PanelCase>
 
 function PanelCell({ panel }: { panel: PanelCase }) {
   return (
     <Cell id={panel.anchor} label={`${panel.label} · #${panel.anchor}`} wide>
-      <Routed>
+      <Routed path={panel.path}>
         <AnalysisPanel inquiryId={panel.id} body={MAIL_BODY} user={panel.user} onUnauthorized={() => {}} />
       </Routed>
     </Cell>
@@ -581,9 +587,24 @@ function InspectorCell({ inquiryId }: { inquiryId: number }) {
   )
 }
 
-// A view outside App (Inbox, AppNav): the signed-in session and a router for its links.
-function Routed({ children }: { children: ReactNode }) {
-  const [router] = useState(() => memoryRouter('/'))
+// A view outside App (Inbox, AppNav): the signed-in session and a router for its links. With a
+// `path`, the route is matched before the view mounts, so the view reads that address (its
+// `?step=`, for the analysis panel).
+function Routed({ children, path }: { children: ReactNode; path?: string }) {
+  const [router] = useState(() => memoryRouter(path ?? '/'))
+  const [ready, setReady] = useState(path === undefined)
+  useEffect(() => {
+    if (path === undefined) return
+    let live = true
+    router.load().then(
+      () => live && setReady(true),
+      (error: unknown) => console.error(error),
+    )
+    return () => {
+      live = false
+    }
+  }, [router, path])
+  if (!ready) return null
   return (
     <RouterContextProvider router={router}>
       <SessionContext.Provider value={SESSION}>
@@ -801,6 +822,7 @@ function KitchenSink() {
           <PanelCell panel={PANEL_CASES.awaitingSales} />
           <PanelCell panel={PANEL_CASES.awaitingSupervisor} />
           <PanelCell panel={PANEL_CASES.ready} />
+          <PanelCell panel={PANEL_CASES.unavailableStepLink} />
         </Section>
 
         <Section state="hover" caption="Forced hover look (static classes matching each hover: rule). Hover the real controls in “default” to compare.">

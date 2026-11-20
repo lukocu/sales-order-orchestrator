@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TFunction } from 'i18next'
-import { Link, useMatch, useNavigate } from '@tanstack/react-router'
+import { Link, useMatch, useNavigate, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   analyzeInquiry,
@@ -28,7 +28,15 @@ import { describeError, localError, type ErrorDescriptor } from '../api/errorMes
 import { Button } from '@/components/ui/button'
 import ChecksSection from './ChecksSection'
 import { errorMessage, formatDate } from './format'
-import { inquirySteps, stepBackReason, type StepBackKey, type StepId } from './inquirySteps'
+import {
+  inquirySteps,
+  parseStepId,
+  resolveLinkedStep,
+  stepBackReason,
+  stepOpen,
+  type StepBackKey,
+  type StepId,
+} from './inquirySteps'
 import InquiryStepper from './InquiryStepper'
 import type { InquiryStatusFacts } from './inquiryStatus'
 import OrchestrationSection from './OrchestrationSection'
@@ -260,7 +268,7 @@ function Field({ name, label, inputId, analysis, reviewed, onReviewed, children 
 }
 
 // Why the flow moved back to an earlier step: announced next to the notice, in one status.
-type StepMessage = { step: StepId; reason: StepBackKey }
+type StepMessage = { step: StepId; reason: StepBackKey | 'steps.unavailableLink' }
 
 function MailBody({ body }: { body: string }) {
   return <div className="text-sm wrap-anywhere whitespace-pre-wrap">{body}</div>
@@ -269,12 +277,19 @@ function MailBody({ body }: { body: string }) {
 function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUnauthorized, onStatusFacts }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const router = useRouter()
+  // Under the inquiry's own address the viewed step lives in `?step=`; elsewhere (no matching
+  // route) the panel keeps it to itself.
+  const inquiryMatch = useMatch({ from: '/inbox/inquiries/$inquiryId', shouldThrow: false })
+  const linked = inquiryMatch?.search.step
   // The run inspector is open while /inquiries/$inquiryId/run matches; it reads the analysis
   // this panel holds, so it never refetches.
   const inspecting = useMatch({
     from: '/inbox/inquiries/$inquiryId/run',
     shouldThrow: false,
   })
+  // The address follows the viewed step only while the panel is not under the inspector.
+  const addressed = inquiryMatch !== undefined && inspecting === undefined
   const inspectorLink = useRef<HTMLAnchorElement>(null)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -296,8 +311,12 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
   const [notice, setNotice] = useState<NoticeKey | null>(null)
   const [confirming, setConfirming] = useState(false)
   // The step whose panel is shown; it follows the active step unless the user opens a done one.
-  const [viewed, setViewed] = useState<StepId>('inquiry')
+  const [viewed, setViewed] = useState<StepId>(() => parseStepId(linked) ?? 'inquiry')
   const [stepMessage, setStepMessage] = useState<StepMessage | null>(null)
+  // The first successful read resolves the link the panel was opened with.
+  const [opened, setOpened] = useState(false)
+  // The step in the address last applied, to notice Back and Forward.
+  const [seenLink, setSeenLink] = useState(linked)
   // The analysis last shown, to tell where the flow moved when the next one arrives.
   const lastAnalysis = useRef<Analysis | null>(null)
 
@@ -353,6 +372,46 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
   }
 
   const analysis = load.kind === 'ok' ? load.analysis : null
+  const steps = inquirySteps(analysis)
+
+  // The first read opens the step the link names, or the active step with a message when the
+  // link names one that cannot be viewed. Later, Back and Forward select the step in the
+  // address; one that has become unavailable is replaced below without a message.
+  if (load.kind === 'ok' && !opened) {
+    setOpened(true)
+    setSeenLink(linked)
+    const target = resolveLinkedStep(linked, steps)
+    setViewed(target.step)
+    if (target.fallback) setStepMessage({ step: target.step, reason: 'steps.unavailableLink' })
+  } else if (opened && linked !== seenLink) {
+    setSeenLink(linked)
+    const step = parseStepId(linked)
+    if (step !== null && step !== viewed) {
+      setViewed(step)
+      setStepMessage(null)
+    }
+  }
+
+  // A locked or not needed step cannot be viewed; the active step stands in for it.
+  const shown = stepOpen(steps, viewed) ? viewed : steps.active
+
+  // Once the analysis is read, the address names the shown step: a link without a step is
+  // filled in, an unavailable one corrected, a move of the flow recorded — each replacing the
+  // history entry. While loading or after a failed read the address is left as it came.
+  const canonicalStep = addressed && load.kind === 'ok' && opened ? shown : null
+  useEffect(() => {
+    if (canonicalStep === null || canonicalStep === linked) return
+    // The user may already be leaving (a click elsewhere while this panel is still mounted);
+    // the history holds the address they are heading for.
+    if (router.history.location.pathname !== `/inquiries/${inquiryId}`) return
+    void navigate({
+      to: '/inquiries/$inquiryId',
+      params: { inquiryId: String(inquiryId) },
+      search: { step: canonicalStep },
+      replace: true,
+    })
+  }, [canonicalStep, linked, navigate, router, inquiryId])
+
   const dirty = analysis !== null && draft !== null && !sameDraft(draft, toDraft(analysis.fields))
   const hasCorrections =
     analysis !== null && (analysis.corrected_at !== null || analysis.corrected_fields.length > 0)
@@ -542,8 +601,16 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
   }
 
   function showStep(step: StepId) {
-    setViewed(step)
     setStepMessage(null)
+    // A step opened by hand is a new history entry; the panel follows once the address has
+    // changed (above), so the replacing effect never races the new entry.
+    if (addressed) {
+      void navigate({
+        to: '/inquiries/$inquiryId',
+        params: { inquiryId: String(inquiryId) },
+        search: { step },
+      })
+    } else setViewed(step)
   }
 
   const id = (name: string) => `analysis-${inquiryId}-${name}`
@@ -894,10 +961,6 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
   }
 
   function renderSteps() {
-    const steps = inquirySteps(analysis)
-    // A locked or not needed step cannot be viewed; the active step stands in for it.
-    const state = steps.states[viewed]
-    const shown = state === 'locked' || state === 'not_needed' ? steps.active : viewed
     const panels =
       analysis !== null && draft !== null
         ? renderPanels(analysis, draft, steps)
@@ -958,10 +1021,12 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
         {notice && <p>{t(notice)}</p>}
         {stepMessage && (
           <p>
-            {t('steps.backMessage', {
-              step: t(`steps.names.${stepMessage.step}`),
-              reason: t(stepMessage.reason),
-            })}
+            {stepMessage.reason === 'steps.unavailableLink'
+              ? t('steps.unavailableLink', { step: t(`steps.names.${stepMessage.step}`) })
+              : t('steps.backMessage', {
+                  step: t(`steps.names.${stepMessage.step}`),
+                  reason: t(stepMessage.reason),
+                })}
           </p>
         )}
       </div>

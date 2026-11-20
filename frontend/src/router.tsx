@@ -31,6 +31,9 @@ const indexRoute = createRoute({
 const inquiryRoute = createRoute({
   getParentRoute: () => inboxRoute,
   path: '/inquiries/$inquiryId',
+  validateSearch: (search: Record<string, unknown>): { step?: string } => ({
+    step: typeof search.step === 'string' ? search.step : undefined,
+  }),
 })
 
 // Opens the run inspector in Phase 3; no component of its own yet.

@@ -687,6 +687,7 @@
       "not_needed": "not needed"
     },
     "backMessage": "Back to {{step}}: {{reason}}.",
+    "unavailableLink": "This step is no longer available. Showing {{step}} instead.",
     "back": {
       "draftRejected": "the draft was rejected",
       "analysisReplaced": "the request was analysed again",

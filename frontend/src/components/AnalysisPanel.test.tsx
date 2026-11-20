@@ -1584,29 +1584,191 @@ describe('AnalysisPanel approval and reply steps', () => {
   })
 })
 
-describe('AnalysisPanel run inspector (routed)', () => {
-  const INQUIRY = {
-    id: 7,
-    sender_name: 'ACME Sp. z o.o.',
-    sender_email: 'zakupy@acme.example.com',
-    subject: 'Zapytanie ofertowe ABC-100',
-    received_at: '2026-11-09T10:00:00Z',
-    source: 'sample',
-    outcome: null,
-    draft_status: null,
-    analyzed: false,
+// Inquiry 7 in the inbox, for the tests that render the whole app.
+const INQUIRY = {
+  id: 7,
+  sender_name: 'ACME Sp. z o.o.',
+  sender_email: 'zakupy@acme.example.com',
+  subject: 'Zapytanie ofertowe ABC-100',
+  received_at: '2026-11-09T10:00:00Z',
+  source: 'sample',
+  outcome: null,
+  draft_status: null,
+  analyzed: false,
+}
+
+// The whole app, signed in, with inquiry 7 and its analysis (plus any `more` routes).
+function stubApp(analysisReply: Handler, more: Routes = {}) {
+  return stubApi({
+    'GET /api/auth/me': () => json(200, SALES),
+    'GET /api/inquiries': () => json(200, [INQUIRY]),
+    'GET /api/inquiries/7': () => json(200, { ...INQUIRY, body: 'Prosimy o 80 szt. ABC-100.' }),
+    [`GET ${PATH}`]: analysisReply,
+    ...more,
+  })
+}
+
+// The analysis reads, to show that changing the step does not fetch it again.
+function analysisReads(fetchMock: ReturnType<typeof stubApi>) {
+  return fetchMock.mock.calls.filter(
+    ([input, init]) => String(input) === PATH && (init?.method ?? 'GET') === 'GET',
+  )
+}
+
+describe('AnalysisPanel step in the address (routed)', () => {
+  const DRAFTED: Partial<Analysis> = {
+    checks: EXCEPTION,
+    orchestration: ACME_ORCHESTRATION,
+    recommendation: ACME_RECOMMENDATION,
+    policy: ACME_POLICY,
+    draft: ACME_DRAFT,
+    decisions: [],
+  }
+  const READY: Partial<Analysis> = {
+    ...DRAFTED,
+    draft: { ...ACME_DRAFT, status: 'ready_to_send' },
+    decisions: [ACME_APPROVED],
   }
 
-  // The whole app at `path`, signed in, with inquiry 7 and its analysis.
-  function stubApp(analysisReply: Handler) {
-    stubApi({
-      'GET /api/auth/me': () => json(200, SALES),
-      'GET /api/inquiries': () => json(200, [INQUIRY]),
-      'GET /api/inquiries/7': () => json(200, { ...INQUIRY, body: 'Prosimy o 80 szt. ABC-100.' }),
-      [`GET ${PATH}`]: analysisReply,
+  // The panel's status line (the inbox has its own).
+  async function fallbackMessage(step: string) {
+    const message = await screen.findByText(
+      `This step is no longer available. Showing ${step} instead.`,
+    )
+    expect(message.closest('[role="status"]')).not.toBeNull()
+    return message
+  }
+
+  it('opens the completed Variants named in the address', async () => {
+    stubApp(() => json(200, analysis(READY)))
+
+    const router = await renderWithRouter('/inquiries/7?step=variants')
+
+    expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
+    expect(router.state.location.search).toEqual({ step: 'variants' })
+    expect(screen.queryByText(/no longer available/)).not.toBeInTheDocument()
+  })
+
+  it('records a step opened by hand in history and keeps the edits and the analysis', async () => {
+    const fetchMock = stubApp(() => json(200, analysis(READY)))
+
+    const router = await renderWithRouter('/inquiries/7?step=inquiry')
+    fireEvent.change(await screen.findByLabelText('Quantity'), { target: { value: '90' } })
+    const entries = router.history.length
+
+    await openStep(/Variants/)
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'variants' }))
+    expect(router.history.length).toBe(entries + 1)
+    expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
+
+    router.history.back()
+    expect(await screen.findByRole('tab', { name: /Inquiry/, selected: true })).toBeInTheDocument()
+    expect(screen.getByLabelText('Quantity')).toHaveValue('90')
+    router.history.forward()
+    expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
+    expect(router.state.location.search).toEqual({ step: 'variants' })
+
+    expect(analysisReads(fetchMock)).toHaveLength(1)
+  })
+
+  it('fills in the current step for a link without one, replacing the entry', async () => {
+    stubApp(() => json(200, analysis(READY)))
+
+    const router = await renderWithRouter('/inquiries/7')
+    const entries = router.history.length
+
+    expect(await screen.findByRole('tab', { name: /Reply/, selected: true })).toBeInTheDocument()
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'reply' }))
+    expect(router.history.length).toBe(entries)
+    expect(screen.queryByText(/no longer available/)).not.toBeInTheDocument()
+  })
+
+  it.each<[string, string, Partial<Analysis> | null, string, string]>([
+    ['an unknown value', 'bogus', READY, 'Reply', 'reply'],
+    ['a locked step', 'reply', { checks: EXCEPTION }, 'Variants', 'variants'],
+    ['a step that is not needed', 'reply', { checks: STANDARD }, 'Inquiry', 'inquiry'],
+    ['a step of an inquiry not analysed yet', 'variants', null, 'Inquiry', 'inquiry'],
+  ])(
+    'opens the current step for %s, says so and replaces the entry',
+    async (_name, linked, overrides, shown, step) => {
+      stubApp(() => json(200, overrides === null ? null : analysis(overrides)))
+
+      const router = await renderWithRouter(`/inquiries/7?step=${linked}`)
+      const entries = router.history.length
+
+      expect(
+        await screen.findByRole('tab', { name: new RegExp(shown), selected: true }),
+      ).toBeInTheDocument()
+      await fallbackMessage(shown)
+      await vi.waitFor(() => expect(router.state.location.search).toEqual({ step }))
+      expect(router.history.length).toBe(entries)
+    },
+  )
+
+  it('leaves the address as it came until the analysis is read', async () => {
+    let answer: (response: Response) => void = () => {}
+    stubApp(() => new Promise<Response>((resolve) => (answer = resolve)))
+
+    const router = await renderWithRouter('/inquiries/7?step=reply')
+
+    expect(await screen.findByText('Loading analysis…')).toBeInTheDocument()
+    expect(router.state.location.search).toEqual({ step: 'reply' })
+
+    answer(json(200, analysis({ checks: EXCEPTION })))
+    await fallbackMessage('Variants')
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'variants' }))
+  })
+
+  it('keeps the address of a failed read', async () => {
+    stubApp(() => json(500, { detail: 'boom' }))
+
+    const router = await renderWithRouter('/inquiries/7?step=reply')
+
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(router.state.location.search).toEqual({ step: 'reply' })
+  })
+
+  it('moves to the new current step after a decision and replaces the entry', async () => {
+    stubApp(() => json(200, analysis(DRAFTED)), {
+      [`POST ${DECISION_PATH}`]: () => json(200, analysis(READY)),
     })
-  }
 
+    const router = await renderWithRouter('/inquiries/7?step=approval')
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
+    const entries = router.history.length
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+
+    expect(await screen.findByRole('tab', { name: /Reply/, selected: true })).toBeInTheDocument()
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'reply' }))
+    expect(router.history.length).toBe(entries)
+    expect(
+      await screen.findByText('Approved — ready to send (sending is simulated).'),
+    ).toBeInTheDocument()
+  })
+
+  it('corrects Back to a step that is no longer available, without a message', async () => {
+    stubApp(() => json(200, analysis(READY)), {
+      [`POST ${PATH}`]: () => json(200, analysis({ analyzed_at: '2026-11-10T10:00:00Z' })),
+    })
+
+    const router = await renderWithRouter('/inquiries/7?step=reply')
+    await screen.findByRole('tab', { name: /Reply/, selected: true })
+    await openStep(/Inquiry/)
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'inquiry' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Re-analyze' }))
+    expect(await screen.findByRole('tab', { name: /Reply/ })).toBeDisabled()
+
+    const seen: string[] = []
+    router.history.subscribe(() => seen.push(router.history.location.search))
+    router.history.back()
+    await vi.waitFor(() => expect(seen).toEqual(['?step=reply', '?step=inquiry']))
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'inquiry' }))
+    expect(screen.getByRole('tab', { name: /Inquiry/, selected: true })).toBeInTheDocument()
+    expect(screen.queryByText(/no longer available/)).not.toBeInTheDocument()
+  })
+})
+
+describe('AnalysisPanel run inspector (routed)', () => {
   it('opens the inspector from the link and changes the address', async () => {
     stubApp(() => json(200, analysis({ checks: EXCEPTION, orchestration: ACME_ORCHESTRATION })))
 

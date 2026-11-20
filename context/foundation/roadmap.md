@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-18
+updated: 2026-11-19
 prd_version: 2
 main_goal: quality
 top_blocker: skills
@@ -49,7 +49,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | done |
 | S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | done |
 | S-16 | backend-messages-by-code      | użytkownik widzi wyniki sprawdzeń, reguły polityki i sygnały pewności w wybranym języku               | F-03, S-12    | FR-021, US-01, US-02                             | done |
-| S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | proposed |
+| S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | planning |
 
 ## Streams
 
@@ -176,7 +176,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Should-have; trasy dla strony systemowej (S-11) i kolejki (S-15) wchodzą wcześniej tam, gdzie są potrzebne, a ten wycinek domyka adresy kroków i powrót po logowaniu.
-- **Status:** proposed
+- **Status:** planning
 
 ## Backlog Handoff
 

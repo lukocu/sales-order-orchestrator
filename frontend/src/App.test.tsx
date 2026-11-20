@@ -398,6 +398,18 @@ describe('App', () => {
       expect(router.state.location.pathname).toBe('/inquiries/1')
     })
 
+    it('completes an older inquiry link with the current step, replacing the entry', async () => {
+      stubApi(SIGNED_IN_INBOX)
+
+      const router = await renderWithRouter('/inquiries/1')
+      const entries = router.history.length
+
+      expect(await screen.findByRole('tab', { name: /Inquiry/, selected: true })).toBeInTheDocument()
+      await waitFor(() => expect(router.state.location.search).toEqual({ step: 'inquiry' }))
+      expect(router.state.location.pathname).toBe('/inquiries/1')
+      expect(router.history.length).toBe(entries)
+    })
+
     it('moves to the address of a clicked inquiry', async () => {
       stubApi(SIGNED_IN_INBOX)
 
