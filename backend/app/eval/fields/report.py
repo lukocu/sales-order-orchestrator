@@ -54,7 +54,7 @@ def render_markdown(run: FieldRun) -> str:
         _metadata(run),
         _per_field(summary.per_field),
         _silent_errors(run),
-        _per_tag(summary.per_tag),
+        _per_tag(summary.per_tag, run.cases),
         _case_table(run),
         _unstable(run),
         _failures(run),
@@ -79,6 +79,13 @@ def _metadata(run: FieldRun) -> str:
         f"- Cases: {len(run.cases)}",
         f"- Extractor calls: {len(run.observations)} ({failed} failed)",
     ]
+    if run.aborted_by:
+        planned = run.repeats * len(run.cases)
+        lines.insert(
+            1,
+            f"> **PARTIAL RUN**: stopped by `{run.aborted_by}` after "
+            f"{len(run.observations)} of {planned} planned calls.",
+        )
     if tokens:
         lines.append(
             f"- Tokens (in / out): {sum(o.input_tokens or 0 for o in tokens)} / "
@@ -105,7 +112,7 @@ def _per_field(per_field: dict[FieldName, Tally]) -> str:
     return "\n".join(lines)
 
 
-def _per_tag(per_tag: Mapping[FieldTag, Tally]) -> str:
+def _per_tag(per_tag: Mapping[FieldTag, Tally], cases: Sequence[FieldCase]) -> str:
     lines = [
         "## Accuracy per tag",
         "",
@@ -113,14 +120,16 @@ def _per_tag(per_tag: Mapping[FieldTag, Tally]) -> str:
         "other five fields; a case can carry several tags.",
         "",
     ]
-    if not per_tag:
+    # Every tag of the run, also one whose calls all failed (it shows a total of 0).
+    tags = {tag for case in cases for tag in case.tags}
+    if not tags:
         lines.append("None.")
         return "\n".join(lines)
     lines += [
         "| Tag | Hit | Flagged miss | Silent wrong | Total |",
         "|---|---|---|---|---|",
     ]
-    lines += [_tally_row(tag, per_tag[tag]) for tag in sorted(per_tag)]
+    lines += [_tally_row(tag, per_tag.get(tag, Tally())) for tag in sorted(tags)]
     return "\n".join(lines)
 
 
@@ -170,7 +179,10 @@ def _silent_errors(run: FieldRun) -> str:
     order = {case.id: index for index, case in enumerate(run.cases)}
     for case_id, name, got in sorted(found, key=lambda k: (order[k[0]], FIELD_NAMES.index(k[1]))):
         repeats = ", ".join(str(r) for r in found[(case_id, name, got)])
-        lines.append(_row([case_id, name, _expected(cases[case_id], name), got, repeats]))
+        expected = _expected(cases[case_id], name)
+        if got == expected.removesuffix(" (flagged)"):
+            got += " (not flagged)"  # the value is right, the required flag is missing
+        lines.append(_row([case_id, name, expected, got, repeats]))
     return "\n".join(lines)
 
 
@@ -322,4 +334,10 @@ def _scalar(value: object) -> str:
 
 
 def _row(cells: list[str]) -> str:
-    return "| " + " | ".join(cell.replace("|", "\\|").replace("\n", " ") for cell in cells) + " |"
+    return "| " + " | ".join(_cell(cell) for cell in cells) + " |"
+
+
+def _cell(text: str) -> str:
+    """Keep model-controlled text inside one table cell."""
+    flat = text.replace("\r", "").replace("\n", " ")
+    return flat.replace("\\", "\\\\").replace("|", "\\|")

@@ -2,9 +2,10 @@
 
 Each (case, repeat) calls the extractor once, passes the extraction through the real
 `build_parsed` with the Warsaw day of reception as the reference date, and scores the six
-fields. An `ExtractionError` is kept as a failed observation (class name only: messages and
-inquiry text stay out of the report) and never counts as a hit; any other exception
-propagates.
+fields. An `ExtractionError` is kept as a failed observation (class name only: the error
+message stays out of the report) and never counts as a hit. Any other exception, or an
+interrupt, stops the run as `FieldRunAborted`, which carries the calls made so far. The
+labelled case texts are part of the run and its JSON report.
 """
 
 import time
@@ -50,6 +51,7 @@ class FieldRun(BaseModel):
     cases_sha256: str
     cases: list[FieldCase]  # in run order; kept so the report can be re-read on its own
     observations: list[FieldObservation]
+    aborted_by: str | None = None  # exception class name when the run stopped early
 
     def scored(self) -> list[CaseRepeats]:
         """Each case with the outcomes of its successful repeats (failed calls are left out)."""
@@ -64,6 +66,19 @@ class FieldRun(BaseModel):
             )
             for case in self.cases
         ]
+
+
+class FieldRunAborted(Exception):
+    """The run stopped on an unexpected exception or an interrupt; `run` holds what was done.
+
+    The original exception is the `__cause__`.
+    """
+
+    def __init__(self, run: FieldRun) -> None:
+        super().__init__(
+            f"Field eval aborted by {run.aborted_by} after {len(run.observations)} calls"
+        )
+        self.run = run
 
 
 def run_field_eval(
@@ -85,22 +100,32 @@ def run_field_eval(
         raise ValueError("repeats must be at least 1")
     started_at = datetime.now(UTC)
     observations: list[FieldObservation] = []
-    for repeat in range(1, repeats + 1):
-        for case in cases:
-            if pause_seconds > 0 and observations:
-                sleep(pause_seconds)
-            observations.append(_observe(case, repeat, extractor))
-    return FieldRun(
-        started_at=started_at,
-        finished_at=datetime.now(UTC),
-        provider=provider,
-        model=model,
-        extractor=extractor.name,
-        repeats=repeats,
-        cases_sha256=cases_version,
-        cases=list(cases),
-        observations=observations,
-    )
+
+    def finish(aborted_by: str | None = None) -> FieldRun:
+        return FieldRun(
+            started_at=started_at,
+            finished_at=datetime.now(UTC),
+            provider=provider,
+            model=model,
+            extractor=extractor.name,
+            repeats=repeats,
+            cases_sha256=cases_version,
+            cases=list(cases),
+            observations=observations,
+            aborted_by=aborted_by,
+        )
+
+    try:
+        for repeat in range(1, repeats + 1):
+            for case in cases:
+                if pause_seconds > 0 and observations:
+                    sleep(pause_seconds)
+                observations.append(_observe(case, repeat, extractor))
+    except (Exception, KeyboardInterrupt) as error:
+        # A paid run must not vanish with a bug or an interrupt: hand the calls made so far
+        # to the caller, which can still report them.
+        raise FieldRunAborted(finish(type(error).__name__)) from error
+    return finish()
 
 
 def _observe(case: FieldCase, repeat: int, extractor: InquiryExtractor) -> FieldObservation:
@@ -109,11 +134,15 @@ def _observe(case: FieldCase, repeat: int, extractor: InquiryExtractor) -> Field
     try:
         result = extractor.extract(case.subject, case.body, reference_date)
     except ExtractionError as error:
+        # `error.usage` is set when the provider answered (and billed) before the failure
+        failed_usage = error.usage
         return FieldObservation(
             case_id=case.id,
             repeat=repeat,
             duration_ms=_elapsed_ms(started),
             failure=type(error).__name__,
+            input_tokens=failed_usage.input_tokens if failed_usage else None,
+            output_tokens=failed_usage.output_tokens if failed_usage else None,
         )
     duration_ms = _elapsed_ms(started)
     parsed, uncertain = build_parsed(result.extraction, reference_date)

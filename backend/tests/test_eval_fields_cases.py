@@ -1,7 +1,7 @@
 """The parser field eval case schema and loader: label invariants. No database."""
 
 import json
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, get_args
 from zoneinfo import ZoneInfo
@@ -10,7 +10,14 @@ import pytest
 from pydantic import ValidationError
 
 from app.eval.fields import cases as cases_module
-from app.eval.fields.cases import DuplicateFieldCaseId, FieldCase, FieldTag, load_cases
+from app.eval.fields.cases import (
+    DuplicateFieldCaseId,
+    FieldCase,
+    FieldTag,
+    load_cases,
+    reference_day,
+)
+from app.parsing.service import reference_date_of
 
 
 def _expected(**overrides: Any) -> dict[str, Any]:
@@ -123,6 +130,24 @@ def test_the_reference_day_is_the_warsaw_day() -> None:
     assert FieldCase.model_validate(same_day).expected.deadline.value.isoformat() == "2026-11-03"  # type: ignore[union-attr]
 
 
+@pytest.mark.parametrize(
+    "received_at",
+    [
+        "2026-03-28T22:59:00Z",  # the day before the spring change, still 23:59 CET
+        "2026-03-28T23:00:00Z",  # midnight CET: the 29th starts
+        "2026-03-29T00:30:00Z",  # the change itself (CET to CEST at 01:00Z)
+        "2026-10-24T21:59:00Z",  # 23:59 CEST on the 24th
+        "2026-10-24T22:00:00Z",  # midnight CEST: the 25th starts
+        "2026-11-02T22:59:00Z",
+        "2026-11-02T23:00:00Z",
+    ],
+)
+def test_reference_day_equals_the_one_production_uses(received_at: str) -> None:
+    moment = datetime.fromisoformat(received_at)
+
+    assert reference_day(moment) == reference_date_of(moment)
+
+
 def test_a_deadline_on_the_reference_day_is_allowed() -> None:
     FieldCase.model_validate(_case(expected=_expected(deadline={"value": "2026-11-02"})))
 
@@ -138,6 +163,14 @@ def test_an_absent_deadline_needs_no_flag() -> None:
 def test_a_null_value_must_be_flagged(field: str) -> None:
     with pytest.raises(ValidationError, match="must be flagged"):
         FieldCase.model_validate(_case(expected=_expected(**{field: {"value": None}})))
+
+
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_a_blank_text_label_is_rejected(blank: str) -> None:
+    expected = _expected(customer={"value": blank, "flagged": True})
+
+    with pytest.raises(ValidationError, match="must not be blank"):
+        FieldCase.model_validate(_case(expected=expected))
 
 
 def test_a_flagged_null_value_is_allowed() -> None:

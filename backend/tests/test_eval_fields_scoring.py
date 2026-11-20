@@ -247,3 +247,15 @@ def test_summarize_counts_a_tag_only_on_its_own_field() -> None:
     substitute = summary.per_tag["substitute_absent"]
     assert (substitute.hits, substitute.total) == (1, 1)
     assert "price_best" not in summary.per_tag
+
+
+def test_two_tags_of_one_field_count_the_same_unit_twice() -> None:
+    case = _case(tags=["deadline_supported", "weekend_reference"])
+    wrong = _all("hit") | {"deadline": "silent_wrong", "price": "silent_wrong"}
+
+    summary = summarize([(case, [wrong, _all("hit")])])
+
+    for tag in ("deadline_supported", "weekend_reference"):
+        tally = summary.per_tag[tag]
+        assert (tally.hits, tally.silent_wrongs, tally.total) == (1, 1, 2)
+    assert summary.per_field["deadline"].total == 2  # the field itself counts each unit once

@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from app.eval.fields.cases import FieldCase, load_cases
-from app.eval.fields.runner import FieldRun, run_field_eval
+from app.eval.fields.runner import FieldRun, FieldRunAborted, run_field_eval
 from app.parsing.extractor import ExtractionFailed, ExtractionResult
 from app.parsing.fake import RuleBasedExtractor
 from app.parsing.schema import ModelExtraction
@@ -63,7 +63,7 @@ class ScriptedExtractor:
     name = "scripted"
     step_kind: StepKind = "llm"
 
-    def __init__(self, script: dict[str, list[ModelExtraction | Exception]]) -> None:
+    def __init__(self, script: dict[str, list[ModelExtraction | BaseException]]) -> None:
         self.script = {case_id: list(items) for case_id, items in script.items()}
         self.calls: list[tuple[str, date]] = []
         self.usage: LlmUsage | None = None
@@ -71,7 +71,7 @@ class ScriptedExtractor:
     def extract(self, subject: str, body: str, reference_date: date) -> ExtractionResult:
         self.calls.append((subject, reference_date))
         item = self.script[subject].pop(0)
-        if isinstance(item, Exception):
+        if isinstance(item, BaseException):
             raise item
         return ExtractionResult(extraction=item, usage=self.usage)
 
@@ -141,7 +141,7 @@ def test_silent_wrong_and_flagged_miss_are_told_apart() -> None:
 
 
 def test_failed_call_is_recorded_by_class_and_is_never_a_hit() -> None:
-    error = ExtractionFailed("timeout for Prosimy o oferte")
+    error = ExtractionFailed("SENTINEL-7f3a leaked message")
     extractor = ScriptedExtractor({"a": [error], "b": [extraction()]})
 
     result = run([make_case("a"), make_case("b")], extractor)
@@ -151,18 +151,44 @@ def test_failed_call_is_recorded_by_class_and_is_never_a_hit() -> None:
     assert failed.outcomes is None
     assert failed.parsed is None
     assert ok.failure is None
-    assert "timeout" not in result.model_dump_json()  # the message is never kept
+    assert "SENTINEL-7f3a" not in result.model_dump_json()  # the message is never kept
     # Scoring counts the successful call only; the failed one is neither hit nor miss.
     (_, failed_repeats), (_, ok_repeats) = result.scored()
     assert failed_repeats == []
     assert len(ok_repeats) == 1
 
 
-def test_other_exceptions_propagate() -> None:
-    extractor = ScriptedExtractor({"a": [RuntimeError("bug")]})
+def test_other_exceptions_abort_the_run_but_keep_the_calls_made() -> None:
+    extractor = ScriptedExtractor({"a": [extraction()], "b": [RuntimeError("bug")]})
 
-    with pytest.raises(RuntimeError):
-        run([make_case("a")], extractor)
+    with pytest.raises(FieldRunAborted) as raised:
+        run([make_case("a"), make_case("b")], extractor)
+
+    assert isinstance(raised.value.__cause__, RuntimeError)
+    partial = raised.value.run
+    assert partial.aborted_by == "RuntimeError"
+    assert [o.case_id for o in partial.observations] == ["a"]  # the call before the bug is kept
+
+
+def test_an_interrupt_also_keeps_the_calls_made() -> None:
+    extractor = ScriptedExtractor({"a": [extraction()], "b": [KeyboardInterrupt()]})
+
+    with pytest.raises(FieldRunAborted) as raised:
+        run([make_case("a"), make_case("b")], extractor)
+
+    assert raised.value.run.aborted_by == "KeyboardInterrupt"
+    assert len(raised.value.run.observations) == 1
+
+
+def test_a_failed_call_keeps_the_usage_the_provider_billed() -> None:
+    billed = ExtractionFailed("rejected", usage=USAGE)
+    unbilled = ExtractionFailed("refused")
+    extractor = ScriptedExtractor({"a": [billed], "b": [unbilled]})
+
+    first, second = run([make_case("a"), make_case("b")], extractor).observations
+
+    assert (first.input_tokens, first.output_tokens) == (120, 30)
+    assert (second.input_tokens, second.output_tokens) == (None, None)
 
 
 def test_every_case_runs_once_per_repeat() -> None:
@@ -203,7 +229,7 @@ def test_token_usage_is_kept_when_the_extractor_reports_it() -> None:
 
 
 def test_pause_separates_calls_and_is_skipped_at_zero() -> None:
-    script: dict[str, list[ModelExtraction | Exception]] = {
+    script: dict[str, list[ModelExtraction | BaseException]] = {
         "a": [extraction(), extraction()],
         "b": [extraction(), extraction()],
     }
@@ -211,7 +237,7 @@ def test_pause_separates_calls_and_is_skipped_at_zero() -> None:
 
     paused: list[float] = []
     run(cases, ScriptedExtractor(script), repeats=2, pause_seconds=0.5, sleeps=paused)
-    script_again: dict[str, list[ModelExtraction | Exception]] = {
+    script_again: dict[str, list[ModelExtraction | BaseException]] = {
         "a": [extraction(), extraction()],
         "b": [extraction(), extraction()],
     }

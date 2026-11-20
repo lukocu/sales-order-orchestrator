@@ -14,12 +14,13 @@ is 0 even when some calls failed; an unknown `--only` id or a missing provider e
 
 import argparse
 import logging
+import math
 import sys
 from pathlib import Path
 
 from app.eval.fields.cases import FIELD_CASES_PATH, load_cases
 from app.eval.fields.report import write_report
-from app.eval.fields.runner import run_field_eval
+from app.eval.fields.runner import FieldRun, FieldRunAborted, run_field_eval
 from app.eval.fields.scoring import FIELD_NAMES, summarize
 from app.eval.runner import cases_sha256
 from app.llm.client import DEFAULT_MODELS
@@ -36,15 +37,28 @@ def _repeats(value: str) -> int:
     return repeats
 
 
+def _pause_seconds(value: str) -> float:
+    seconds = float(value)
+    if not math.isfinite(seconds) or seconds < 0:
+        raise argparse.ArgumentTypeError("must be a finite number, 0 or more")
+    return seconds
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app.eval.fields",
         description="Measure how well the inquiry parser reads each field on the labelled set.",
     )
     parser.add_argument("--repeats", type=_repeats, default=3, help="runs per case")
-    parser.add_argument("--pause-seconds", type=float, default=1.0, help="pause between calls")
     parser.add_argument(
-        "--cases", type=Path, default=FIELD_CASES_PATH, help="field case file (JSON)"
+        "--pause-seconds", type=_pause_seconds, default=1.0, help="pause between calls"
+    )
+    parser.add_argument(
+        "--cases",
+        type=Path,
+        default=FIELD_CASES_PATH,
+        help="field case file (JSON); the report JSON embeds its inquiry texts, so do not "
+        "point this at real customer mail",
     )
     parser.add_argument("--only", nargs="+", metavar="CASE_ID", help="run only these cases")
     parser.add_argument(
@@ -81,16 +95,27 @@ def main(argv: list[str] | None = None) -> int:
 
     provider = settings.llm_provider
     model = None if provider == "fake" else settings.llm_model or DEFAULT_MODELS[provider]
-    field_run = run_field_eval(
-        cases,
-        get_extractor(settings),
-        repeats=args.repeats,
-        pause_seconds=args.pause_seconds,
-        provider=provider,
-        model=model,
-        cases_version=cases_sha256(args.cases),
-    )
+    try:
+        field_run = run_field_eval(
+            cases,
+            get_extractor(settings),
+            repeats=args.repeats,
+            pause_seconds=args.pause_seconds,
+            provider=provider,
+            model=model,
+            cases_version=cases_sha256(args.cases),
+        )
+    except FieldRunAborted as aborted:
+        # Keep what a paid run already produced, then fail loudly with the original cause.
+        logger.error("Run aborted by %s; writing a partial report", aborted.run.aborted_by)
+        _report(aborted.run, args.out)
+        raise aborted.__cause__ or aborted from None
 
+    _report(field_run, args.out)
+    return 0
+
+
+def _report(field_run: FieldRun, out_dir: Path) -> None:
     summary = summarize(field_run.scored())
     for name in FIELD_NAMES:
         tally = summary.per_field[name]
@@ -106,9 +131,8 @@ def main(argv: list[str] | None = None) -> int:
     if failed:
         logger.warning("%d of %d extractor calls failed", failed, len(field_run.observations))
 
-    md_path, json_path = write_report(field_run, args.out)
+    md_path, json_path = write_report(field_run, out_dir)
     logger.info("Report written to %s and %s", md_path, json_path)
-    return 0
 
 
 if __name__ == "__main__":

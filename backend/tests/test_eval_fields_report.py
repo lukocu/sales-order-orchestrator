@@ -8,11 +8,11 @@ import pytest
 
 import app.db
 from app.eval.fields import __main__ as cli
-from app.eval.fields.report import render_markdown, write_report
-from app.eval.fields.runner import FieldRun
+from app.eval.fields.report import _row, render_markdown, write_report
+from app.eval.fields.runner import FieldRun, FieldRunAborted
 from app.parsing.extractor import ExtractionFailed
 from app.settings import get_settings
-from tests.test_eval_fields_runner import ScriptedExtractor, extraction, make_case, run
+from tests.test_eval_fields_runner import USAGE, ScriptedExtractor, extraction, make_case, run
 
 SECTIONS = [
     "# Parser field evaluation",
@@ -26,6 +26,9 @@ SECTIONS = [
 ]
 
 
+NL = "\n## "  # the start of the next section
+
+
 def _clean_run() -> FieldRun:
     extractor = ScriptedExtractor({"case-a": [extraction()]})
     return run([make_case("case-a")], extractor)
@@ -35,10 +38,14 @@ def _messy_run() -> FieldRun:
     extractor = ScriptedExtractor(
         {
             "case-a": [extraction(quantity=81), extraction(), extraction(quantity=81)],
-            "case-b": [ExtractionFailed("boom"), extraction(), extraction()],
+            "case-b": [ExtractionFailed("SENTINEL-boom"), extraction(), extraction()],
         }
     )
     return run([make_case("case-a"), make_case("case-b")], extractor, repeats=3)
+
+
+def _json_text(result: FieldRun) -> str:
+    return result.model_dump_json()
 
 
 def test_files_are_named_by_date_provider_and_model(tmp_path: Path) -> None:
@@ -109,7 +116,8 @@ def test_unstable_pairs_and_failed_calls_are_listed() -> None:
     assert "case-a | quantity | 1: silent_wrong; 2: hit; 3: silent_wrong" in unstable
     failures = text.split("## Failed extractor calls")[1].split("\n## ")[0]
     assert "| case-b | 1 | `ExtractionFailed` |" in failures
-    assert "boom" not in text
+    assert "SENTINEL-boom" not in text
+    assert "SENTINEL-boom" not in _json_text(_messy_run())
 
 
 def test_failed_calls_and_unstable_say_none_when_empty() -> None:
@@ -141,6 +149,57 @@ def test_json_holds_the_whole_run_and_round_trips(tmp_path: Path) -> None:
 
     assert FieldRun.model_validate_json(json_path.read_text(encoding="utf-8")) == result
     assert len(json.loads(json_path.read_text(encoding="utf-8"))["observations"]) == 6
+
+
+def test_a_run_where_every_call_failed_still_renders() -> None:
+    extractor = ScriptedExtractor({"case-a": [ExtractionFailed("x"), ExtractionFailed("y")]})
+    result = run([make_case("case-a")], extractor, repeats=2)
+
+    text = render_markdown(result)
+
+    assert "all calls failed" in text
+    per_field = text.split("## Accuracy per field")[1].split(NL)[0]
+    assert "| quantity | 0 | 0 | 0 | 0 |" in per_field  # a zero total prints plain counts
+    tags = text.split("## Accuracy per tag")[1].split(NL)[0]
+    assert "| deadline_supported | 0 | 0 | 0 | 0 |" in tags  # the tag does not vanish
+    assert "| case-a | 1 | `ExtractionFailed` |" in text
+
+
+def test_a_silent_error_that_only_lacks_the_flag_says_so() -> None:
+    case = make_case("case-a", deadline={"value": None, "flagged": True})
+    extractor = ScriptedExtractor({"case-a": [extraction(deadline_text=None, deadline_date=None)]})
+
+    text = render_markdown(run([case], extractor))
+
+    silent = text.split("## SILENT ERRORS")[1].split(NL)[0]
+    assert "| case-a | deadline | — (flagged) | — (not flagged) | 1 |" in silent
+
+
+def test_a_partial_run_is_marked_in_the_report() -> None:
+    extractor = ScriptedExtractor({"case-a": [extraction()], "case-b": [RuntimeError("bug")]})
+    with pytest.raises(FieldRunAborted) as raised:
+        run([make_case("case-a"), make_case("case-b")], extractor, repeats=2)
+
+    text = render_markdown(raised.value.run)
+
+    assert "PARTIAL RUN" in text
+    assert "`RuntimeError` after 1 of 4 planned calls" in text
+    assert "PARTIAL RUN" not in render_markdown(_clean_run())
+
+
+def test_failed_calls_keep_their_billed_tokens_in_the_totals() -> None:
+    extractor = ScriptedExtractor({"a": [extraction()], "b": [ExtractionFailed("x", usage=USAGE)]})
+    extractor.usage = USAGE
+
+    text = render_markdown(run([make_case("a"), make_case("b")], extractor))
+
+    assert "Tokens (in / out): 240 / 60" in text
+
+
+def test_table_cells_cannot_break_out_of_their_row() -> None:
+    row = _row(["a|b", "line1\r\nline2", "ends with \\", "plain"])
+
+    assert row == "| a\\|b | line1 line2 | ends with \\\\ | plain |"
 
 
 # --- CLI --------------------------------------------------------------------------------
@@ -231,3 +290,41 @@ def test_failed_calls_still_exit_0(
     (json_path,) = tmp_path.glob("*.json")
     saved = FieldRun.model_validate_json(json_path.read_text(encoding="utf-8"))
     assert [o.failure for o in saved.observations] == ["ExtractionNotConfigured"]
+
+
+@pytest.mark.parametrize("value", ["inf", "nan", "-1"])
+def test_pause_seconds_must_be_finite_and_not_negative(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, no_database: None, value: str
+) -> None:
+    _settings(monkeypatch, llm_provider="fake", llm_api_key=None)
+
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["--allow-fake", "--pause-seconds", value, "--out", str(tmp_path)])
+
+    assert raised.value.code == 2
+
+
+def test_a_crash_writes_a_partial_report_and_still_raises(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, no_database: None
+) -> None:
+    class Crashing:
+        name = "crashing"
+        step_kind = "llm"
+
+        def extract(self, subject: str, body: str, reference_date: object) -> object:
+            raise RuntimeError("bug")
+
+    _settings(monkeypatch, llm_provider="fake", llm_api_key=None)
+    monkeypatch.setattr(cli, "get_extractor", lambda settings: Crashing())
+
+    with pytest.raises(RuntimeError, match="bug"):
+        cli.main(
+            ["--allow-fake", "--pause-seconds", "0", "--only", "dl-do-piatku"]
+            + ["--out", str(tmp_path)]
+        )
+
+    (json_path,) = tmp_path.glob("*.json")
+    saved = FieldRun.model_validate_json(json_path.read_text(encoding="utf-8"))
+    assert saved.aborted_by == "RuntimeError"
+    assert saved.observations == []
+    assert "PARTIAL RUN" in next(tmp_path.glob("*.md")).read_text(encoding="utf-8")

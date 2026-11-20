@@ -93,7 +93,7 @@ plus the MCP/tools actually exposed in the current session.
 | ------------------------- | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------- |
 | backend unit + integration | pytest + httpx                                        | ≥ 9.2    | 55 plików testów, PostgreSQL w CI; profil bazy: meaningful                              |
 | frontend unit + component | Vitest + Testing Library                               | 5.x      | 29 plików testów, język przypięty do angielskiego                                       |
-| eval (LLM decisions)      | własny runner ewaluacji w backendzie + OpenRouter      | n/a      | 32 oznaczone przypadki (21 z wyjątkiem, 4 adversarialne), raporty w `backend/eval_reports/`;   |
+| eval (LLM decisions)      | własny runner ewaluacji w backendzie + OpenRouter      | n/a      | 32 oznaczone przypadki (21 z wyjątkiem, 4 adversarialne), raporty w `backend/eval_reports/`                                                              |
 | eval (parser fields)      | własny runner pól w backendzie (`app.eval.fields`) + OpenRouter | n/a | 42 ręcznie oznaczone zapytania, raporty w `backend/eval_reports/fields/`; pomiar bez bramki, lokalnie |
 | e2e                       | none yet — see Phase 4 (Playwright)                    | —        | konfiguracja przez `/10x-e2e-setup`                                                     |
 | visual / accessibility    | none — wykluczone (§7)                                 | —        | —                                                                                       |

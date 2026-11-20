@@ -76,6 +76,13 @@ class _NullableExpectation(_Expectation):
 class ExpectedText(_NullableExpectation):
     value: str | None
 
+    @field_validator("value")
+    @classmethod
+    def _not_blank(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("a text label must not be blank (use null and flagged instead)")
+        return value
+
 
 class ExpectedQuantity(_NullableExpectation):
     value: int | None = Field(ge=1)
