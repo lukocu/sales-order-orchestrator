@@ -9,7 +9,7 @@ main_goal: quality
 top_blocker: skills
 milestone_id: ux-driven-redesign
 milestone_seq: 2
-milestone_status: open # open | done
+milestone_status: done # open | done
 ---
 
 # Roadmap: Intelligent Sales Order Orchestration System
@@ -21,7 +21,7 @@ milestone_status: open # open | done
 
 ## Milestone
 
-**M-2: Przebudowa interfejsu wokół pracy handlowca** — Status: open
+**M-2: Przebudowa interfejsu wokół pracy handlowca** — Status: done
 
 - **Intent:** Handlowiec i przełożony podejmują decyzję o zapytaniu bez przedzierania się przez diagnostykę: proces zapytania jest podzielony na kroki z jedną główną akcją, warstwa techniczna (plan, agenci, tokeny, koszt, stan systemu) jest dostępna na żądanie, przełożony ma własną kolejkę, a interfejs działa po polsku i angielsku na jednym systemie projektowym zgodnym z WCAG 2.2 AA. Wymagania funkcjonalne M-1 nie zmieniają się — zmienia się to, gdzie i w jakiej kolejności użytkownik je widzi.
 - **Source materials:** `context/foundation/prd.md` (v2), audyt `context/audits/ux/2026-11-16-prism-analysis-flow.md`
@@ -214,6 +214,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Milestone History
 
 - **M-1: MVP przepływu wyjątku** (`exception-flow-mvp`) — closed 2026-11-16. Zapytanie z wyjątkiem przechodzi cały przepływ od odczytu skrzynki do decyzji człowieka, zapytanie standardowe kończy się bez agentów, a ewaluacja porównuje workflow z orchestratorem.
+- **M-2: Przebudowa interfejsu wokół pracy handlowca** (`ux-driven-redesign`) — closed 2026-11-20. Wszystkie F-03 i S-11 – S-17 są `done`; na 1440×900 główna akcja każdego kroku jest widoczna bez przewijania (belka decyzji kończy się na 888 px, „Analizuj zapytanie” na 638 px), przełożony ma własną kolejkę, a interfejs działa po polsku i angielsku.
 
 ## Done
 
