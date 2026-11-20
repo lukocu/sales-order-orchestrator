@@ -297,10 +297,10 @@ None: no schema, no `ParsedFields` change (the JSONB lesson in `context/foundati
 
 #### Automated
 
-- [x] 4.1 No TBD remains in test-plan §6.2 and §3 row 2 is updated
-- [x] 4.2 Full backend gate still passes
+- [x] 4.1 No TBD remains in test-plan §6.2 and §3 row 2 is updated — f034db7
+- [x] 4.2 Full backend gate still passes — f034db7
 
 #### Manual
 
-- [x] 4.3 Real-provider baseline run committed
-- [x] 4.4 Silent errors in the baseline triaged and recorded in test-plan §6.6
+- [x] 4.3 Real-provider baseline run committed — f034db7
+- [x] 4.4 Silent errors in the baseline triaged and recorded in test-plan §6.6 — f034db7
