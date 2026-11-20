@@ -148,15 +148,15 @@ Dotychczasowe ścieżki pozostają poprawne. Link bez `step` rozwiązuje się do
 
 #### Automated
 
-- [x] 1.1 Testy frontendu potwierdzają odtworzenie oglądanych Wariantów, wybór bieżącego kroku dla starszego adresu oraz obsługę nieznanej wartości parametru.
-- [x] 1.2 Testy frontendu potwierdzają zastąpienie adresu niedostępnego kroku, komunikat oraz zachowanie istniejących przejść po zmianie stanu sprawy.
-- [x] 1.3 Testy nawigacji potwierdzają historię Wstecz i Dalej oraz zachowanie niezapisanych zmian bez ponownego pobrania analizy podczas ręcznego przełączania kroków tej samej sprawy.
-- [x] 1.4 Przechodzą npm run lint, npm run typecheck i npm test w katalogu frontend.
+- [x] 1.1 Testy frontendu potwierdzają odtworzenie oglądanych Wariantów, wybór bieżącego kroku dla starszego adresu oraz obsługę nieznanej wartości parametru. — 641a353
+- [x] 1.2 Testy frontendu potwierdzają zastąpienie adresu niedostępnego kroku, komunikat oraz zachowanie istniejących przejść po zmianie stanu sprawy. — 641a353
+- [x] 1.3 Testy nawigacji potwierdzają historię Wstecz i Dalej oraz zachowanie niezapisanych zmian bez ponownego pobrania analizy podczas ręcznego przełączania kroków tej samej sprawy. — 641a353
+- [x] 1.4 Przechodzą npm run lint, npm run typecheck i npm test w katalogu frontend. — 641a353
 
 #### Manual
 
-- [x] 1.5 W sprawie na etapie Odpowiedź otwórz ukończone Warianty, odśwież adres i sprawdź panel Wariantów. W historii bez odświeżenia Wstecz przywraca Odpowiedź, a Dalej Warianty.
-- [x] 1.6 Otwórz dawny link do Odpowiedzi po ponownej analizie. Sprawdź bieżący panel, skorygowany URL i krótkie wyjaśnienie po polsku i angielsku.
+- [x] 1.5 W sprawie na etapie Odpowiedź otwórz ukończone Warianty, odśwież adres i sprawdź panel Wariantów. W historii bez odświeżenia Wstecz przywraca Odpowiedź, a Dalej Warianty. — 641a353
+- [x] 1.6 Otwórz dawny link do Odpowiedzi po ponownej analizie. Sprawdź bieżący panel, skorygowany URL i krótkie wyjaśnienie po polsku i angielsku. — 641a353
 
 ### Phase 2: Inspektor i wejścia z linków
 
