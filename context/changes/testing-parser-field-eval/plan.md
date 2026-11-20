@@ -284,9 +284,9 @@ None: no schema, no `ParsedFields` change (the JSONB lesson in `context/foundati
 
 #### Automated
 
-- [x] 3.1 Runner, report and CLI tests pass with a stub extractor
-- [x] 3.2 Smoke run on the built-in set writes both files
-- [x] 3.3 Lint, format and types pass
+- [x] 3.1 Runner, report and CLI tests pass with a stub extractor — 688f244
+- [x] 3.2 Smoke run on the built-in set writes both files — 688f244
+- [x] 3.3 Lint, format and types pass — 688f244
 - [x] 3.4 Full backend gate passes on a temporary database
 
 #### Manual
