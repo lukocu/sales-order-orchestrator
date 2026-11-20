@@ -3,7 +3,7 @@ project: "Intelligent Sales Order Orchestration System"
 version: 1
 status: draft # draft | active | locked
 created: 2026-11-09
-updated: 2026-11-19
+updated: 2026-11-20
 prd_version: 2
 main_goal: quality
 top_blocker: skills
@@ -49,7 +49,7 @@ Handlowiec w MŚP odpowiada na zapytania ofertowe, ręcznie przechodząc przez p
 | S-14 | status-and-honest-actions     | użytkownik zawsze widzi status zapytania, a etykieta akcji mówi, co się stanie                        | S-12          | FR-018, US-02, FR-011, NFR                       | done |
 | S-15 | supervisor-queue              | przełożony rozstrzyga wyjątki z kolejki „Do akceptacji”                                               | S-11, S-14    | FR-019, US-02, FR-009, FR-020, Access Control    | done |
 | S-16 | backend-messages-by-code      | użytkownik widzi wyniki sprawdzeń, reguły polityki i sygnały pewności w wybranym języku               | F-03, S-12    | FR-021, US-01, US-02                             | done |
-| S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | planning |
+| S-17 | shareable-urls                | użytkownik odświeża lub wysyła link do zapytania z aktywnym krokiem i wraca pod ten adres po logowaniu | S-12, S-15    | FR-020, US-01                                    | done |
 
 ## Streams
 
@@ -176,7 +176,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Should-have; trasy dla strony systemowej (S-11) i kolejki (S-15) wchodzą wcześniej tam, gdzie są potrzebne, a ten wycinek domyka adresy kroków i powrót po logowaniu.
-- **Status:** planning
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -235,3 +235,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-13: handlowiec porównuje warianty realizacji obok siebie (pokrycie, termin względem oczekiwanego, wartość, marża, ryzyka, pewność) pod czytelnymi nazwami, z wyróżnionym wariantem rekomendowanym; na wąskim ekranie żadna informacja nie jest ukryta bez sygnału.** — Archived 2026-11-17 → `context/archive/2026-11-16-variant-comparison/`. Lesson: —.
 - **S-14: użytkownik widzi status zapytania na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji (ogłaszany czytnikom ekranu); gdy polityka wymaga akceptacji, akcja nazywa się „Send to supervisor”, a nie „Approve”.** — Archived 2026-11-17 → `context/archive/2026-11-17-status-and-honest-actions/`. Lesson: —.
 - **S-16: użytkownik widzi wyniki sprawdzeń, powody reguł polityki i sygnały pewności w języku wybranym przełącznikiem PL | EN; tłumaczenie dzieje się przy wyświetlaniu po stabilnych kodach, a zapisane dane, mail klienta, szkic odpowiedzi i uzasadnienie napisane przez model nie zmieniają się.** — Archived 2026-11-18 → `context/archive/2026-11-18-backend-messages-by-code/`. Lesson: —.
+- **S-17: użytkownik odświeża lub wysyła komuś link do zapytania z aktywnym krokiem, do inspektora przebiegu, kolejki przełożonego i strony systemowej; wejście bez sesji prowadzi do logowania i wraca pod ten sam adres.** — Archived 2026-11-20 → `context/archive/2026-11-19-shareable-urls/`. Lesson: —.
