@@ -288,8 +288,10 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
     from: '/inbox/inquiries/$inquiryId/run',
     shouldThrow: false,
   })
-  // The address follows the viewed step only while the panel is not under the inspector.
-  const addressed = inquiryMatch !== undefined && inspecting === undefined
+  // The address follows the viewed step under the inquiry's own address and under the inspector
+  // (`/run` keeps its route); elsewhere there is no address to follow.
+  const addressed = inquiryMatch !== undefined
+  const inspectorOpen = inspecting !== undefined
   const inspectorLink = useRef<HTMLAnchorElement>(null)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -403,14 +405,15 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
     if (canonicalStep === null || canonicalStep === linked) return
     // The user may already be leaving (a click elsewhere while this panel is still mounted);
     // the history holds the address they are heading for.
-    if (router.history.location.pathname !== `/inquiries/${inquiryId}`) return
+    const base = `/inquiries/${inquiryId}`
+    if (router.history.location.pathname !== (inspectorOpen ? `${base}/run` : base)) return
     void navigate({
-      to: '/inquiries/$inquiryId',
+      to: inspectorOpen ? '/inquiries/$inquiryId/run' : '/inquiries/$inquiryId',
       params: { inquiryId: String(inquiryId) },
       search: { step: canonicalStep },
       replace: true,
     })
-  }, [canonicalStep, linked, navigate, router, inquiryId])
+  }, [canonicalStep, linked, navigate, router, inquiryId, inspectorOpen])
 
   const dirty = analysis !== null && draft !== null && !sameDraft(draft, toDraft(analysis.fields))
   const hasCorrections =
@@ -606,7 +609,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
     // changed (above), so the replacing effect never races the new entry.
     if (addressed) {
       void navigate({
-        to: '/inquiries/$inquiryId',
+        to: inspectorOpen ? '/inquiries/$inquiryId/run' : '/inquiries/$inquiryId',
         params: { inquiryId: String(inquiryId) },
         search: { step },
       })
@@ -995,6 +998,7 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
             ref={inspectorLink}
             to="/inquiries/$inquiryId/run"
             params={{ inquiryId: String(inquiryId) }}
+            search={{ step: shown }}
             className="text-sm text-primary underline underline-offset-4"
           >
             {t('inspector.open')}
@@ -1061,11 +1065,12 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
         loading={load.kind === 'loading'}
         loadError={load.kind === 'error' ? load.error : null}
         onRetry={reload}
-        open={inspecting !== undefined}
+        open={inspectorOpen}
         onClose={() =>
           void navigate({
             to: '/inquiries/$inquiryId',
             params: { inquiryId: String(inquiryId) },
+            search: { step: load.kind === 'ok' ? shown : linked },
           })
         }
         returnFocusTo={inspectorLink}

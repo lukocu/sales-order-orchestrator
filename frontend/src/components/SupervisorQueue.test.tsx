@@ -154,6 +154,15 @@ describe('Supervisor queue and review routes', () => {
     expect(reviewCalls).toBe(0)
   })
 
+  it('shows a salesperson the access message at the queue address without asking for the queue', async () => {
+    signedIn = SALES
+    const router = await renderWithRouter('/approvals')
+
+    expect(await screen.findByText('Supervisor access required')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/approvals')
+    expect(queueCalls).toBe(0)
+  })
+
   it('allows rejection but hides approval for the supervisor’s own submission', async () => {
     reviewResponses = [{ ...review(), submitted_by: SUPERVISOR.id, allowed_actions: ['reject'] }]
     await renderWithRouter('/approvals/17')

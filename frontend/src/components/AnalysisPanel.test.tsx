@@ -1839,4 +1839,82 @@ describe('AnalysisPanel run inspector (routed)', () => {
       expect(screen.getByRole('link', { name: 'How was this calculated?' })).toHaveFocus(),
     )
   })
+
+  describe('with the step in the address', () => {
+    const READY: Partial<Analysis> = {
+      checks: EXCEPTION,
+      orchestration: ACME_ORCHESTRATION,
+      recommendation: ACME_RECOMMENDATION,
+      policy: ACME_POLICY,
+      draft: { ...ACME_DRAFT, status: 'ready_to_send' },
+      decisions: [ACME_APPROVED],
+    }
+
+    it('carries the viewed step into the inspector address and back', async () => {
+      stubApp(() => json(200, analysis(READY)))
+
+      const router = await renderWithRouter('/inquiries/7?step=variants')
+      fireEvent.click(await screen.findByRole('link', { name: 'How was this calculated?' }))
+
+      const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+      await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7/run'))
+      expect(router.state.location.search).toEqual({ step: 'variants' })
+
+      fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }))
+      await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+      expect(router.state.location.search).toEqual({ step: 'variants' })
+      expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
+    })
+
+    it('closes an inspector opened directly to the step in its address', async () => {
+      stubApp(() => json(200, analysis(READY)))
+
+      const router = await renderWithRouter('/inquiries/7/run?step=variants')
+      const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+      await within(inspector).findByRole('table', { name: 'Steps: Parsing' })
+      expect(router.state.location.pathname).toBe('/inquiries/7/run')
+      expect(router.state.location.search).toEqual({ step: 'variants' })
+
+      fireEvent.keyDown(inspector, { key: 'Escape' })
+      await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+      expect(router.state.location.search).toEqual({ step: 'variants' })
+      expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
+    })
+
+    it('does not overwrite the linked step when the inspector is closed while loading', async () => {
+      stubApp(() => new Promise<Response>(() => {}))
+
+      const router = await renderWithRouter('/inquiries/7/run?step=variants')
+      const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+      fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }))
+
+      await vi.waitFor(() => expect(router.state.location.pathname).toBe('/inquiries/7'))
+      expect(router.state.location.search).toEqual({ step: 'variants' })
+    })
+
+    it('completes an older inspector link with the current step, keeping /run', async () => {
+      stubApp(() => json(200, analysis({ checks: EXCEPTION })))
+
+      const router = await renderWithRouter('/inquiries/7/run')
+      const entries = router.history.length
+      const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+      await within(inspector).findByRole('table', { name: 'Steps: Parsing' })
+
+      await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'variants' }))
+      expect(router.state.location.pathname).toBe('/inquiries/7/run')
+      expect(router.history.length).toBe(entries)
+      expect(screen.getByRole('dialog', { name: 'Run inspector' })).toBeInTheDocument()
+    })
+
+    it('corrects an unavailable step in the inspector address and keeps /run', async () => {
+      stubApp(() => json(200, analysis({ checks: EXCEPTION })))
+
+      const router = await renderWithRouter('/inquiries/7/run?step=reply')
+      const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+      await within(inspector).findByRole('table', { name: 'Steps: Parsing' })
+
+      await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'variants' }))
+      expect(router.state.location.pathname).toBe('/inquiries/7/run')
+    })
+  })
 })

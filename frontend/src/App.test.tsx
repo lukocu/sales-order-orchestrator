@@ -464,6 +464,48 @@ describe('App', () => {
       expect(router.state.location.pathname).toBe('/inquiries/1')
     })
 
+    it('keeps the inspector address and step through sign-in', async () => {
+      stubApi({
+        ...SIGNED_IN_INBOX,
+        'GET /api/auth/me': UNAUTHORIZED,
+        'POST /api/auth/login': () => json(200, SALES),
+      })
+
+      const router = await renderWithRouter('/inquiries/1/run?step=inquiry')
+
+      expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: 'Run inspector' })).not.toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/inquiries/1/run')
+      expect(router.state.location.search).toEqual({ step: 'inquiry' })
+
+      signIn('sales', 'demo')
+
+      expect(await screen.findByRole('dialog', { name: 'Run inspector' })).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/inquiries/1/run')
+      expect(router.state.location.search).toEqual({ step: 'inquiry' })
+    })
+
+    it('restores the view of the address after the session expires, with the step current again', async () => {
+      stubApi({
+        ...SIGNED_IN_INBOX,
+        'GET /api/inquiries/1/analysis': [UNAUTHORIZED, () => json(200, null)],
+        'POST /api/auth/login': () => json(200, SALES),
+      })
+
+      const router = await renderWithRouter('/inquiries/1?step=reply')
+
+      expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/inquiries/1')
+      expect(router.state.location.search).toEqual({ step: 'reply' })
+
+      signIn('sales', 'demo')
+
+      expect(await screen.findByRole('tab', { name: /Inquiry/, selected: true })).toBeInTheDocument()
+      expect(await screen.findByText(/no longer available/)).toBeInTheDocument()
+      await waitFor(() => expect(router.state.location.search).toEqual({ step: 'inquiry' }))
+      expect(router.state.location.pathname).toBe('/inquiries/1')
+    })
+
     it('marks the current page in the navigation', async () => {
       stubApi(SIGNED_IN_INBOX)
 
