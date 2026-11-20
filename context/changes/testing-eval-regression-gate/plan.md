@@ -211,14 +211,14 @@ Brak migracji danych. Baza porównania to istniejący raport z 2026-11-20. Nowy 
 
 #### Automated
 
-- [x] 1.1 Testy rdzenia przechodzą (tests/test_eval_compare.py)
-- [x] 1.2 Lint i format przechodzą
-- [x] 1.3 Typy (mypy strict) przechodzą
-- [x] 1.4 Porównanie raportu bazowego z samym sobą nie ma regresji ani nowych porażek
+- [x] 1.1 Testy rdzenia przechodzą (tests/test_eval_compare.py) — 710f8e2
+- [x] 1.2 Lint i format przechodzą — 710f8e2
+- [x] 1.3 Typy (mypy strict) przechodzą — 710f8e2
+- [x] 1.4 Porównanie raportu bazowego z samym sobą nie ma regresji ani nowych porażek — 710f8e2
 
 #### Manual
 
-- [x] 1.5 Nazwy pól i kodów w Comparison czytają się jasno
+- [x] 1.5 Nazwy pól i kodów w Comparison czytają się jasno — 710f8e2
 
 ### Phase 2: Komenda i wybór bazy
 
