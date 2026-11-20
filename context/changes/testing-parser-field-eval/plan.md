@@ -273,12 +273,12 @@ None: no schema, no `ParsedFields` change (the JSONB lesson in `context/foundati
 
 #### Automated
 
-- [ ] 2.1 Built-in set loads and the coverage test passes
-- [ ] 2.2 Lint, format and types still pass
+- [x] 2.1 Built-in set loads and the coverage test passes
+- [x] 2.2 Lint, format and types still pass
 
 #### Manual
 
-- [ ] 2.3 Label arithmetic of at least 10 cases hand-checked against a calendar
+- [x] 2.3 Label arithmetic of at least 10 cases hand-checked against a calendar
 
 ### Phase 3: Runner, report and CLI
 
