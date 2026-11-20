@@ -7,7 +7,7 @@ deadline resolver, because a label computed by the code being measured would pro
 """
 
 import re
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal, Self
@@ -49,6 +49,11 @@ FieldTag = Literal[
     "customer_missing",
     "quantity_variant",
 ]
+
+
+def reference_day(received_at: datetime) -> date:
+    """The day the inquiry arrived, as seen in Poland (`reference_date_of` without the DB)."""
+    return received_at.astimezone(_WARSAW).date()
 
 
 class _Expectation(BaseModel):
@@ -161,7 +166,7 @@ class FieldCase(BaseModel):
         if len(set(self.tags)) != len(self.tags):
             raise ValueError("tags must not repeat")
         deadline = self.expected.deadline.value
-        reference = self.received_at.astimezone(_WARSAW).date()
+        reference = reference_day(self.received_at)
         if deadline is not None and deadline < reference:
             raise ValueError(
                 f"deadline {deadline.isoformat()} is before the reference day "
