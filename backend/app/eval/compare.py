@@ -15,19 +15,37 @@ provider. The unit is a pair (case, arm): its hits are the repeats with a full h
 Two reports are comparable only when they ran the same case set with the same number of
 repeats, and (unless `allow_model_change`) the same provider, model, extractor, planners and
 recommender; otherwise the result carries `incompatibilities` and nothing else.
+
+    python -m app.eval.compare
+    python -m app.eval.compare --baseline eval_reports/<baseline>.json --current <report>.json
+
+The command picks the current report (the newest in `--reports-dir`, unless `--current`) and
+its baseline (the newest older report of the same case set, unless `--baseline`), prints the
+comparison as Markdown and exits 0 (comparable, nothing blocking), 1 (a regression or a new
+failure) or 2 (incompatible reports, no baseline, unreadable report or bad usage).
 """
 
+import argparse
 import json
+import logging
+import sys
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from app.eval.report import EvalReport
+from app.eval.report import NO_MODEL, EvalReport
 from app.eval.runner import EvalRun
 from app.eval.scoring import FAILURE_ORCHESTRATION_PARTIAL, ArmName, ArmRun
 
+logger = logging.getLogger("app.eval.compare")
+
 DEFAULT_COST_FACTOR = 1.5
+DEFAULT_REPORTS_DIR = Path("eval_reports")
+
+EXIT_OK = 0
+EXIT_BLOCKING = 1
+EXIT_UNUSABLE = 2
 
 Pair = tuple[str, ArmName]  # case id, arm
 
@@ -222,3 +240,198 @@ def _cost_warnings(
                 )
             )
     return warnings
+
+
+# --- Command ----------------------------------------------------------------------------
+
+
+class _Unusable(Exception):
+    """A reason to exit with code 2 (the message is logged)."""
+
+
+def _cost_factor(value: str) -> float:
+    factor = float(value)
+    if factor <= 1:
+        raise argparse.ArgumentTypeError("must be greater than 1")
+    return factor
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python -m app.eval.compare",
+        description="Compare an evaluation report with a baseline, case by case.",
+    )
+    parser.add_argument("--current", type=Path, help="report to check (default: newest)")
+    parser.add_argument("--baseline", type=Path, help="report to compare with (default: auto)")
+    parser.add_argument(
+        "--reports-dir",
+        type=Path,
+        default=DEFAULT_REPORTS_DIR,
+        help="directory of JSON reports to choose from",
+    )
+    parser.add_argument(
+        "--allow-model-change",
+        action="store_true",
+        help="compare reports of another provider, model, extractor, planners or recommender",
+    )
+    parser.add_argument(
+        "--cost-factor",
+        type=_cost_factor,
+        default=DEFAULT_COST_FACTOR,
+        help="warn when the orchestrated cost or time per run grows past this factor (> 1)",
+    )
+    parser.add_argument("--out", type=Path, help="also write the Markdown here")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    args = _parser().parse_args(argv)
+    try:
+        current_path, current, baseline_path, baseline = _select(args)
+    except _Unusable as error:
+        logger.error("%s", error)
+        return EXIT_UNUSABLE
+
+    comparison = compare(
+        baseline,
+        current,
+        allow_model_change=args.allow_model_change,
+        cost_factor=args.cost_factor,
+    )
+    markdown = render_comparison(comparison, baseline, current)
+    logger.info("Current: %s; baseline: %s", current_path, baseline_path)
+    sys.stdout.write(markdown)
+    if args.out is not None:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(markdown, encoding="utf-8")
+
+    if comparison.incompatibilities:
+        return EXIT_UNUSABLE
+    return EXIT_BLOCKING if comparison.blocking else EXIT_OK
+
+
+def _read(path: Path) -> EvalReport:
+    try:
+        return load_report(path)
+    except (ValueError, OSError) as error:
+        raise _Unusable(str(error)) from error
+
+
+def _select(args: argparse.Namespace) -> tuple[Path, EvalReport, Path, EvalReport]:
+    """The (path, report) of the current report and of its baseline."""
+    in_dir: list[tuple[Path, EvalReport]] = []
+    if args.current is None or args.baseline is None:
+        in_dir = _reports_in(args.reports_dir)
+
+    if args.current is not None:
+        current_path, current = args.current, _read(args.current)
+    elif in_dir:
+        current_path, current = max(in_dir, key=lambda item: item[1].run.started_at)
+    else:
+        raise _Unusable(f"No evaluation report found in {args.reports_dir}.")
+
+    if args.baseline is not None:
+        return current_path, current, args.baseline, _read(args.baseline)
+
+    candidates = [
+        (path, report)
+        for path, report in in_dir
+        if report.run.cases_sha256 == current.run.cases_sha256
+        and path.resolve() != current_path.resolve()
+        and report.run.started_at < current.run.started_at
+    ]
+    if not candidates:
+        raise _Unusable(
+            f"No baseline for the case set {current.run.cases_sha256} in {args.reports_dir}: "
+            "no older report of the same case set. Pass --baseline PATH."
+        )
+    baseline_path, baseline = max(candidates, key=lambda item: item[1].run.started_at)
+    return current_path, current, baseline_path, baseline
+
+
+def _reports_in(directory: Path) -> list[tuple[Path, EvalReport]]:
+    """Every `*.json` in `directory` that is a report; the others are skipped with a warning."""
+    reports: list[tuple[Path, EvalReport]] = []
+    for path in sorted(directory.glob("*.json")):
+        try:
+            reports.append((path, load_report(path)))
+        except (ValueError, OSError) as error:
+            logger.warning("Skipping %s: %s", path, error)
+    return reports
+
+
+# --- Markdown ---------------------------------------------------------------------------
+
+
+def render_comparison(comparison: Comparison, baseline: EvalReport, current: EvalReport) -> str:
+    """The comparison as Markdown: both reports, the verdict and one section per finding."""
+    sections = [_header(baseline, current)]
+    if comparison.incompatibilities:
+        lines = ["## Incompatible reports", ""]
+        lines += [f"- {line}" for line in comparison.incompatibilities]
+        sections.append("\n".join(lines))
+        return "\n\n".join(sections) + "\n"
+
+    sections.append(f"**Result: {'REGRESSION' if comparison.blocking else 'OK'}**")
+    sections += [
+        _pairs("Regressions", comparison.regressions),
+        _pairs("New failures", comparison.new_failures),
+        _pairs("Noise", comparison.noise),
+        _pairs("New instability", comparison.new_instability),
+        _pairs("Improvements", comparison.improvements),
+        _costs(comparison.warnings),
+    ]
+    return "\n\n".join(sections) + "\n"
+
+
+def _header(baseline: EvalReport, current: EvalReport) -> str:
+    lines = ["# Evaluation comparison"]
+    for title, report in (("Baseline", baseline), ("Current", current)):
+        run = report.run
+        lines += [
+            "",
+            f"## {title}",
+            "",
+            f"- Date: {run.started_at:%Y-%m-%d %H:%M:%S} UTC",
+            f"- Provider: `{run.provider}`",
+            f"- Model: `{run.model or NO_MODEL}`",
+            f"- Repeats: {run.repeats}",
+            f"- Case set sha256: `{run.cases_sha256}`",
+            f"- Cases: {len(run.cases)}",
+        ]
+    return "\n".join(lines)
+
+
+def _pairs(title: str, entries: list[PairChange]) -> str:
+    lines = [f"## {title}", ""]
+    if not entries:
+        lines.append("None found.")
+        return "\n".join(lines)
+    for entry in entries:
+        line = (
+            f"- `{entry.case_id}` ({entry.arm}): "
+            f"{entry.baseline_hits}/{entry.baseline_total} -> "
+            f"{entry.current_hits}/{entry.current_total}"
+        )
+        if entry.failures:
+            line += " · " + ", ".join(f"`{code}`" for code in entry.failures)
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _costs(warnings: list[CostWarning]) -> str:
+    lines = ["## Cost and time", ""]
+    if not warnings:
+        lines.append("None found: no orchestrated mean grew past the factor.")
+        return "\n".join(lines)
+    for warning in warnings:
+        lines.append(
+            f"- {warning.arm} · {warning.metric}: {warning.baseline:g} -> "
+            f"{warning.current:g} ({warning.factor:.2f}x)"
+        )
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

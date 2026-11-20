@@ -1,6 +1,6 @@
 """Comparison of evaluation reports on hand-built runs: every rule of the gate. No database."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from app.eval.cases import ExpectedDecision
-from app.eval.compare import Comparison, compare, load_report
+from app.eval.compare import Comparison, compare, load_report, main
 from app.eval.report import EvalReport, build_report
 from app.eval.runner import EvalRun
 from app.eval.scoring import ArmName, ArmRun, Observation, Score
@@ -369,3 +369,242 @@ def test_baseline_report_compared_with_itself_is_clean() -> None:
     assert result.regressions == []
     assert result.new_failures == []
     assert not result.blocking
+
+
+# --- Command ----------------------------------------------------------------------------
+
+
+def _day(days: int) -> dict[str, Any]:
+    """Overrides that start a report `days` after the default one."""
+    return {"started_at": STARTED + timedelta(days=days)}
+
+
+def _write(directory: Path, name: str, report: EvalReport) -> Path:
+    path = directory / name
+    path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    return path
+
+
+def _run(capsys: pytest.CaptureFixture[str], *args: object) -> tuple[int, str]:
+    code = main([str(arg) for arg in args])
+    return code, capsys.readouterr().out
+
+
+def test_exit_0_for_identical_reports(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    _write(tmp_path, "new.json", _report(_stable(), **_day(1)))
+
+    code, out = _run(capsys, "--reports-dir", tmp_path)
+
+    assert code == 0
+    assert "**Result: OK**" in out
+
+
+def test_exit_1_for_a_regression_that_names_the_case(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    _write(tmp_path, "new.json", _report(_with(_stable(), acme=[HIT, HIT, MISS]), **_day(1)))
+
+    code, out = _run(capsys, "--reports-dir", tmp_path)
+
+    assert code == 1
+    assert "**Result: REGRESSION**" in out
+    assert f"`{CASE}` (orchestrator): 3/3 -> 2/3" in out
+
+
+def test_exit_1_for_a_new_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    baseline = _write(tmp_path, "old.json", _report(_with(_stable(), acme=[MISS, MISS, MISS])))
+    failed = _with(_stable(), acme=[MISS, MISS, (False, "orchestration_failed:timeout")])
+    current = _write(tmp_path, "new.json", _report(failed, **_day(1)))
+
+    code, out = _run(capsys, "--baseline", baseline, "--current", current)
+
+    assert code == 1
+    assert "`orchestration_failed:timeout`" in out
+
+
+def test_exit_2_for_another_case_set(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    baseline = _write(tmp_path, "old.json", _report(_stable()))
+    current = _write(tmp_path, "new.json", _report(_stable(), cases_sha256="def456", **_day(1)))
+
+    code, out = _run(capsys, "--baseline", baseline, "--current", current)
+
+    assert code == 2
+    assert "cases_sha256: baseline 'abc123', current 'def456'" in out
+    assert "## Regressions" not in out
+
+
+def test_exit_2_without_a_baseline_in_the_directory(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+) -> None:
+    _write(tmp_path, "other.json", _report(_stable(), cases_sha256="def456"))
+    _write(tmp_path, "new.json", _report(_stable(), **_day(1)))
+
+    code, out = _run(capsys, "--reports-dir", tmp_path)
+
+    assert code == 2
+    assert out == ""
+    assert "No baseline for the case set abc123" in caplog.text
+
+
+def test_exit_2_for_an_empty_directory(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert _run(capsys, "--reports-dir", tmp_path)[0] == 2
+
+
+def test_exit_2_for_a_model_change_unless_allowed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    _write(tmp_path, "new.json", _report(_stable(), model="other/model", **_day(1)))
+
+    code, out = _run(capsys, "--reports-dir", tmp_path)
+    assert code == 2
+    assert "model: baseline 'qwen/qwen3', current 'other/model'" in out
+
+    code, _ = _run(capsys, "--reports-dir", tmp_path, "--allow-model-change")
+    assert code == 0
+
+
+def test_exit_1_for_a_regression_with_a_model_change_allowed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    changed = _report(_with(_stable(), acme=[MISS, MISS, MISS]), model="other/model", **_day(1))
+    _write(tmp_path, "new.json", changed)
+
+    code, _ = _run(capsys, "--reports-dir", tmp_path, "--allow-model-change")
+
+    assert code == 1
+
+
+def test_exit_2_for_an_unreadable_explicit_report(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+) -> None:
+    good = _write(tmp_path, "good.json", _report(_stable()))
+    broken = tmp_path / "broken.json"
+    broken.write_text("not json", encoding="utf-8")
+
+    assert _run(capsys, "--baseline", good, "--current", broken)[0] == 2
+    assert "broken.json" in caplog.text
+    assert _run(capsys, "--baseline", tmp_path / "missing.json", "--current", good)[0] == 2
+
+
+def test_the_baseline_is_the_newest_matching_older_report(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+) -> None:
+    # the newest matching older report has a better pair than the oldest one, so only it blocks
+    _write(tmp_path, "a-oldest.json", _report(_with(_stable(), acme=[MISS, MISS, MISS])))
+    _write(tmp_path, "b-middle.json", _report(_stable(), **_day(1)))
+    _write(tmp_path, "c-other-set.json", _report(_stable(), cases_sha256="def456", **_day(2)))
+    (tmp_path / "d-notes.json").write_text('{"hello": 1}', encoding="utf-8")
+    _write(tmp_path, "e-current.json", _report(_with(_stable(), acme=[HIT, HIT, MISS]), **_day(3)))
+
+    code, out = _run(capsys, "--reports-dir", tmp_path)
+
+    assert code == 1
+    assert "- Date: 2026-11-21 18:00:00 UTC" in out  # the baseline: b-middle
+    assert "- Date: 2026-11-23 18:00:00 UTC" in out  # the current: e-current
+    assert "2026-11-20 18:00:00" not in out
+    assert "d-notes.json" in caplog.text
+
+
+def test_a_report_newer_than_the_current_one_is_not_a_baseline(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    current = _write(tmp_path, "current.json", _report(_stable()))
+    _write(tmp_path, "later.json", _report(_stable(), **_day(1)))
+
+    code, _ = _run(capsys, "--reports-dir", tmp_path, "--current", current)
+
+    assert code == 2
+
+
+def test_explicit_baseline_and_current_ignore_the_directory(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    baseline = _write(tmp_path, "old.json", _report(_stable()))
+    current = _write(tmp_path, "mid.json", _report(_stable(), **_day(1)))
+    _write(tmp_path, "newest.json", _report(_with(_stable(), acme=[MISS] * 3), **_day(2)))
+
+    code, out = _run(capsys, "--baseline", baseline, "--current", current)
+
+    assert code == 0
+    assert "- Date: 2026-11-21 18:00:00 UTC" in out
+
+
+def test_out_writes_the_markdown_that_goes_to_stdout(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    _write(tmp_path, "new.json", _report(_with(_stable(), acme=[HIT, MISS, MISS]), **_day(1)))
+    out_path = tmp_path / "nested" / "dir" / "comparison.md"
+
+    code, out = _run(capsys, "--reports-dir", tmp_path, "--out", out_path)
+
+    assert code == 1
+    assert out_path.read_text(encoding="utf-8") == out
+
+
+def test_markdown_has_every_section_and_says_when_one_is_empty(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable()))
+    _write(tmp_path, "new.json", _report(_stable(), **_day(1)))
+
+    _, out = _run(capsys, "--reports-dir", tmp_path)
+
+    for title in (
+        "Regressions",
+        "New failures",
+        "Noise",
+        "New instability",
+        "Improvements",
+        "Cost and time",
+    ):
+        assert f"## {title}\n\nNone found" in out
+    assert "- Case set sha256: `abc123`" in out
+    assert "- Repeats: 3" in out
+
+
+def test_cost_warning_appears_in_the_markdown(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write(tmp_path, "old.json", _report(_stable(), duration_ms=1000))
+    _write(tmp_path, "new.json", _report(_stable(), duration_ms=2000, **_day(1)))
+
+    code, out = _run(capsys, "--reports-dir", tmp_path)
+    assert code == 0
+    assert "orchestrator · duration_ms_mean: 1000 -> 2000 (2.00x)" in out
+
+    code, out = _run(capsys, "--reports-dir", tmp_path, "--cost-factor", "2.5")
+    assert code == 0
+    assert "duration_ms_mean" not in out
+
+
+@pytest.mark.parametrize("factor", ["1", "0.5", "abc"])
+def test_a_cost_factor_of_one_or_less_is_rejected(
+    factor: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as raised:
+        main(["--cost-factor", factor])
+
+    assert raised.value.code == 2
+    assert "--cost-factor" in capsys.readouterr().err
+
+
+def test_exit_1_for_the_real_report_with_one_hit_lowered(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Break check on the committed baseline: a copy with one hit lowered blocks."""
+    baseline = _write(tmp_path, "baseline.json", load_report(REAL_REPORT))
+    broken = load_report(REAL_REPORT)
+    broken.run.started_at += timedelta(days=1)
+    lowered = next(r for r in broken.run.runs if r.score.full_hit)
+    lowered.score.full_hit = False
+    current = _write(tmp_path, "broken.json", broken)
+
+    code, out = _run(capsys, "--baseline", baseline, "--current", current)
+
+    assert code == 1
+    assert f"`{lowered.case_id}` ({lowered.arm})" in out

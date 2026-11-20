@@ -224,14 +224,14 @@ Brak migracji danych. Baza porównania to istniejący raport z 2026-11-20. Nowy 
 
 #### Automated
 
-- [ ] 2.1 Testy CLI przechodzą (kody wyjścia, wybór bazy, --out)
-- [ ] 2.2 Lint, format i typy przechodzą
-- [ ] 2.3 Pomoc komendy działa (--help)
-- [ ] 2.4 Kontrola celowego zepsucia daje kod 1
+- [x] 2.1 Testy CLI przechodzą (kody wyjścia, wybór bazy, --out)
+- [x] 2.2 Lint, format i typy przechodzą
+- [x] 2.3 Pomoc komendy działa (--help)
+- [x] 2.4 Kontrola celowego zepsucia daje kod 1
 
 #### Manual
 
-- [ ] 2.5 Wynik compare na realnych raportach jest zrozumiały dla autora zmiany
+- [x] 2.5 Wynik compare na realnych raportach jest zrozumiały dla autora zmiany
 
 ### Phase 3: Test CI i dokumentacja
 
