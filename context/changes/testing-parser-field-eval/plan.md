@@ -260,14 +260,14 @@ None: no schema, no `ParsedFields` change (the JSONB lesson in `context/foundati
 
 #### Automated
 
-- [x] 1.1 Case schema and loader tests pass
-- [x] 1.2 Scoring tests pass
-- [x] 1.3 Lint and format pass
-- [x] 1.4 Type check passes
+- [x] 1.1 Case schema and loader tests pass — 39d647f
+- [x] 1.2 Scoring tests pass — 39d647f
+- [x] 1.3 Lint and format pass — 39d647f
+- [x] 1.4 Type check passes — 39d647f
 
 #### Manual
 
-- [x] 1.5 No validator calls the deadline resolver
+- [x] 1.5 No validator calls the deadline resolver — 39d647f
 
 ### Phase 2: Labelled case set
 
