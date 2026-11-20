@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from app.checks.rules import normalize_name
 from app.eval.cases import (
     DuplicateCaseId,
     EvalCase,
@@ -21,6 +22,36 @@ SEED_CUSTOMER_DOMAINS = {
     "hurtowniadelta.example",
     "technikaomega.example",
 }
+
+
+SEED_CUSTOMER_NAMES = ["ACME", "Biuro Max", "Hurtownia Delta", "Technika Omega"]
+SEED_PRODUCT_CODES = {"ABC-100", "ABC-110", "ABC-200", "XYZ-300", "XYZ-310"}
+
+
+def _needs_input_reasons(case: EvalCase) -> set[str]:
+    """The reasons the checks give, derived from the golden fields and the seed catalogue."""
+    fields = case.fields
+    reasons: set[str] = set()
+    words = normalize_name(fields.customer or "")
+    matches = [
+        name
+        for name in SEED_CUSTOMER_NAMES
+        if any(
+            words[i : i + len(normalize_name(name))] == normalize_name(name)
+            for i in range(len(words))
+        )
+    ]
+    if fields.customer and len(matches) == 0:
+        reasons.add("customer_not_found")
+    elif len(matches) > 1:
+        reasons.add("customer_ambiguous")
+    if not (fields.product_code or "").strip():
+        reasons.add("product_missing")
+    elif fields.product_code not in SEED_PRODUCT_CODES:
+        reasons.add("product_not_found")
+    if fields.quantity is None:
+        reasons.add("quantity_missing")
+    return reasons
 
 
 def _case(**overrides: Any) -> dict[str, Any]:
@@ -58,7 +89,7 @@ def test_builtin_set_loads_with_unique_ids() -> None:
     cases = load_cases()
     ids = [case.id for case in cases]
     assert len(ids) == len(set(ids))
-    assert len(cases) >= 12
+    assert len(cases) >= 28
 
 
 def test_builtin_set_starts_with_the_four_seed_scenarios() -> None:
@@ -74,7 +105,7 @@ def test_builtin_set_starts_with_the_four_seed_scenarios() -> None:
 def test_builtin_set_covers_the_scenarios() -> None:
     cases = load_cases()
     exceptions = [c for c in cases if c.expected.checks_outcome == "exception"]
-    assert len(exceptions) >= 10
+    assert len(exceptions) >= 15
     assert {c.expected.policy_outcome for c in exceptions} == {
         "no_approval_needed",
         "requires_supervisor",
@@ -87,6 +118,37 @@ def test_builtin_set_covers_the_scenarios() -> None:
     # Refused substitutes and an exception without a deadline are both in the set.
     assert any(c.fields.substitute_allowed is False for c in exceptions)
     assert any(c.fields.deadline is None for c in exceptions)
+
+
+def test_builtin_set_has_several_cases_per_category() -> None:
+    cases = load_cases()
+    exceptions = [c for c in cases if c.expected.checks_outcome == "exception"]
+    for kind in ("partial_delivery", "substitute", "other_source", "combined"):
+        assert sum(c.expected.option_kind == kind for c in exceptions) >= 3, kind
+    for tag in ("unusual_discount", "price_deadline_conflict", "unclear_requirements"):
+        assert sum(tag in c.tags for c in cases) >= 2, tag
+    assert sum(c.expected.checks_outcome == "standard" for c in cases) >= 2
+    assert sum("adversarial" in c.tags for c in cases) >= 4
+    # The types without a shortage never reach the orchestration in the MVP (PRD OQ #4).
+    for tag in ("unusual_discount", "price_deadline_conflict"):
+        without_shortage = [c for c in cases if tag in c.tags and c not in exceptions]
+        assert len(without_shortage) >= 2, tag
+        assert all(c.expected.checks_outcome == "standard" for c in without_shortage), tag
+
+
+def test_builtin_needs_input_cases_have_distinct_reasons() -> None:
+    needs_input = [c for c in load_cases() if c.expected.checks_outcome == "needs_input"]
+    assert len(needs_input) >= 3
+    reasons = [_needs_input_reasons(c) for c in needs_input]
+    assert all(reasons), "every needs_input case must show a reason in its fields"
+    assert len(set().union(*reasons)) >= 3
+
+
+def test_builtin_adversarial_cases_cover_the_four_attacks() -> None:
+    adversarial = [c for c in load_cases() if "adversarial" in c.tags]
+    assert any("</tresc>" in c.body for c in adversarial)
+    assert any("SYSTEM" in c.subject for c in adversarial)
+    assert len({c.adversarial_of for c in adversarial}) == len(adversarial)
 
 
 def test_builtin_set_uses_seed_customer_domains_and_explains_every_label() -> None:

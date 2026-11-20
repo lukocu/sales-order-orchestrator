@@ -392,25 +392,25 @@ None. `cases.json` is not stored in the database, and the new `EvalCase` fields 
 
 #### Automated
 
-- [x] 2.1 Backend quality gates pass: `docker compose run --rm backend sh check.sh` — PHASE2SHA
-- [x] 2.2 Adversarial-path runner tests pass: `docker compose run --rm backend uv run pytest tests/test_eval_runner.py` — PHASE2SHA
+- [x] 2.1 Backend quality gates pass: `docker compose run --rm backend sh check.sh` — ce7905b
+- [x] 2.2 Adversarial-path runner tests pass: `docker compose run --rm backend uv run pytest tests/test_eval_runner.py` — ce7905b
 
 #### Manual
 
-- [x] 2.3 A fake run on a scratch case file with one adversarial pair writes a report with the "Adversarial cases" section and the grouped sections filled in — PHASE2SHA
+- [x] 2.3 A fake run on a scratch case file with one adversarial pair writes a report with the "Adversarial cases" section and the grouped sections filled in — ce7905b
 
 ### Phase 3: Dataset
 
 #### Automated
 
-- [ ] 3.1 Case set loads and coverage assertions pass: `docker compose run --rm backend uv run pytest tests/test_eval_cases.py`
-- [ ] 3.2 Every case hits on the fake path (labels or `rule_based`): `docker compose run --rm backend uv run pytest tests/test_eval_runner.py`
-- [ ] 3.3 Backend quality gates pass: `docker compose run --rm backend sh check.sh`
+- [x] 3.1 Case set loads and coverage assertions pass: `docker compose run --rm backend uv run pytest tests/test_eval_cases.py` — PHASE3SHA
+- [x] 3.2 Every case hits on the fake path (labels or `rule_based`): `docker compose run --rm backend uv run pytest tests/test_eval_runner.py` — PHASE3SHA
+- [x] 3.3 Backend quality gates pass: `docker compose run --rm backend sh check.sh` — PHASE3SHA
 
 #### Manual
 
-- [ ] 3.4 Spot-check 5 new rationales against the seed tables by hand (variants, chosen option, margin, verdict)
-- [ ] 3.5 Every adversarial email reads like a realistic customer email with an embedded instruction
+- [x] 3.4 Spot-check 5 new rationales against the seed tables by hand (variants, chosen option, margin, verdict) — PHASE3SHA
+- [x] 3.5 Every adversarial email reads like a realistic customer email with an embedded instruction — PHASE3SHA
 
 ### Phase 4: Baseline run and documentation
 

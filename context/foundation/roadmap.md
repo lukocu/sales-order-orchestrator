@@ -195,7 +195,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 1. **Problem nie jest zwalidowany.** Koszt dziś nie jest zmierzony (brak danych o czasie przygotowania oferty i częstotliwości wyjątków); Mom Test zaplanowany, niewykonany. — Owner: autor. Block: none (projekt świadomie hipotetyczny).
 2. **Priorytet zapytań przy większej skali.** Notatka skali: przy dużej liczbie wyjątków kolejność ich obsługi staje się częścią reguły. Poza zakresem MVP (skala: kilka osób) — czy zapisać to jako kierunek v2? — Owner: autor. Block: none.
-3. **Typy wyjątków w MVP.** Notatki opisują scenariusz braku pełnej ilości oraz scenariusz odrzucenia przez politykę; nie określają, czy pozostałe typy (konflikt cena–termin, nietypowy rabat, niejasne wymagania) są obsługiwane w MVP. — Owner: autor. Block: none dla M-2 (zmienia zakres przepływu, nie jego prezentację).
+3. ~~**Typy wyjątków w MVP.**~~ **Rozwiązane (2026-11-20, zmiana `testing-eval-dataset-expansion`):** w MVP wyjątkiem jest tylko brak pełnej ilości w magazynie. Konflikt cena–termin, nietypowy rabat i niejasne wymagania bez niedoboru są pokazywane w sprawdzeniach, a polityka ocenia je tylko w przepływie wyjątku; zbiór ewaluacyjny etykietuje je tak samo (wynik `standard` lub `needs_input`).
 4. **Rozwiązane (F-03, 2026-11-16):** zapisane w [`tech-stack.md` → Frontend](tech-stack.md#frontend). **Decyzje frontendowe poza `tech-stack.md`.** Wybór bibliotek (Tailwind v4, shadcn/ui, lucide, react-i18next, TanStack Router, sonner), brak SSR i jeden obraz Docker zostały ustalone w rozmowie 2026-11-16, ale nie są zapisane w `tech-stack.md`. — Owner: autor. Block: none (zapisać najpóźniej w planie F-03).
 
 ## Parked
