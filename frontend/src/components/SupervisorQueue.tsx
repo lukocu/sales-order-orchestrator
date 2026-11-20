@@ -73,7 +73,7 @@ function SupervisorQueue() {
                 className="grid gap-2 rounded-lg border bg-card p-4 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span className="flex flex-wrap items-start justify-between gap-2">
-                  <span className="font-semibold wrap-anywhere">{item.sender_name}</span>
+                  <span className="font-semibold wrap-anywhere">{item.customer ?? item.sender_name}</span>
                   <span className="text-sm text-muted-foreground">
                     {t('supervisor.queue.waiting', { age: waitAge(item.submitted_at, t) })}
                   </span>

@@ -256,7 +256,8 @@ describe('AnalysisPanel', () => {
     renderPanel(vi.fn(), vi.fn(), { user, awaitingSupervisor: true })
 
     expect(await screen.findByText(/waiting for a supervisor decision/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeDisabled()
+    // Reloading the case is a read, so it stays available while the case is locked.
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled()
     if (user.role === 'supervisor') {
       expect(screen.getByRole('link', { name: 'Open supervisor review' })).toHaveAttribute(
         'href',

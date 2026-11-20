@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ApiError, UnauthorizedError } from '../api/client'
@@ -40,6 +40,7 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
   const [refreshError, setRefreshError] = useState<ErrorDescriptor | null>(null)
   const [inspectorError, setInspectorError] = useState<ErrorDescriptor | null>(null)
   const [requiresReview, setRequiresReview] = useState(false)
+  const [decided, setDecided] = useState(false)
   const [inspectorResult, setInspectorResult] = useState<{
     inquiryId: number
     analysis: Analysis | null
@@ -89,10 +90,43 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
     return () => { active = false; controller.abort() }
   }, [inquiryId, inspectorOpen, inspectorAttempt, onUnauthorized])
 
-  const focusResult = visibleState.kind === 'ready' && visibleState.data.review_state === 'not_awaiting'
+  // Focus the result only after a decision made in this view, not on a plain visit to a decided case.
+  useLayoutEffect(() => {
+    if (decided) resultHeading.current?.focus()
+  }, [decided])
+
+  // Coming back to the tab re-reads the review, so a decision is never sent on a stale token.
+  const currentToken = visibleState.kind === 'ready' ? visibleState.data.draft_updated_at : null
+  const tokenRef = useRef<string | null>(null)
   useEffect(() => {
-    if (focusResult) resultHeading.current?.focus()
-  }, [focusResult])
+    tokenRef.current = currentToken
+  }, [currentToken])
+  useEffect(() => {
+    let controller: AbortController | null = null
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      controller?.abort()
+      const own = new AbortController()
+      controller = own
+      fetchSupervisorReview(inquiryId, own.signal).then(
+        (latest) => {
+          if (own.signal.aborted) return
+          if (tokenRef.current !== null && latest.draft_updated_at !== tokenRef.current) setRequiresReview(true)
+          setAction((current) => (current !== null && latest.allowed_actions.includes(current) ? current : null))
+          setState((current) => (current.key === loadKey && current.kind === 'ready' ? { key: loadKey, kind: 'ready', data: latest } : current))
+        },
+        (error: unknown) => {
+          if (own.signal.aborted) return
+          if (error instanceof UnauthorizedError) onUnauthorized()
+        },
+      )
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      controller?.abort()
+    }
+  }, [inquiryId, loadKey, onUnauthorized])
 
   async function submitDecision() {
     if (visibleState.kind !== 'ready' || action === null || visibleState.data.draft_updated_at === null || !visibleState.data.allowed_actions.includes(action)) return
@@ -108,6 +142,7 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
       const status: ReplyDraftStatus | null = updated.draft?.status ?? (action === 'approve' ? 'ready_to_send' : 'rejected')
       remove(inquiryId)
       setAction(null)
+      setDecided(true)
       setState((current) => current.kind !== 'ready' ? current : {
         key: loadKey,
         kind: 'ready',
@@ -188,11 +223,10 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
             {review.submitted_at && <p className="text-sm text-muted-foreground">{t('supervisor.review.submitted', { date: formatDate(review.submitted_at) })}</p>}
           </header>
 
-          {!awaiting && (
-            <p role="status" className="rounded-md border bg-muted p-3">
-              {t('supervisor.review.result', { status: review.draft_status ? t(`draft.status.${review.draft_status}`) : t('supervisor.state.not_awaiting') })}
-            </p>
-          )}
+          {/* Always mounted, so the result set after a decision is announced. */}
+          <p role="status" className={awaiting ? 'sr-only' : 'rounded-md border bg-muted p-3'}>
+            {awaiting ? '' : t('supervisor.review.result', { status: review.draft_status ? t(`draft.status.${review.draft_status}`) : t('supervisor.state.not_awaiting') })}
+          </p>
           {awaiting && review.review_state !== 'actionable' && (
             <p className="rounded-md border border-warning bg-warning/10 p-3">{t(`supervisor.state.${review.review_state}`)}</p>
           )}
@@ -261,9 +295,6 @@ function SupervisorReview({ inquiryId, inspectorOpen = false }: Props) {
               </ul>}
               {review.offer_body && <details><summary className="cursor-pointer">{t('supervisor.review.email')}</summary><div className="grid gap-2 pt-2"><p className="font-medium">{review.offer_subject}</p><p className="whitespace-pre-wrap">{review.offer_body}</p></div></details>}
               <details><summary className="cursor-pointer">{t('supervisor.review.originalEmail')}</summary><p className="whitespace-pre-wrap pt-2">{review.body}</p></details>
-              {review.context.checks !== null && review.context.checks !== undefined && (
-                <pre className="overflow-x-auto whitespace-pre-wrap text-xs">{JSON.stringify(review.context.checks, null, 2)}</pre>
-              )}
               {review.decisions.length > 0 && <DecisionHistory inquiryId={inquiryId} decisions={review.decisions} />}
             </div>
           </details>

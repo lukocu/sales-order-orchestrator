@@ -412,7 +412,8 @@ def _reject_pending(
         policy = _policy_in_force(session, analysis, row, result)
         if policy is None:
             raise DraftStale
-    except DraftStale, ValidationError:
+    except DraftStale, ValidationError, KeyError, TypeError, AttributeError, ValueError:
+        # Unreadable stored data must never keep a pending submission from being returned.
         submission = session.exec(
             select(InquiryDraftDecision)
             .where(
