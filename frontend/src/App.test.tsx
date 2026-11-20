@@ -501,7 +501,7 @@ describe('App', () => {
       signIn('sales', 'demo')
 
       expect(await screen.findByRole('tab', { name: /Inquiry/, selected: true })).toBeInTheDocument()
-      expect(await screen.findByText(/no longer available/)).toBeInTheDocument()
+      expect(await screen.findByText(/can’t be opened/)).toBeInTheDocument()
       await waitFor(() => expect(router.state.location.search).toEqual({ step: 'inquiry' }))
       expect(router.state.location.pathname).toBe('/inquiries/1')
     })

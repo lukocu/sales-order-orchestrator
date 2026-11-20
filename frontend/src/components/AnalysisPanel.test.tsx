@@ -1633,7 +1633,7 @@ describe('AnalysisPanel step in the address (routed)', () => {
   // The panel's status line (the inbox has its own).
   async function fallbackMessage(step: string) {
     const message = await screen.findByText(
-      `This step is no longer available. Showing ${step} instead.`,
+      `The step in this link can’t be opened. Showing ${step} instead.`,
     )
     expect(message.closest('[role="status"]')).not.toBeNull()
     return message
@@ -1646,7 +1646,7 @@ describe('AnalysisPanel step in the address (routed)', () => {
 
     expect(await screen.findByRole('tab', { name: /Variants/, selected: true })).toBeInTheDocument()
     expect(router.state.location.search).toEqual({ step: 'variants' })
-    expect(screen.queryByText(/no longer available/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/can’t be opened/)).not.toBeInTheDocument()
   })
 
   it('records a step opened by hand in history and keeps the edits and the analysis', async () => {
@@ -1671,6 +1671,14 @@ describe('AnalysisPanel step in the address (routed)', () => {
     expect(analysisReads(fetchMock)).toHaveLength(1)
   })
 
+  it('fills in the step for an address with a trailing slash', async () => {
+    stubApp(() => json(200, analysis(READY)))
+
+    const router = await renderWithRouter('/inquiries/7/')
+
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'reply' }))
+  })
+
   it('fills in the current step for a link without one, replacing the entry', async () => {
     stubApp(() => json(200, analysis(READY)))
 
@@ -1680,7 +1688,7 @@ describe('AnalysisPanel step in the address (routed)', () => {
     expect(await screen.findByRole('tab', { name: /Reply/, selected: true })).toBeInTheDocument()
     await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'reply' }))
     expect(router.history.length).toBe(entries)
-    expect(screen.queryByText(/no longer available/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/can’t be opened/)).not.toBeInTheDocument()
   })
 
   it.each<[string, string, Partial<Analysis> | null, string, string]>([
@@ -1764,7 +1772,7 @@ describe('AnalysisPanel step in the address (routed)', () => {
     await vi.waitFor(() => expect(seen).toEqual(['?step=reply', '?step=inquiry']))
     await vi.waitFor(() => expect(router.state.location.search).toEqual({ step: 'inquiry' }))
     expect(screen.getByRole('tab', { name: /Inquiry/, selected: true })).toBeInTheDocument()
-    expect(screen.queryByText(/no longer available/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/can’t be opened/)).not.toBeInTheDocument()
   })
 })
 

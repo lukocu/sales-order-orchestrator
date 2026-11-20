@@ -406,7 +406,8 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
     // The user may already be leaving (a click elsewhere while this panel is still mounted);
     // the history holds the address they are heading for.
     const base = `/inquiries/${inquiryId}`
-    if (router.history.location.pathname !== (inspectorOpen ? `${base}/run` : base)) return
+    const heading = router.history.location.pathname.replace(/\/+$/, '')
+    if (heading !== (inspectorOpen ? `${base}/run` : base)) return
     void navigate({
       to: inspectorOpen ? '/inquiries/$inquiryId/run' : '/inquiries/$inquiryId',
       params: { inquiryId: String(inquiryId) },
