@@ -416,9 +416,9 @@ None. `cases.json` is not stored in the database, and the new `EvalCase` fields 
 
 #### Automated
 
-- [x] 4.1 Baseline report files exist in `backend/eval_reports/` with ~30 cases and no setup errors — PHASE4SHA
+- [x] 4.1 Baseline report files exist in `backend/eval_reports/` with ~30 cases and no setup errors — d8f5782
 
 #### Manual
 
-- [x] 4.2 Real eval run completes with an OpenRouter key and the report's grouped and adversarial sections are readable — PHASE4SHA
-- [x] 4.3 test-plan §6.6 notes name the weakest categories from the baseline — PHASE4SHA
+- [x] 4.2 Real eval run completes with an OpenRouter key and the report's grouped and adversarial sections are readable — d8f5782
+- [x] 4.3 test-plan §6.6 notes name the weakest categories from the baseline — d8f5782
