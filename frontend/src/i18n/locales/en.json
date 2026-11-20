@@ -36,7 +36,14 @@
     "fetchDuplicates": "{{count}} already in inbox",
     "fetchSkipped": "{{count}} skipped",
     "fetchInProgress": "A fetch is already in progress",
-    "mailboxUnavailable": "Mailbox unavailable, try again"
+    "mailboxUnavailable": "Mailbox unavailable, try again",
+    "filterLabel": "Filter inquiries",
+    "filterPlaceholder": "Filter by sender or subject…",
+    "emptyFilter": "No inquiries match the filter.",
+    "columnSender": "Sender",
+    "columnSubject": "Subject",
+    "columnStatus": "Status",
+    "columnDate": "Received"
   },
   "nav": {
     "label": "Main navigation",
@@ -152,6 +159,12 @@
   },
   "system": {
     "title": "System"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "language": {
     "label": "Language",

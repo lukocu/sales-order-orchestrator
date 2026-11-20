@@ -13,8 +13,9 @@ import { fetchMail, type FetchResult } from '../api/mailbox'
 import { describeError, type ErrorDescriptor } from '../api/errorMessages'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { Inbox as InboxIcon, RefreshCw, Search } from 'lucide-react'
 import { useSession } from '../session'
 import AnalysisPanel from './AnalysisPanel'
 import { errorMessage, formatDate } from './format'
@@ -73,6 +74,7 @@ function Inbox({ selectedId = null }: Props) {
   const [listAttempt, setListAttempt] = useState(0)
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [awaitingOnly, setAwaitingOnly] = useState(false)
+  const [query, setQuery] = useState('')
   const [fetching, setFetching] = useState(false)
   const [fetchStatus, setFetchStatus] = useState<FetchStatus | null>(null)
 
@@ -190,25 +192,63 @@ function Inbox({ selectedId = null }: Props) {
     list.kind === 'ok'
       ? list.inquiries.filter((inquiry) => inquiry.draft_status === 'awaiting_supervisor')
       : []
-  const shown = list.kind !== 'ok' ? [] : awaitingOnly ? awaiting : list.inquiries
+  const filtered = list.kind !== 'ok' ? [] : awaitingOnly ? awaiting : list.inquiries
+  // The text filter matches the sender and the subject, ignoring case.
+  const needle = query.trim().toLocaleLowerCase()
+  const shown =
+    needle === ''
+      ? filtered
+      : filtered.filter((inquiry) =>
+          `${inquiry.sender_name}\n${inquiry.subject}`.toLocaleLowerCase().includes(needle),
+        )
 
   return (
-    <div className="grid items-start gap-4 md:grid-cols-5">
-      <Card
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <section
         role="region"
         aria-labelledby="inbox-heading"
-        className="min-w-0 gap-0 rounded-lg py-5 shadow-none md:col-span-2"
+        className="@container min-w-0 overflow-hidden rounded-lg border bg-card"
       >
-        <CardContent className="grid gap-3">
+        <div className="grid gap-3 border-b px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <h2 id="inbox-heading" className="text-lg font-semibold">
+            <h2 id="inbox-heading" className="text-base font-semibold tracking-tight">
               {t('inbox.heading')}
             </h2>
-            <Button type="button" onClick={handleFetchMail} disabled={fetching}>
-              {fetching ? t('inbox.fetching') : t('inbox.fetchMail')}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {list.kind === 'ok' && list.inquiries.length > 0 && (
+                <Button
+                  type="button"
+                  variant={awaitingOnly ? 'default' : 'outline'}
+                  size="sm"
+                  aria-pressed={awaitingOnly}
+                  onClick={() => setAwaitingOnly((on) => !on)}
+                >
+                  {t('inbox.awaitingOnly', { count: awaiting.length })}
+                </Button>
+              )}
+              <Button type="button" size="sm" onClick={handleFetchMail} disabled={fetching}>
+                <RefreshCw aria-hidden="true" className={cn(fetching && 'animate-spin')} />
+                {fetching ? t('inbox.fetching') : t('inbox.fetchMail')}
+              </Button>
+            </div>
           </div>
-          <div className="empty:hidden" aria-live="polite">
+          {list.kind === 'ok' && list.inquiries.length > 0 && (
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label={t('inbox.filterLabel')}
+                placeholder={t('inbox.filterPlaceholder')}
+                className="h-8 ps-8"
+              />
+            </div>
+          )}
+          <div className="text-sm empty:hidden" aria-live="polite">
             {fetchStatus !== null && (
               <p
                 className={
@@ -221,37 +261,39 @@ function Inbox({ selectedId = null }: Props) {
               </p>
             )}
           </div>
-          {list.kind === 'loading' && (
-            <p className="text-muted-foreground">{t('inbox.loading')}</p>
-          )}
-          {list.kind === 'error' && (
-            <div role="alert" className="grid justify-items-start gap-2">
-              <p className="text-destructive">{errorMessage(list.error, t)}</p>
-              <Button type="button" variant="outline" onClick={retryList}>
-                {t('inbox.retry')}
-              </Button>
-            </div>
-          )}
-          {list.kind === 'ok' && list.inquiries.length > 0 && (
-            <Button
-              type="button"
-              variant={awaitingOnly ? 'default' : 'outline'}
-              size="sm"
-              className="justify-self-start"
-              aria-pressed={awaitingOnly}
-              onClick={() => setAwaitingOnly((on) => !on)}
-            >
-              {t('inbox.awaitingOnly', { count: awaiting.length })}
+        </div>
+        {list.kind === 'loading' && (
+          <p className="px-4 py-6 text-sm text-muted-foreground">{t('inbox.loading')}</p>
+        )}
+        {list.kind === 'error' && (
+          <div role="alert" className="grid justify-items-start gap-2 px-4 py-6">
+            <p className="text-destructive">{errorMessage(list.error, t)}</p>
+            <Button type="button" variant="outline" onClick={retryList}>
+              {t('inbox.retry')}
             </Button>
-          )}
-          {list.kind === 'ok' && list.inquiries.length === 0 && (
-            <p className="text-muted-foreground">{t('inbox.empty')}</p>
-          )}
-          {list.kind === 'ok' && list.inquiries.length > 0 && shown.length === 0 && (
-            <p className="text-muted-foreground">{t('inbox.emptyAwaiting')}</p>
-          )}
-          {shown.length > 0 && (
-            <ul className="grid gap-2">
+          </div>
+        )}
+        {list.kind === 'ok' && list.inquiries.length === 0 && (
+          <p className="px-4 py-6 text-sm text-muted-foreground">{t('inbox.empty')}</p>
+        )}
+        {list.kind === 'ok' && list.inquiries.length > 0 && shown.length === 0 && (
+          <p className="px-4 py-6 text-sm text-muted-foreground">
+            {needle === '' ? t('inbox.emptyAwaiting') : t('inbox.emptyFilter')}
+          </p>
+        )}
+        {shown.length > 0 && (
+          <>
+            {/* Column titles for the wide list only; each row names its own fields. */}
+            <div
+              aria-hidden="true"
+              className="hidden border-b bg-muted px-4 py-2 text-xs font-medium text-muted-foreground @xl:grid @xl:grid-cols-12 @xl:gap-4"
+            >
+              <span className="col-span-3">{t('inbox.columnSender')}</span>
+              <span className="col-span-4">{t('inbox.columnSubject')}</span>
+              <span className="col-span-3">{t('inbox.columnStatus')}</span>
+              <span className="col-span-2 text-end">{t('inbox.columnDate')}</span>
+            </div>
+            <ul className="divide-y">
               {shown.map((inquiry) => {
                 const selected = inquiry.id === selectedId
                 return (
@@ -263,46 +305,63 @@ function Inbox({ selectedId = null }: Props) {
                       params={{ inquiryId: String(inquiry.id) }}
                       activeProps={{}}
                       className={cn(
-                        'grid w-full gap-0.5 rounded-md border bg-card px-4 py-2 text-left transition-colors hover:bg-muted',
-                        selected && 'border-primary bg-muted',
+                        'relative grid w-full gap-1 px-4 py-3 text-start text-sm transition-colors hover:bg-muted @xl:grid-cols-12 @xl:items-center @xl:gap-4',
+                        selected && 'bg-muted',
                       )}
                     >
-                      <span className="font-semibold wrap-anywhere">{inquiry.sender_name}</span>
-                      <span className="wrap-anywhere" data-field="subject">
+                      {selected && (
+                        <span aria-hidden="true" className="absolute inset-y-0 start-0 w-0.5 bg-primary" />
+                      )}
+                      <span className="min-w-0 font-medium wrap-anywhere @xl:col-span-3 @xl:truncate">
+                        {inquiry.sender_name}
+                      </span>
+                      <span
+                        className={cn(
+                          'min-w-0 wrap-anywhere @xl:col-span-4 @xl:truncate',
+                          selected ? 'text-foreground' : 'text-muted-foreground',
+                        )}
+                        data-field="subject"
+                      >
                         {inquiry.subject}
                       </span>
-                      <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                        <time
-                          className="text-sm text-muted-foreground"
-                          dateTime={inquiry.received_at}
-                        >
-                          {formatDate(inquiry.received_at)}
-                        </time>
-                        <span className="flex flex-wrap gap-1">
-                          {inquiry.source === 'mailbox' && (
-                            <Badge variant="outline" className="text-muted-foreground">
-                              {t('inbox.badgeMailbox')}
-                            </Badge>
-                          )}
-                          <StatusBadge facts={inquiry} />
-                        </span>
+                      <span className="flex flex-wrap items-center gap-1 @xl:col-span-3">
+                        <StatusBadge facts={inquiry} />
+                        {inquiry.source === 'mailbox' && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            {t('inbox.badgeMailbox')}
+                          </Badge>
+                        )}
                       </span>
+                      <time
+                        className="font-mono text-xs text-muted-foreground tabular-nums @xl:col-span-2 @xl:text-end"
+                        dateTime={inquiry.received_at}
+                      >
+                        {formatDate(inquiry.received_at)}
+                      </time>
                     </Link>
                   </li>
                 )
               })}
             </ul>
-          )}
-        </CardContent>
-      </Card>
+          </>
+        )}
+      </section>
 
-      <section className="card md:col-span-3" aria-label={t('inbox.detailLabel')}>
-        {selectedId === null && <p className="muted">{t('inbox.selectPrompt')}</p>}
+      <section
+        className="grid min-w-0 content-start rounded-lg border bg-card px-4 py-5 md:px-6"
+        aria-label={t('inbox.detailLabel')}
+      >
+        {selectedId === null && (
+          <div className="grid justify-items-center gap-3 py-16 text-center">
+            <InboxIcon aria-hidden="true" className="size-10 text-muted-foreground opacity-40" />
+            <p className="text-sm text-muted-foreground">{t('inbox.selectPrompt')}</p>
+          </div>
+        )}
         {selectedId !== null && currentDetail === null && (
-          <p className="muted">{t('inbox.loadingDetail')}</p>
+          <p className="text-sm text-muted-foreground">{t('inbox.loadingDetail')}</p>
         )}
         {currentDetail?.kind === 'error' && (
-          <p className="error" role="alert">
+          <p className="text-destructive" role="alert">
             {errorMessage(currentDetail.error, t)}
           </p>
         )}

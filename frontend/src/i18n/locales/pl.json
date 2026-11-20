@@ -36,7 +36,14 @@
     "fetchDuplicates": "już w skrzynce: {{count}}",
     "fetchSkipped": "pominięte: {{count}}",
     "fetchInProgress": "Pobieranie poczty już trwa",
-    "mailboxUnavailable": "Skrzynka pocztowa niedostępna, spróbuj ponownie"
+    "mailboxUnavailable": "Skrzynka pocztowa niedostępna, spróbuj ponownie",
+    "filterLabel": "Filtruj zapytania",
+    "filterPlaceholder": "Filtruj po nadawcy lub temacie…",
+    "emptyFilter": "Żadne zapytanie nie pasuje do filtra.",
+    "columnSender": "Nadawca",
+    "columnSubject": "Temat",
+    "columnStatus": "Status",
+    "columnDate": "Otrzymano"
   },
   "nav": {
     "label": "Nawigacja główna",
@@ -152,6 +159,12 @@
   },
   "system": {
     "title": "System"
+  },
+  "theme": {
+    "label": "Motyw",
+    "light": "Jasny",
+    "dark": "Ciemny",
+    "system": "Systemowy"
   },
   "language": {
     "label": "Język",

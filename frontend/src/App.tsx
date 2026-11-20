@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { fetchMe, logout, UnauthorizedError, type User } from './api/auth'
 import { describeError, type ErrorDescriptor } from './api/errorMessages'
 import { errorMessage } from './components/format'
-import AppNav from './components/AppNav'
+import AppNav, { SectionCrumb } from './components/AppNav'
 import AppShell from './components/AppShell'
 import LoginForm from './components/LoginForm'
 import { SessionContext, type Session } from './session'
@@ -100,6 +100,7 @@ function App() {
       onSignOut={handleSignOut}
       signingOut={signingOut}
       nav={user !== null ? <AppNav /> : undefined}
+      crumb={user !== null ? <SectionCrumb /> : undefined}
     >
       {state.kind === 'loading' && <p className="text-muted-foreground">{t('app.loading')}</p>}
       {state.kind === 'error' && (

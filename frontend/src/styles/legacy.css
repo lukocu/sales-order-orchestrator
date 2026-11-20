@@ -1,7 +1,6 @@
 /* Colour values live in index.css (:root tokens + legacy aliases --text, --muted, --bg, --ok, --warn, --error). */
 :root {
-  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: light dark;
+  font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
 }
@@ -18,19 +17,6 @@ body {
 .error {
   margin: 0;
   color: var(--error);
-}
-
-.card {
-  min-width: 0;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
-}
-
-.card h2 {
-  margin: 0 0 1rem;
-  font-size: 1.125rem;
 }
 
 .detail__subject {

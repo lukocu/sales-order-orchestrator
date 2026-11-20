@@ -7,15 +7,17 @@ import { createMemoryHistory, RouterContextProvider, RouterProvider } from '@tan
 import { useTranslation } from 'react-i18next'
 import './index.css'
 import './i18n'
+import './theme'
 import type { Analysis, ChecksView, OrchestrationView, RunSummary } from './api/analysis'
 import type { SupervisorQueue as SupervisorQueueData, SupervisorReview as SupervisorReviewData } from './api/supervisor'
 import type { User } from './api/auth'
 import type { InquiryDetail, InquirySummary } from './api/inquiries'
-import AppNav from './components/AppNav'
+import AppNav, { SectionCrumb } from './components/AppNav'
 import AnalysisPanel from './components/AnalysisPanel'
 import AppShell from './components/AppShell'
 import Inbox from './components/Inbox'
 import LanguageSwitch from './components/LanguageSwitch'
+import ThemeSwitch from './components/ThemeSwitch'
 import LoginForm from './components/LoginForm'
 import SystemPage from './components/SystemPage'
 import SupervisorQueue from './components/SupervisorQueue'
@@ -746,7 +748,10 @@ function KitchenSink() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
         <p className="font-semibold">Kitchen sink · 7-state matrix</p>
-        <LanguageSwitch />
+        <div className="flex items-center gap-3">
+          <ThemeSwitch />
+          <LanguageSwitch />
+        </div>
       </div>
       {/* Existing descriptors translate on render without remounting or repeating requests. */}
       <main className="mx-auto grid max-w-7xl gap-10 px-4 py-6">
@@ -772,7 +777,7 @@ function KitchenSink() {
           </Cell>
           <Cell label="Header logged in with nav + inbox list (selecting a row opens the inquiry view, not stubbed here)" wide shell>
             <Routed>
-              <AppShell user={SUPERVISOR} onSignOut={() => {}} nav={<AppNav />}>
+              <AppShell user={SUPERVISOR} onSignOut={() => {}} nav={<AppNav />} crumb={<SectionCrumb />}>
                 <Inbox />
               </AppShell>
             </Routed>

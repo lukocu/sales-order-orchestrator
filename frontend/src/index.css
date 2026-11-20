@@ -5,13 +5,19 @@
 */
 @layer theme, base, legacy, components, utilities;
 
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './styles/legacy.css' layer(legacy);
 
+/* `dark:` follows the theme attribute that src/theme.ts sets on <html>, not the media query. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 /*
   Design tokens. Raw colour values live only in these two :root blocks; everything
-  else refers to them with var(). Dark mode follows the OS (prefers-color-scheme).
+  else refers to them with var(). The theme is the `data-theme` attribute on <html>
+  ("light" or "dark"), set by src/theme.ts from the user's choice or, by default, the OS.
   Values and contrast pairs: context/changes/design-system-i18n-foundation/tokens.md.
 
   `--muted` keeps its old meaning (secondary TEXT) because legacy.css reads it that
@@ -36,25 +42,28 @@
   --on-destructive: #fff;
   --input: #818b98;
   --ring: #0969da;
+
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0d1117;
-    --foreground: #e6edf3;
-    --card: #151b23;
-    --muted-foreground: #9198a1;
-    --border: #3d444d;
-    --destructive: #f85149;
-    --success: #3fb950;
-    --warning: #d29922;
+:root[data-theme='dark'] {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card: #151b23;
+  --muted-foreground: #9198a1;
+  --border: #3d444d;
+  --destructive: #f85149;
+  --success: #3fb950;
+  --warning: #d29922;
 
-    --primary: #4493f8;
-    --primary-foreground: #0d1117;
-    --on-destructive: #fff;
-    --input: #6e7681;
-    --ring: #4493f8;
-  }
+  --primary: #4493f8;
+  --primary-foreground: #0d1117;
+  --on-destructive: #fff;
+  --input: #6e7681;
+  --ring: #4493f8;
+
+  /* Scrollbars and native controls follow the chosen theme. */
+  color-scheme: dark;
 }
 
 /* Derived roles: references only, so they follow the theme automatically. */
@@ -82,6 +91,9 @@
 }
 
 @theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -125,5 +137,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
