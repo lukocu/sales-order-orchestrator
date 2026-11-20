@@ -75,9 +75,9 @@ orchestrator updates Status as artifacts appear on disk.
 
 | #   | Phase name                       | Goal (one line)                                                                                                     | Risks covered  | Test types                                  | Status      | Change folder |
 | --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------- | ----------- | ------------- |
-| 1   | Eval dataset expansion           | Zbiór przypadków pokazuje, które typy wyjątków orkiestrator myli; etykiety wynikają z reguł, nie z wyniku systemu  | #1, #3, #6     | labelled eval cases (incl. adversarial)     | implemented | context/changes/testing-eval-dataset-expansion/ |
-| 2   | Parser field eval                | Jakość odczytu każdego pola jest mierzona osobno i taniej niż pełny przepływ                                        | #4             | field-level eval                            | not started | —             |
-| 3   | Eval regression gate             | Zmiana w orkiestracji nie trafia na main bez porównania per przypadek z linią bazową (regresje, niestabilność, koszt) | #2, #5, #7     | baseline comparison + gate                  | implemented | context/changes/testing-eval-regression-gate/ |
+| 1   | Eval dataset expansion           | Zbiór przypadków pokazuje, które typy wyjątków orkiestrator myli; etykiety wynikają z reguł, nie z wyniku systemu  | #1, #3, #6     | labelled eval cases (incl. adversarial)     | implemented | context/archive/2026-11-20-testing-eval-dataset-expansion/ |
+| 2   | Parser field eval                | Jakość odczytu każdego pola jest mierzona osobno i taniej niż pełny przepływ                                        | #4             | field-level eval                            | implemented | context/changes/testing-parser-field-eval/ |
+| 3   | Eval regression gate             | Zmiana w orkiestracji nie trafia na main bez porównania per przypadek z linią bazową (regresje, niestabilność, koszt) | #2, #5, #7     | baseline comparison + gate                  | implemented | context/archive/2026-11-20-testing-eval-regression-gate/ |
 | 4   | Two critical e2e flows           | Dwa testy E2E: przekazanie wyjątku do przełożonego oraz główna akcja widoczna bez przewijania                       | #8, #9         | e2e (Playwright, deterministic model stub)  | not started | —             |
 
 Faza 2 może iść równolegle z fazą 1. Faza 3 potrzebuje rozszerzonego zbioru z fazy 1. Faza 4 jest niezależna, ale ma najniższy priorytet.
@@ -93,7 +93,8 @@ plus the MCP/tools actually exposed in the current session.
 | ------------------------- | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------- |
 | backend unit + integration | pytest + httpx                                        | ≥ 9.2    | 55 plików testów, PostgreSQL w CI; profil bazy: meaningful                              |
 | frontend unit + component | Vitest + Testing Library                               | 5.x      | 29 plików testów, język przypięty do angielskiego                                       |
-| eval (LLM decisions)      | własny runner ewaluacji w backendzie + OpenRouter      | n/a      | 32 oznaczone przypadki (21 z wyjątkiem, 4 adversarialne), raporty w `backend/eval_reports/`; rozszerzany w fazach 2–3  |
+| eval (LLM decisions)      | własny runner ewaluacji w backendzie + OpenRouter      | n/a      | 32 oznaczone przypadki (21 z wyjątkiem, 4 adversarialne), raporty w `backend/eval_reports/`;   |
+| eval (parser fields)      | własny runner pól w backendzie (`app.eval.fields`) + OpenRouter | n/a | 42 ręcznie oznaczone zapytania, raporty w `backend/eval_reports/fields/`; pomiar bez bramki, lokalnie |
 | e2e                       | none yet — see Phase 4 (Playwright)                    | —        | konfiguracja przez `/10x-e2e-setup`                                                     |
 | visual / accessibility    | none — wykluczone (§7)                                 | —        | —                                                                                       |
 
@@ -155,7 +156,20 @@ Etykieta: `exception · substitute · no_approval_needed`.
 
 ### 6.2 Adding a parser field case
 
-- TBD — see §3 Phase 2 (wzorzec: sformułowanie → oczekiwana wartość pola liczona niezależnie od parsera).
+Przypadek to wpis w `backend/app/eval/fields/cases.json`: jedno krótkie zapytanie po polsku (`subject`, `body`, `received_at`) i poprawny odczyt sześciu pól (`expected`). To pomiar, nie bramka: CI uruchamia tylko testy czystych modułów i atrapy ekstraktora, a nie ocenę modelu (brak sekretów LLM). Eval pól jest osobny od eval decyzji (§6.1): nie dotyka `cases.json` decyzji ani jego bazy.
+
+**Procedura etykietowania**
+
+1. Napisz zapytanie tak, jak napisałby klient, i odczytaj je własnymi oczami, nie uruchamiając parsera. Etykieta wynika z reguł i kalendarza, nigdy z wyniku parsera ani `resolve_deadline` (ten sam kod nie może być wyrocznią samego siebie, ryzyko #4). Loader sprawdza tylko niezależne niezmienniki: dzień tygodnia zgodny z datą (`weekday`), termin nie wcześniejszy niż dzień odbioru (czas warszawski), reguły ceny jak w `ParsedFields`.
+2. Termin: policz datę względem `received_at` (dzień warszawski) i wpisz go razem z `weekday`. W `rationale` pokaż rachunek (np. „poniedziałek 2026-11-02 + 4 dni = piątek 2026-11-06”). Zwrot bez jednej poprawnej daty („jak najszybciej”, „w przyszłym tygodniu”) ma `value: null` i `flagged: true`.
+3. `flagged: true` znaczy: poprawny wynik to wartość, którą parser musi też oznaczyć jako niepewną. Puste `customer`, `product_code`, `quantity` i nieznany `substitute_allowed` (`null`) wymagają `flagged: true`: parser zawsze je oznacza (`app/parsing/analyze.py`). Brak terminu i brak ceny (`price.kind: none`) nie są oznaczane.
+4. Wyniki pola: `hit` (zgodne z etykietą, a jeśli etykieta wymaga flagi, flaga jest), `flagged_miss` (błędne, ale oznaczone jako niepewne; dopuszczalne wg PRD FR-002) oraz `silent_wrong` (błędne i nieoznaczone: błąd z ryzyka #4). Klient pasuje, gdy słowa etykiety (po `normalize_name`) tworzą ciągły fragment wyniku (jak w `match_customer`), więc „ACME” pasuje do „ACME Sp. z o.o.”. Kod produktu porównuje się bez względu na wielkość liter.
+5. Tagi z zamkniętej listy (`FieldTag`): `deadline_supported`, `deadline_unsupported`, `deadline_absent`, `weekend_reference`, `year_rollover`, `substitute_stated`, `substitute_absent`, `price_target`, `price_discount`, `price_best`, `price_absent`, `customer_signature`, `customer_missing`, `quantity_variant`. Dokładność tagu liczy się tylko na polu, którego tag dotyczy.
+6. Czego nie dodawać: przypadków, których poprawny odczyt jest decyzją produktową (np. „10 dni roboczych” kalendarzowo czy roboczo, „za całość” czy za sztukę, „do piątku” odebrane w piątek), angielskich zapytań, HTML i cytowanych odpowiedzi. Parser czyta polski tekst prosty.
+
+**Uruchomienie** (z `backend/`, bez bazy; wymaga dostawcy LLM i klucza): `python -m app.eval.fields --repeats 3`. Raport (`.md` i `.json`) trafia do `eval_reports/fields/`. Czytaj najpierw sekcję **SILENT ERRORS**, potem „unstable” (para pole-przypadek, której wynik zmienia się między powtórzeniami) i nieudane wywołania. Błąd ekstrakcji to osobna kategoria, nigdy trafienie. Test na atrapie: `LLM_PROVIDER=fake python -m app.eval.fields --allow-fake --repeats 1 --out /tmp/fields` (sprawdza potok, nie jakość modelu).
+
+**Kiedy uruchomić.** Po zmianie `backend/app/parsing/openai_compatible.py` (prompt), `backend/app/parsing/{analyze,deadline}.py` albo modelu/dostawcy (`LLM_PROVIDER`, `LLM_MODEL`): uruchom eval pól i obejrzyj błędy ciche. Każdy błąd cichy to albo błędna etykieta (popraw `cases.json`), albo luka parsera (zapisz w §6.6 lub otwórz zmianę).
 
 ### 6.3 Changing a prompt, model or orchestration step
 
@@ -209,6 +223,14 @@ Prompt draftu (`backend/app/draft/llm_drafter.py`) nie wpływa na wynik: w eval 
 - Orkiestrator: 4 uruchomienia `orchestration_failed:failed` (schemat odpowiedzi planera), koszt 0,020 USD vs 0,013 USD workflow; średni czas 17,3 s vs 9,9 s.
 - Uwaga operacyjna: przebieg 32 przypadków × 3 powtórzenia trwa ~1 h, nie 20–25 min z planu, a dwa pierwsze przebiegi zawiesiły się bez wyjścia (przyczyna nieustalona; trzeci przeszedł). Do faz 3: limit czasu na cały przebieg lub na przypadek.
 - Etykiety kontrolowane ręcznie na 5 nowych przypadkach (wariant, wybrana opcja, marża, werdykt).
+
+**Faza 2 — eval pól parsera (2026-11-20).** Linia bazowa: `backend/eval_reports/fields/2026-11-20-openrouter-qwen-qwen3-30b-a3b-instruct-2507.{md,json}` (42 przypadki, 3 powtórzenia, 126 wywołań, 0 nieudanych; ~74 tys. tokenów wejścia i ~12 tys. wyjścia, średnio 3,9 s na wywołanie, cały przebieg ~10 min). To pomiar, nie bramka; model i prompt jak w eval decyzji.
+
+- Trafność pól (hit / oznaczone błędne / ciche błędy): klient, kod produktu, ilość, zamiennik 126/126; termin 117/126 (9 oznaczonych błędnych, 0 cichych); cena 124/126 (2 ciche).
+- Terminy objęte regułami (`deadline_supported`, w tym weekend, przełom roku, luty): 48/48. Zwroty spoza gramatyki (`deadline_unsupported`): 12/21. Pozostałe 9 to model wymyślający datę (np. „w piątek” → 2026-11-05, czyli czwartek; „jak najszybciej” → 2026-11-05; „na święta” → 2026-12-24), zawsze oznaczoną jako „Resolved by model only”, więc dopuszczalną wg FR-002 i bez cichego błędu. Oznacza to, że bezpieczeństwo przy zwrotach, których reguły nie czytają, zależy od tego oznaczenia, nie od jakości odczytu modelu.
+- Niestabilność przy temperaturze 0: 4 pary termin (`dl-na-piatek`, `dl-w-piatek`, `dl-na-swieta`, `dl-jak-najszybciej`) i 1 para cena zmieniają wynik między powtórzeniami, więc ten sam mail może raz dać poprawną datę, a raz błędną z flagą. Dane do przyszłej bramki: jeden przebieg nie wystarcza.
+- Błędy ciche (triage): jedna para, `cena-brak-pytanie-o-cene` (zwykłe „ile kosztuje 24 szt. ABC-100?”), model zwrócił `best_price` w powtórzeniach 1 i 3, bez flagi. Etykieta zostaje (samo pytanie o cenę nie jest prośbą o najlepszą cenę), więc to luka parsera: model nadinterpretuje pytanie o cenę. Bez zmiany parsera w tej zmianie; skutek to zbędna informacja o cenie w analizie, nie zła data ani ilość.
+- Etykiety kontrolowane ręcznie na 10 przypadkach (terminy, rabat, cena docelowa, klient). Ograniczenia: 42 przypadki po jednym sformułowaniu, jeden model, tylko polski tekst prosty. Brak błędów cichych w polach klient, produkt, ilość i zamiennik nie dowodzi poprawności poza tym zbiorem.
 
 ## 7. What We Deliberately Don't Test
 
