@@ -11,7 +11,7 @@ import type { Analysis, ChecksView, OrchestrationView, RunSummary } from './api/
 import type { SupervisorQueue as SupervisorQueueData, SupervisorReview as SupervisorReviewData } from './api/supervisor'
 import type { User } from './api/auth'
 import type { InquiryDetail, InquirySummary } from './api/inquiries'
-import AppNav from './components/AppNav'
+import AppNav, { SectionCrumb } from './components/AppNav'
 import AnalysisPanel from './components/AnalysisPanel'
 import AppShell from './components/AppShell'
 import Inbox from './components/Inbox'
@@ -772,7 +772,7 @@ function KitchenSink() {
           </Cell>
           <Cell label="Header logged in with nav + inbox list (selecting a row opens the inquiry view, not stubbed here)" wide shell>
             <Routed>
-              <AppShell user={SUPERVISOR} onSignOut={() => {}} nav={<AppNav />}>
+              <AppShell user={SUPERVISOR} onSignOut={() => {}} nav={<AppNav />} crumb={<SectionCrumb />}>
                 <Inbox />
               </AppShell>
             </Routed>

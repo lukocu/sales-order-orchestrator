@@ -277,6 +277,28 @@ describe('Inbox', () => {
     expect(statusBadge(acme)).toHaveTextContent('Status: Exception')
   })
 
+  it('filters the list by sender or subject, ignoring case', async () => {
+    stubApi({ 'GET /api/inquiries': () => json(200, [DELTA_SUMMARY, ACME]) })
+
+    await renderInbox(SALES)
+
+    await screen.findByRole('link', { name: /Zamówienie ABC-100/ })
+    const filter = screen.getByRole('searchbox', { name: 'Filter inquiries' })
+
+    fireEvent.change(filter, { target: { value: 'zapytanie OFERTOWE' } })
+    expect(listedSubjects()).toEqual([ACME.subject])
+
+    fireEvent.change(filter, { target: { value: DELTA_SUMMARY.sender_name.toUpperCase() } })
+    expect(listedSubjects()).toContain(DELTA_SUMMARY.subject)
+
+    fireEvent.change(filter, { target: { value: 'no such inquiry' } })
+    expect(listedSubjects()).toEqual([])
+    expect(screen.getByText('No inquiries match the filter.')).toBeInTheDocument()
+
+    fireEvent.change(filter, { target: { value: '' } })
+    expect(listedSubjects()).toHaveLength(2)
+  })
+
   it('shows the same status in the header of the open inquiry as in its row', async () => {
     stubApi({
       'GET /api/inquiries': () => json(200, SUMMARIES),
