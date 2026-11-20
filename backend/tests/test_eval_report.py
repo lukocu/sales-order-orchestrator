@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.eval.cases import ExpectedDecision
 from app.eval.report import NO_VALUE, slug, write_report
-from app.eval.runner import EvalRun
+from app.eval.runner import EvalRun, ParseCheck
 from app.eval.scoring import ArmName, ArmRun, Observation, Score
 from app.policy.schema import PolicyOutcome
 from app.recommendation.schema import OptionKind
@@ -80,6 +80,7 @@ def _eval_run(model: str | None = "openai/gpt-oss-120b") -> EvalRun:
         finished_at=STARTED.replace(minute=45),
         provider="groq",
         model=model,
+        extractor="fake",
         repeats=2,
         planners={"workflow": "rule-based", "orchestrator": "groq"},
         recommender="groq",
@@ -133,6 +134,7 @@ def test_markdown_has_every_section_and_the_numbers(tmp_path: Path) -> None:
         "## Cases",
         "## By expected decision",
         "## By tag",
+        "## Adversarial cases",
         "## Unstable cases",
         "## Failures",
         "## Setup errors",
@@ -140,6 +142,7 @@ def test_markdown_has_every_section_and_the_numbers(tmp_path: Path) -> None:
     ):
         assert heading in markdown
     assert "- Model: `openai/gpt-oss-120b`" in markdown
+    assert "- Extractor: `fake`" in markdown
     assert "- Case set sha256: `abc123`" in markdown
     assert "- Repeats: 2" in markdown
 
@@ -228,6 +231,96 @@ def test_grouped_sections_count_full_hits_per_arm(tmp_path: Path) -> None:
         "rate": 2 / 3,
     }
     assert {group["group"] for group in data["by_decision"]} >= {"exception", "standard"}
+
+
+def _adversarial_run() -> EvalRun:
+    """The base run plus an adversarial case with a divergent parse and one that failed."""
+    base = _eval_run()
+    parsed, unparsed = f"{EXCEPTION_CASE}-dropped", f"{EXCEPTION_CASE}-unparsed"
+    expected = base.expected[EXCEPTION_CASE]
+
+    def observation(failure: str | None, *, decided: bool) -> Observation:
+        return Observation(
+            checks_outcome="exception" if decided else None,
+            option_kind="substitute" if decided else None,
+            policy_outcome="requires_supervisor" if decided else None,
+            band=None,
+            failure=failure,
+            cost_usd=Decimal(0),
+            cost_complete=decided,
+            duration_ms=0,
+            input_tokens=0,
+            output_tokens=0,
+        )
+
+    miss = Score(checks_hit=False, option_hit=False, policy_hit=False, full_hit=False)
+    runs = [
+        ArmRun(
+            case_id=case_id,
+            arm=arm,
+            repeat=1,
+            observation=observation(failure, decided=decided),
+            score=Score(checks_hit=decided, option_hit=decided, policy_hit=False, full_hit=False)
+            if decided
+            else miss,
+        )
+        for case_id, failure, decided in (
+            (parsed, None, True),
+            (unparsed, "parse_failed:ExtractionFailed", False),
+        )
+        for arm in ("workflow", "orchestrator")
+    ]
+    return base.model_copy(
+        update={
+            "cases": [*base.cases, parsed, unparsed],
+            "expected": {**base.expected, parsed: expected, unparsed: expected},
+            "tags": {**base.tags, parsed: ["adversarial"], unparsed: ["adversarial"]},
+            "adversarial_of": {parsed: EXCEPTION_CASE, unparsed: EXCEPTION_CASE},
+            "parse_checks": {parsed: ParseCheck(differing=["price_kind", "price_value"])},
+            "not_orchestrated": [*base.not_orchestrated, unparsed],
+            "runs": [*base.runs, *runs],
+        }
+    )
+
+
+def test_adversarial_section_lists_twin_parse_check_and_decision_per_arm(
+    tmp_path: Path,
+) -> None:
+    md_path, json_path = write_report(_adversarial_run(), tmp_path)
+    markdown = md_path.read_text(encoding="utf-8")
+
+    section = markdown.split("## Adversarial cases")[1].split("## Unstable cases")[0]
+    assert _row(section, f"| {EXCEPTION_CASE}-dropped |") == [
+        f"{EXCEPTION_CASE}-dropped",
+        EXCEPTION_CASE,
+        "price_kind, price_value",
+        "exception · substitute · requires_supervisor (1/1)",
+        "exception · substitute · requires_supervisor (1/1)",
+    ]
+    assert _row(section, f"| {EXCEPTION_CASE}-unparsed |") == [
+        f"{EXCEPTION_CASE}-unparsed",
+        EXCEPTION_CASE,
+        "parse failed",
+        "no checks (1/1), `parse_failed:ExtractionFailed`",
+        "no checks (1/1), `parse_failed:ExtractionFailed`",
+    ]
+    assert "| workflow | `parse_failed:ExtractionFailed` | 1 |" in markdown
+    assert "once per case" in markdown
+
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    assert data["run"]["extractor"] == "fake"
+    assert data["run"]["parse_checks"][f"{EXCEPTION_CASE}-dropped"] == {
+        "differing": ["price_kind", "price_value"]
+    }
+    assert EvalRun.model_validate(data["run"]) == _adversarial_run()
+
+
+def test_adversarial_section_is_empty_without_adversarial_cases(tmp_path: Path) -> None:
+    md_path, _ = write_report(_eval_run(), tmp_path)
+    markdown = md_path.read_text(encoding="utf-8")
+
+    section = markdown.split("## Adversarial cases")[1].split("## Unstable cases")[0]
+    assert "None." in section
 
 
 def test_json_holds_every_run_and_the_summaries(tmp_path: Path) -> None:

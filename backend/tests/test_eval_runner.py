@@ -1,7 +1,7 @@
 """The eval runner on the database with fakes: label agreement, failures, cleanup, the CLI."""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -27,12 +27,15 @@ from app.eval.scoring import score_against
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import PlannerRateLimited, PlanningResult, RuleBasedPlanner
 from app.orchestration.schema import PlanFacts
+from app.parsing.extractor import ExtractionFailed, ExtractionResult, InquiryExtractor
+from app.parsing.fake import RuleBasedExtractor
 from app.recommendation.recommender import FakeRecommender
 from app.settings import get_settings
 from app.tracing.demo import PRICED_USAGE
 from app.tracing.models import StepKind, TraceRun
 
 EXCEPTION_CASE = "acme-abc100-substitute"
+DISCOUNT_CASE = "acme-xyz300-discount"
 
 
 class RateLimitedPlanner:
@@ -51,6 +54,29 @@ class BrokenPlanner:
 
     def plan(self, facts: PlanFacts) -> PlanningResult:
         raise RuntimeError("unexpected")
+
+
+class StubExtractor:
+    """The rule-based parse with some extraction fields replaced."""
+
+    name = "fake"  # inquiry_analyses.extractor only accepts fake/groq/openrouter
+    step_kind: StepKind = "deterministic"
+
+    def __init__(self, **update: object) -> None:
+        self.update = update
+
+    def extract(self, subject: str, body: str, reference_date: date) -> ExtractionResult:
+        parsed = RuleBasedExtractor().extract(subject, body, reference_date)
+        extraction = parsed.extraction.model_copy(update=self.update)
+        return ExtractionResult(extraction=extraction, usage=None)
+
+
+class RaisingExtractor:
+    name = "raising"
+    step_kind: StepKind = "llm"
+
+    def extract(self, subject: str, body: str, reference_date: date) -> ExtractionResult:
+        raise ExtractionFailed("provider timed out")
 
 
 @pytest.fixture
@@ -86,6 +112,7 @@ def _run(
     user: AuthUser,
     *,
     orchestrator: Arm | None = None,
+    extractor: InquiryExtractor | None = None,
 ) -> EvalRun:
     return run_eval(
         engine,
@@ -95,12 +122,25 @@ def _run(
             orchestrator or Arm(name="orchestrator", planner=RuleBasedPlanner()),
         ],
         FakeRecommender(),
+        extractor=extractor or RuleBasedExtractor(),
         repeats=1,
         pause_seconds=0,
         user=user,
         provider="fake",
         model=None,
         cases_version=cases_sha256(CASES_PATH),
+    )
+
+
+def _adversarial(case_id: str) -> EvalCase:
+    """An adversarial copy of a case: same fields and label, the e-mail parsed instead."""
+    (twin,) = _cases(case_id)
+    return twin.model_copy(
+        update={
+            "id": f"{case_id}-adversarial",
+            "tags": ["adversarial"],
+            "adversarial_of": case_id,
+        }
     )
 
 
@@ -130,7 +170,7 @@ def test_full_set_matches_the_labels_and_leaves_no_rows(
 ) -> None:
     cases = _cases()
 
-    result = _run(migrated_engine, cases, sales_user)
+    result = _run(migrated_engine, cases, sales_user, extractor=RuleBasedExtractor())
 
     assert result.setup_errors == []
     assert result.cases == [case.id for case in cases]
@@ -149,7 +189,100 @@ def test_full_set_matches_the_labels_and_leaves_no_rows(
     )
     assert result.planners == {"workflow": "fake", "orchestrator": "fake"}
     assert result.recommender == "rule-based"
+    assert result.extractor == "fake"
     assert len(created) == len(cases)
+    _assert_clean(migrated_engine, created)
+
+
+def test_adversarial_case_with_a_matching_parse_is_scored_normally(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    case = _adversarial(EXCEPTION_CASE)
+
+    result = _run(migrated_engine, [case], sales_user)
+
+    assert result.setup_errors == []
+    assert result.extractor == "fake"
+    assert result.adversarial_of == {case.id: EXCEPTION_CASE}
+    assert result.parse_checks[case.id].differing == []
+    assert result.not_orchestrated == []
+    assert [run.arm for run in result.runs] == ["workflow", "orchestrator"]
+    assert all(run.score.full_hit and run.observation.failure is None for run in result.runs)
+    _assert_clean(migrated_engine, created)
+
+
+def test_a_dropped_discount_is_listed_and_scored_against_the_twins_label(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    case = _adversarial(DISCOUNT_CASE)
+    dropped = StubExtractor(price_kind="none", price_value=None, price_text=None)
+
+    result = _run(migrated_engine, [case], sales_user, extractor=dropped)
+
+    assert result.setup_errors == []
+    assert result.extractor == "fake"
+    assert result.parse_checks[case.id].differing == ["price_kind", "price_value"]
+    assert len(result.runs) == 2
+    for run in result.runs:
+        # Without the discount nothing needs the supervisor: the label is missed.
+        assert run.observation.checks_outcome == "exception"
+        assert run.observation.failure is None
+        assert run.score.policy_hit is False
+        assert run.score.full_hit is False
+    _assert_clean(migrated_engine, created)
+
+
+def test_a_parse_that_reaches_another_checks_outcome_is_a_scored_miss(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    case = _adversarial(EXCEPTION_CASE)
+
+    result = _run(migrated_engine, [case], sales_user, extractor=StubExtractor(quantity=1))
+
+    assert result.setup_errors == []
+    assert result.parse_checks[case.id].differing == ["quantity"]
+    assert result.not_orchestrated == [case.id]
+    assert [run.arm for run in result.runs] == ["workflow", "orchestrator"]
+    for run in result.runs:
+        failure = run.observation.failure
+        assert failure is not None
+        assert failure.startswith("parse_mismatch:")
+        assert failure != "parse_mismatch:exception"
+        assert run.observation.checks_outcome == failure.removeprefix("parse_mismatch:")
+        assert run.observation.option_kind is None
+        assert run.score.full_hit is False
+    _assert_clean(migrated_engine, created)
+
+
+def test_a_raising_extractor_is_a_scored_parse_failure(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    case = _adversarial(EXCEPTION_CASE)
+
+    result = _run(migrated_engine, [case], sales_user, extractor=RaisingExtractor())
+
+    assert result.setup_errors == []
+    assert case.id not in result.parse_checks
+    assert result.not_orchestrated == [case.id]
+    assert len(result.runs) == 2
+    for run in result.runs:
+        assert run.observation.failure == "parse_failed:ExtractionFailed"
+        assert run.observation.checks_outcome is None
+        assert run.score.full_hit is False
+    _assert_clean(migrated_engine, created)
+
+
+def test_a_parse_failure_leaves_the_other_cases_running(
+    migrated_engine: Engine, sales_user: AuthUser, created: list[int]
+) -> None:
+    cases = [*_cases(EXCEPTION_CASE), _adversarial(EXCEPTION_CASE)]
+
+    result = _run(migrated_engine, cases, sales_user, extractor=RaisingExtractor())
+
+    by_case = {run.case_id: run for run in result.runs if run.arm == "workflow"}
+    assert by_case[EXCEPTION_CASE].score.full_hit  # golden fields: the extractor is not used
+    assert by_case[f"{EXCEPTION_CASE}-adversarial"].observation.failure is not None
+    assert len(created) == 2
     _assert_clean(migrated_engine, created)
 
 

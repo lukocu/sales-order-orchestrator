@@ -21,6 +21,8 @@ from pydantic import BaseModel, ConfigDict
 from app.eval.cases import ExpectedDecision
 from app.eval.runner import EvalRun
 from app.eval.scoring import (
+    FAILURE_PARSE_FAILED_PREFIX,
+    FAILURE_PARSE_MISMATCH_PREFIX,
     Accuracy,
     ArmName,
     ArmRun,
@@ -174,6 +176,7 @@ def render_markdown(report: EvalReport) -> str:
         _cases(run),
         _grouped("By expected decision", "Expected decision", report.by_decision, run),
         _grouped("By tag", "Tag", report.by_tag, run),
+        _adversarial(run),
         _unstable(report.unstable),
         _failures(run),
         _setup_errors(run),
@@ -194,6 +197,7 @@ def _metadata(run: EvalRun) -> str:
         f"- Model: `{run.model or NO_MODEL}`",
         f"- Planners: {planners}",
         f"- Recommender: `{run.recommender}`",
+        f"- Extractor: `{run.extractor}`",
         f"- Repeats: {run.repeats}",
         f"- Case set sha256: `{run.cases_sha256}`",
         f"- Cases: {len(run.cases)} ({orchestrated} with an exception, "
@@ -296,6 +300,62 @@ def _grouped(title: str, label: str, groups: list[GroupAccuracy], run: EvalRun) 
     return "\n".join(lines)
 
 
+def _adversarial(run: EvalRun) -> str:
+    arms = _arms(run)
+    lines = [
+        "## Adversarial cases",
+        "",
+        "Each case is parsed by the configured extractor instead of loading the golden fields. "
+        "The parse check lists the parsed fields that differ from the twin's; the decision is "
+        "scored against the twin's label.",
+        "",
+    ]
+    case_ids = [case_id for case_id in run.cases if case_id in run.adversarial_of]
+    if not case_ids:
+        lines.append("None.")
+        return "\n".join(lines)
+    header = ["Case", "Twin", "Parse check"] + [f"{arm} (majority)" for arm in arms]
+    lines += [_row(header), "|" + "---|" * len(header)]
+    setup_errors = dict(run.setup_errors)
+    for case_id in case_ids:
+        check = run.parse_checks.get(case_id)
+        if check is None:
+            parse = "parse failed" if _parse_failed(run, case_id) else NO_VALUE
+        else:
+            parse = ", ".join(check.differing) if check.differing else "matches"
+        cells = [case_id, run.adversarial_of[case_id], parse]
+        for arm in arms:
+            case_runs = [r for r in run.runs if r.case_id == case_id and r.arm == arm]
+            if case_id in setup_errors or not case_runs:
+                cells.append("setup error" if case_id in setup_errors else NO_VALUE)
+                continue
+            decision, count = _majority(case_runs)
+            label = f"{_decision_label(decision)} ({count}/{len(case_runs)})"
+            misses = {r.observation.failure for r in case_runs if _is_parse_miss(r)}
+            failures = sorted(f for f in misses if f)
+            if failures:
+                label += ", " + ", ".join(f"`{failure}`" for failure in failures)
+            cells.append(label)
+        lines.append(_row(cells))
+    return "\n".join(lines)
+
+
+def _is_parse_miss(run: ArmRun) -> bool:
+    failure = run.observation.failure
+    return failure is not None and failure.startswith(
+        (FAILURE_PARSE_FAILED_PREFIX, FAILURE_PARSE_MISMATCH_PREFIX)
+    )
+
+
+def _parse_failed(run: EvalRun, case_id: str) -> bool:
+    return any(
+        r.case_id == case_id
+        and r.observation.failure is not None
+        and r.observation.failure.startswith(FAILURE_PARSE_FAILED_PREFIX)
+        for r in run.runs
+    )
+
+
 def _unstable(unstable: list[Instability]) -> str:
     lines = ["## Unstable cases", ""]
     if not unstable:
@@ -349,8 +409,12 @@ def _methodology(run: EvalRun) -> str:
         "step or a missing stage run, so its cost is a lower bound.",
         "- Time is the sum of the wall times of the orchestration, recommendation and policy "
         "runs of one arm run (agents inside the orchestration run in parallel).",
-        "- The parser is excluded from the comparison: both arms start from the golden fields "
-        "of the case, saved as the user's correction before the measurement.",
+        "- The parser is excluded from the comparison: both arms start from the same parse. "
+        "Adversarial cases are parsed by the configured extractor once per case, so the "
+        "repeats measure the orchestration, not the parser; a parse that fails or reaches "
+        "another checks outcome than the label is a scored miss (`parse_failed:<class>`, "
+        "`parse_mismatch:<outcome>`). All other cases start from their golden fields, saved "
+        "as the user's correction before the measurement.",
         "- Cases without an exception never reach the orchestration, so they do not tell the "
         "arms apart: each has one run, shared by both arms. They count in the full accuracy "
         "(checks outcome against the label) but not in the option and verdict accuracy, "

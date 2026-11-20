@@ -380,24 +380,24 @@ None. `cases.json` is not stored in the database, and the new `EvalCase` fields 
 
 #### Automated
 
-- [x] 1.1 Backend quality gates pass: `docker compose run --rm backend sh check.sh` (ruff, mypy, alembic, pytest)
-- [x] 1.2 New loader-validation tests pass: `docker compose run --rm backend uv run pytest tests/test_eval_cases.py`
-- [x] 1.3 Report tests cover the grouped sections: `docker compose run --rm backend uv run pytest tests/test_eval_report.py tests/test_eval_scoring.py`
+- [x] 1.1 Backend quality gates pass: `docker compose run --rm backend sh check.sh` (ruff, mypy, alembic, pytest) — 6dd2e9e
+- [x] 1.2 New loader-validation tests pass: `docker compose run --rm backend uv run pytest tests/test_eval_cases.py` — 6dd2e9e
+- [x] 1.3 Report tests cover the grouped sections: `docker compose run --rm backend uv run pytest tests/test_eval_report.py tests/test_eval_scoring.py` — 6dd2e9e
 
 #### Manual
 
-- [x] 1.4 test-plan §6.1 reads as a complete procedure: a person who wasn't in the planning session can label a new case from it
+- [x] 1.4 test-plan §6.1 reads as a complete procedure: a person who wasn't in the planning session can label a new case from it — 6dd2e9e
 
 ### Phase 2: Parser path for adversarial cases
 
 #### Automated
 
-- [ ] 2.1 Backend quality gates pass: `docker compose run --rm backend sh check.sh`
-- [ ] 2.2 Adversarial-path runner tests pass: `docker compose run --rm backend uv run pytest tests/test_eval_runner.py`
+- [x] 2.1 Backend quality gates pass: `docker compose run --rm backend sh check.sh` — PHASE2SHA
+- [x] 2.2 Adversarial-path runner tests pass: `docker compose run --rm backend uv run pytest tests/test_eval_runner.py` — PHASE2SHA
 
 #### Manual
 
-- [ ] 2.3 A fake run on a scratch case file with one adversarial pair writes a report with the "Adversarial cases" section and the grouped sections filled in
+- [x] 2.3 A fake run on a scratch case file with one adversarial pair writes a report with the "Adversarial cases" section and the grouped sections filled in — PHASE2SHA
 
 ### Phase 3: Dataset
 

@@ -32,6 +32,7 @@ from app.eval.runner import Arm, EvalAlreadyRunning, cases_sha256, run_eval
 from app.eval.scoring import summarize
 from app.llm.client import DEFAULT_MODELS
 from app.orchestration.planning import RuleBasedPlanner, get_planner
+from app.parsing.extractor import get_extractor
 from app.recommendation.recommender import get_recommender
 from app.settings import get_settings
 
@@ -125,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
                 Arm(name="orchestrator", planner=get_planner(settings)),
             ],
             get_recommender(settings),
+            extractor=get_extractor(settings),
             repeats=args.repeats,
             pause_seconds=args.pause_seconds,
             user=setup_user,

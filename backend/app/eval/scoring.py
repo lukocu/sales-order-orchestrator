@@ -31,6 +31,8 @@ FAILURE_CHOICE_REJECTED = "choice_rejected"
 FAILURE_MISSING_RUN = "missing_run"
 FAILURE_STALE_RESULT = "stale_result"
 FAILURE_UNEXPECTED_PREFIX = "unexpected:"
+FAILURE_PARSE_MISMATCH_PREFIX = "parse_mismatch:"
+FAILURE_PARSE_FAILED_PREFIX = "parse_failed:"
 
 
 class Observation(BaseModel):
@@ -40,7 +42,10 @@ class Observation(BaseModel):
     `recommender_failed:<code>`, `choice_rejected`, `missing_run` (an expected stage, or
     the trace run of a stage, is missing), `stale_result` (a stage still holds the result
     of an earlier run, e.g. after an unexpected recommender error) or
-    `unexpected:<ClassName>` (the arm's call raised; set by the runner).
+    `unexpected:<ClassName>` (the arm's call raised; set by the runner),
+    `parse_mismatch:<outcome>` (an adversarial case was parsed into another checks outcome
+    than its label) or `parse_failed:<ClassName>` (the extractor raised on an adversarial
+    case); the last two are also set by the runner.
     `orchestration_partial` is only noted: a partial orchestration that still reaches the
     expected decision is a hit. `failure_detail` is the stage's English error message, never
     inquiry content.
