@@ -151,7 +151,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Zmiana uprawnień dotyka backendu (dziś przełożony może poprawiać i ponownie analizować); po S-14, bo kolejka opiera się na statusach.
-- **Status:** proposed
+- **Status:** done
 
 ### S-16: Komunikaty systemu w wybranym języku
 
@@ -236,3 +236,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-14: użytkownik widzi status zapytania na liście (nowe, przeanalizowane, wyjątek, czeka na przełożonego, gotowe do wysłania, odrzucone), w nagłówku otwartego zapytania i jako komunikat po każdej decyzji (ogłaszany czytnikom ekranu); gdy polityka wymaga akceptacji, akcja nazywa się „Send to supervisor”, a nie „Approve”.** — Archived 2026-11-17 → `context/archive/2026-11-17-status-and-honest-actions/`. Lesson: —.
 - **S-16: użytkownik widzi wyniki sprawdzeń, powody reguł polityki i sygnały pewności w języku wybranym przełącznikiem PL | EN; tłumaczenie dzieje się przy wyświetlaniu po stabilnych kodach, a zapisane dane, mail klienta, szkic odpowiedzi i uzasadnienie napisane przez model nie zmieniają się.** — Archived 2026-11-18 → `context/archive/2026-11-18-backend-messages-by-code/`. Lesson: —.
 - **S-17: użytkownik odświeża lub wysyła komuś link do zapytania z aktywnym krokiem, do inspektora przebiegu, kolejki przełożonego i strony systemowej; wejście bez sesji prowadzi do logowania i wraca pod ten sam adres.** — Archived 2026-11-20 → `context/archive/2026-11-19-shareable-urls/`. Lesson: —.
+- **S-15: przełożony otwiera kolejkę „Do akceptacji” z licznikiem w nawigacji; widok zapytania zaczyna się od reguł, które nie przeszły, rekomendowanego wariantu i akcji Zatwierdź / Odrzuć z komentarzem; na zapytaniu czekającym na jego decyzję przełożony nie poprawia pól, nie uruchamia ponownej analizy i nie edytuje szkicu (także po stronie API).** — Archived 2026-11-20 → `context/archive/2026-11-18-supervisor-queue/`. Lesson: —.
