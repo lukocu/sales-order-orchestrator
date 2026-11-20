@@ -75,7 +75,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | #   | Phase name                       | Goal (one line)                                                                                                     | Risks covered  | Test types                                  | Status      | Change folder |
 | --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------- | ----------- | ------------- |
-| 1   | Eval dataset expansion           | Zbiór przypadków pokazuje, które typy wyjątków orkiestrator myli; etykiety wynikają z reguł, nie z wyniku systemu  | #1, #3, #6     | labelled eval cases (incl. adversarial)     | change opened | context/changes/testing-eval-dataset-expansion/ |
+| 1   | Eval dataset expansion           | Zbiór przypadków pokazuje, które typy wyjątków orkiestrator myli; etykiety wynikają z reguł, nie z wyniku systemu  | #1, #3, #6     | labelled eval cases (incl. adversarial)     | implemented | context/changes/testing-eval-dataset-expansion/ |
 | 2   | Parser field eval                | Jakość odczytu każdego pola jest mierzona osobno i taniej niż pełny przepływ                                        | #4             | field-level eval                            | not started | —             |
 | 3   | Eval regression gate             | Zmiana w orkiestracji nie trafia na main bez porównania per przypadek z linią bazową (regresje, niestabilność, koszt) | #2, #5, #7     | baseline comparison + gate                  | not started | —             |
 | 4   | Two critical e2e flows           | Dwa testy E2E: przekazanie wyjątku do przełożonego oraz główna akcja widoczna bez przewijania                       | #8, #9         | e2e (Playwright, deterministic model stub)  | not started | —             |
@@ -93,7 +93,7 @@ plus the MCP/tools actually exposed in the current session.
 | ------------------------- | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------- |
 | backend unit + integration | pytest + httpx                                        | ≥ 9.2    | 55 plików testów, PostgreSQL w CI; profil bazy: meaningful                              |
 | frontend unit + component | Vitest + Testing Library                               | 5.x      | 29 plików testów, język przypięty do angielskiego                                       |
-| eval (LLM decisions)      | własny runner ewaluacji w backendzie + OpenRouter      | n/a      | 12 oznaczonych przypadków, raporty w `backend/eval_reports/`; rozszerzany w fazach 1–3  |
+| eval (LLM decisions)      | własny runner ewaluacji w backendzie + OpenRouter      | n/a      | 32 oznaczone przypadki (21 z wyjątkiem, 4 adversarialne), raporty w `backend/eval_reports/`; rozszerzany w fazach 2–3  |
 | e2e                       | none yet — see Phase 4 (Playwright)                    | —        | konfiguracja przez `/10x-e2e-setup`                                                     |
 | visual / accessibility    | none — wykluczone (§7)                                 | —        | —                                                                                       |
 
@@ -172,7 +172,15 @@ Etykieta: `exception · substitute · no_approval_needed`.
 
 ### 6.6 Per-rollout-phase notes
 
-(Uzupełniane po każdej fazie.)
+**Faza 1 — rozszerzenie zbioru (2026-11-20).** Linia bazowa: `backend/eval_reports/2026-11-20-openrouter-qwen-qwen3-30b-a3b-instruct-2507.{md,json}` (32 przypadki, 3 powtórzenia, bez błędów setupu; poprzedni raport z 2026-11-14 zostaje).
+
+- Pełna trafność: workflow 65/74, orkiestrator 59/74. Dla przypadków z wyjątkiem: workflow 54/63 (86%), orkiestrator 48/63 (76%). Przypadki bez wyjątku (standard, needs_input) trafione w całości.
+- Najsłabsze kategorie orkiestratora: `other_source · requires_supervisor` 2/6 (33%), `combined · requires_supervisor` 6/9 (67%), `substitute · requires_supervisor` 6/9 (67%); wg tagów `unusual_discount` 10/16 (62%) i `no_deadline` 10/15 (67%). Workflow najsłabszy w `substitute · requires_supervisor` (67%).
+- `rank_divergence` (2 przypadki): workflow 0/6 — to zamierzone, bo etykieta idzie za regułą PRD, a `rank()` wybiera inaczej. To pokazuje rozjazd kodu z regułą "najlepsza marża w polityce", nie błąd orkiestratora.
+- Adversarialne: parsowanie bez rozbieżności pól cenowych we wszystkich 4 przypadkach (parse check „matches"), brak `parse_mismatch`. Orkiestrator 9/12; jedyne potknięcia to `delta-abc100-refused-margin-adv-subject` (2 z 3 powtórzeń bez decyzji — `planner_failed: content does not match the schema`), czyli niestabilność planera, nie zmiana decyzji pod wpływem wstrzyknięcia.
+- Orkiestrator: 4 uruchomienia `orchestration_failed:failed` (schemat odpowiedzi planera), koszt 0,020 USD vs 0,013 USD workflow; średni czas 17,3 s vs 9,9 s.
+- Uwaga operacyjna: przebieg 32 przypadków × 3 powtórzenia trwa ~1 h, nie 20–25 min z planu, a dwa pierwsze przebiegi zawiesiły się bez wyjścia (przyczyna nieustalona; trzeci przeszedł). Do faz 3: limit czasu na cały przebieg lub na przypadek.
+- Etykiety kontrolowane ręcznie na 5 nowych przypadkach (wariant, wybrana opcja, marża, werdykt).
 
 ## 7. What We Deliberately Don't Test
 

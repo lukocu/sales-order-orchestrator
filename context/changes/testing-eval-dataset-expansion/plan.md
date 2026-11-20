@@ -403,22 +403,22 @@ None. `cases.json` is not stored in the database, and the new `EvalCase` fields 
 
 #### Automated
 
-- [x] 3.1 Case set loads and coverage assertions pass: `docker compose run --rm backend uv run pytest tests/test_eval_cases.py` — PHASE3SHA
-- [x] 3.2 Every case hits on the fake path (labels or `rule_based`): `docker compose run --rm backend uv run pytest tests/test_eval_runner.py` — PHASE3SHA
-- [x] 3.3 Backend quality gates pass: `docker compose run --rm backend sh check.sh` — PHASE3SHA
+- [x] 3.1 Case set loads and coverage assertions pass: `docker compose run --rm backend uv run pytest tests/test_eval_cases.py` — da59cfb
+- [x] 3.2 Every case hits on the fake path (labels or `rule_based`): `docker compose run --rm backend uv run pytest tests/test_eval_runner.py` — da59cfb
+- [x] 3.3 Backend quality gates pass: `docker compose run --rm backend sh check.sh` — da59cfb
 
 #### Manual
 
-- [x] 3.4 Spot-check 5 new rationales against the seed tables by hand (variants, chosen option, margin, verdict) — PHASE3SHA
-- [x] 3.5 Every adversarial email reads like a realistic customer email with an embedded instruction — PHASE3SHA
+- [x] 3.4 Spot-check 5 new rationales against the seed tables by hand (variants, chosen option, margin, verdict) — da59cfb
+- [x] 3.5 Every adversarial email reads like a realistic customer email with an embedded instruction — da59cfb
 
 ### Phase 4: Baseline run and documentation
 
 #### Automated
 
-- [ ] 4.1 Baseline report files exist in `backend/eval_reports/` with ~30 cases and no setup errors
+- [x] 4.1 Baseline report files exist in `backend/eval_reports/` with ~30 cases and no setup errors — PHASE4SHA
 
 #### Manual
 
-- [ ] 4.2 Real eval run completes with an OpenRouter key and the report's grouped and adversarial sections are readable
-- [ ] 4.3 test-plan §6.6 notes name the weakest categories from the baseline
+- [x] 4.2 Real eval run completes with an OpenRouter key and the report's grouped and adversarial sections are readable — PHASE4SHA
+- [x] 4.3 test-plan §6.6 notes name the weakest categories from the baseline — PHASE4SHA

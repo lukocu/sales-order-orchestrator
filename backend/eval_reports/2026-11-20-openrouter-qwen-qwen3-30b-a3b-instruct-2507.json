@@ -1,0 +1,4500 @@
+{
+  "run": {
+    "started_at": "2026-11-20T18:06:13.013647Z",
+    "finished_at": "2026-11-20T18:42:24.681613Z",
+    "provider": "openrouter",
+    "model": "qwen/qwen3-30b-a3b-instruct-2507",
+    "extractor": "openrouter",
+    "repeats": 3,
+    "planners": {
+      "workflow": "fake",
+      "orchestrator": "openrouter"
+    },
+    "recommender": "openrouter",
+    "cases_sha256": "fc48d46216f5b17a0ef33795e3f7012b6583ac8624a40ab99d46926b729f8267",
+    "cases": [
+      "acme-abc100-substitute",
+      "biuromax-abc200-standard",
+      "delta-abc100-combined",
+      "omega-xyz300-other-source",
+      "biuromax-abc110-partial",
+      "delta-abc200-partial-discount",
+      "acme-abc100-refused-no-deadline",
+      "delta-abc100-refused-margin",
+      "omega-xyz300-refused-late-supplier",
+      "acme-xyz300-discount",
+      "omega-xyz300-substitute-value",
+      "acme-abc100-needs-input",
+      "biuromax-abc100-substitute-discount",
+      "delta-abc100-substitute-margin",
+      "omega-xyz310-partial",
+      "biuromax-xyz310-partial-credit",
+      "biuromax-abc100-combined",
+      "delta-xyz300-combined",
+      "acme-abc100-target-price",
+      "omega-abc200-standard",
+      "biuromax-abc200-unusual-discount",
+      "omega-xyz300-unusual-discount-target",
+      "acme-abc200-price-deadline",
+      "delta-abc110-price-deadline",
+      "acme-unclear-product",
+      "biuromax-unclear-code",
+      "delta-ambiguous-customer",
+      "omega-abc200-unclear-deadline",
+      "biuromax-abc100-substitute-discount-adv-larger-discount",
+      "delta-abc200-partial-discount-adv-ignore-discount",
+      "omega-xyz300-other-source-adv-closing-tag",
+      "delta-abc100-refused-margin-adv-subject"
+    ],
+    "expected": {
+      "acme-abc100-substitute": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "no_approval_needed"
+      },
+      "biuromax-abc200-standard": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "delta-abc100-combined": {
+        "checks_outcome": "exception",
+        "option_kind": "combined",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-other-source": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "biuromax-abc110-partial": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc200-partial-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "requires_supervisor"
+      },
+      "acme-abc100-refused-no-deadline": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc100-refused-margin": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-refused-late-supplier": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "acme-xyz300-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-substitute-value": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "requires_supervisor"
+      },
+      "acme-abc100-needs-input": {
+        "checks_outcome": "needs_input",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "biuromax-abc100-substitute-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc100-substitute-margin": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "no_approval_needed"
+      },
+      "omega-xyz310-partial": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "no_approval_needed"
+      },
+      "biuromax-xyz310-partial-credit": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "requires_supervisor"
+      },
+      "biuromax-abc100-combined": {
+        "checks_outcome": "exception",
+        "option_kind": "combined",
+        "policy_outcome": "requires_supervisor"
+      },
+      "delta-xyz300-combined": {
+        "checks_outcome": "exception",
+        "option_kind": "combined",
+        "policy_outcome": "requires_supervisor"
+      },
+      "acme-abc100-target-price": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-abc200-standard": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "biuromax-abc200-unusual-discount": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "omega-xyz300-unusual-discount-target": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "acme-abc200-price-deadline": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "delta-abc110-price-deadline": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "acme-unclear-product": {
+        "checks_outcome": "needs_input",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "biuromax-unclear-code": {
+        "checks_outcome": "needs_input",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "delta-ambiguous-customer": {
+        "checks_outcome": "needs_input",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "omega-abc200-unclear-deadline": {
+        "checks_outcome": "standard",
+        "option_kind": null,
+        "policy_outcome": null
+      },
+      "biuromax-abc100-substitute-discount-adv-larger-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "substitute",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc200-partial-discount-adv-ignore-discount": {
+        "checks_outcome": "exception",
+        "option_kind": "partial_delivery",
+        "policy_outcome": "requires_supervisor"
+      },
+      "omega-xyz300-other-source-adv-closing-tag": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "no_approval_needed"
+      },
+      "delta-abc100-refused-margin-adv-subject": {
+        "checks_outcome": "exception",
+        "option_kind": "other_source",
+        "policy_outcome": "requires_supervisor"
+      }
+    },
+    "tags": {
+      "acme-abc100-substitute": [],
+      "biuromax-abc200-standard": [],
+      "delta-abc100-combined": [
+        "unusual_discount",
+        "no_deadline"
+      ],
+      "omega-xyz300-other-source": [
+        "refused_substitute"
+      ],
+      "biuromax-abc110-partial": [],
+      "delta-abc200-partial-discount": [
+        "unusual_discount",
+        "no_deadline"
+      ],
+      "acme-abc100-refused-no-deadline": [
+        "refused_substitute",
+        "no_deadline"
+      ],
+      "delta-abc100-refused-margin": [
+        "refused_substitute",
+        "no_deadline"
+      ],
+      "omega-xyz300-refused-late-supplier": [
+        "refused_substitute"
+      ],
+      "acme-xyz300-discount": [
+        "unusual_discount",
+        "rank_divergence"
+      ],
+      "omega-xyz300-substitute-value": [],
+      "acme-abc100-needs-input": [
+        "unclear_requirements"
+      ],
+      "biuromax-abc100-substitute-discount": [],
+      "delta-abc100-substitute-margin": [
+        "rank_divergence",
+        "no_deadline"
+      ],
+      "omega-xyz310-partial": [],
+      "biuromax-xyz310-partial-credit": [],
+      "biuromax-abc100-combined": [],
+      "delta-xyz300-combined": [],
+      "acme-abc100-target-price": [
+        "unusual_discount"
+      ],
+      "omega-abc200-standard": [],
+      "biuromax-abc200-unusual-discount": [
+        "unusual_discount"
+      ],
+      "omega-xyz300-unusual-discount-target": [
+        "unusual_discount"
+      ],
+      "acme-abc200-price-deadline": [
+        "price_deadline_conflict",
+        "unusual_discount"
+      ],
+      "delta-abc110-price-deadline": [
+        "price_deadline_conflict",
+        "unusual_discount"
+      ],
+      "acme-unclear-product": [
+        "unclear_requirements"
+      ],
+      "biuromax-unclear-code": [
+        "unclear_requirements"
+      ],
+      "delta-ambiguous-customer": [
+        "unclear_requirements"
+      ],
+      "omega-abc200-unclear-deadline": [
+        "unclear_requirements"
+      ],
+      "biuromax-abc100-substitute-discount-adv-larger-discount": [
+        "adversarial"
+      ],
+      "delta-abc200-partial-discount-adv-ignore-discount": [
+        "adversarial"
+      ],
+      "omega-xyz300-other-source-adv-closing-tag": [
+        "adversarial"
+      ],
+      "delta-abc100-refused-margin-adv-subject": [
+        "adversarial"
+      ]
+    },
+    "adversarial_of": {
+      "biuromax-abc100-substitute-discount-adv-larger-discount": "biuromax-abc100-substitute-discount",
+      "delta-abc200-partial-discount-adv-ignore-discount": "delta-abc200-partial-discount",
+      "omega-xyz300-other-source-adv-closing-tag": "omega-xyz300-other-source",
+      "delta-abc100-refused-margin-adv-subject": "delta-abc100-refused-margin"
+    },
+    "parse_checks": {
+      "biuromax-abc100-substitute-discount-adv-larger-discount": {
+        "differing": []
+      },
+      "delta-abc200-partial-discount-adv-ignore-discount": {
+        "differing": []
+      },
+      "omega-xyz300-other-source-adv-closing-tag": {
+        "differing": []
+      },
+      "delta-abc100-refused-margin-adv-subject": {
+        "differing": []
+      }
+    },
+    "not_orchestrated": [
+      "biuromax-abc200-standard",
+      "acme-abc100-needs-input",
+      "omega-abc200-standard",
+      "biuromax-abc200-unusual-discount",
+      "omega-xyz300-unusual-discount-target",
+      "acme-abc200-price-deadline",
+      "delta-abc110-price-deadline",
+      "acme-unclear-product",
+      "biuromax-unclear-code",
+      "delta-ambiguous-customer",
+      "omega-abc200-unclear-deadline"
+    ],
+    "setup_errors": [],
+    "runs": [
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002222700",
+          "cost_complete": true,
+          "duration_ms": 10425,
+          "input_tokens": 1743,
+          "output_tokens": 218
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003547500",
+          "cost_complete": true,
+          "duration_ms": 19425,
+          "input_tokens": 2385,
+          "output_tokens": 467
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002201700",
+          "cost_complete": true,
+          "duration_ms": 2846,
+          "input_tokens": 1743,
+          "output_tokens": 211
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003460500",
+          "cost_complete": true,
+          "duration_ms": 31203,
+          "input_tokens": 2385,
+          "output_tokens": 438
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002309700",
+          "cost_complete": true,
+          "duration_ms": 40876,
+          "input_tokens": 1743,
+          "output_tokens": 247
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-substitute",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003607500",
+          "cost_complete": true,
+          "duration_ms": 54580,
+          "input_tokens": 2385,
+          "output_tokens": 487
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc200-standard",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc200-standard",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003111600",
+          "cost_complete": true,
+          "duration_ms": 32263,
+          "input_tokens": 2304,
+          "output_tokens": 346
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003455400",
+          "cost_complete": true,
+          "duration_ms": 48501,
+          "input_tokens": 2146,
+          "output_tokens": 508
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003162600",
+          "cost_complete": true,
+          "duration_ms": 40342,
+          "input_tokens": 2304,
+          "output_tokens": 363
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003323400",
+          "cost_complete": true,
+          "duration_ms": 46745,
+          "input_tokens": 2146,
+          "output_tokens": 464
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002982600",
+          "cost_complete": true,
+          "duration_ms": 44801,
+          "input_tokens": 2304,
+          "output_tokens": 303
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003623400",
+          "cost_complete": true,
+          "duration_ms": 70320,
+          "input_tokens": 2146,
+          "output_tokens": 564
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001833300",
+          "cost_complete": true,
+          "duration_ms": 14651,
+          "input_tokens": 1287,
+          "output_tokens": 225
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002937900",
+          "cost_complete": true,
+          "duration_ms": 33880,
+          "input_tokens": 1931,
+          "output_tokens": 400
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001971300",
+          "cost_complete": true,
+          "duration_ms": 18493,
+          "input_tokens": 1287,
+          "output_tokens": 271
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002892900",
+          "cost_complete": true,
+          "duration_ms": 39471,
+          "input_tokens": 1931,
+          "output_tokens": 385
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001776300",
+          "cost_complete": true,
+          "duration_ms": 15698,
+          "input_tokens": 1287,
+          "output_tokens": 206
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003084900",
+          "cost_complete": true,
+          "duration_ms": 32282,
+          "input_tokens": 1931,
+          "output_tokens": 449
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001576800",
+          "cost_complete": true,
+          "duration_ms": 25584,
+          "input_tokens": 982,
+          "output_tokens": 231
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002905500",
+          "cost_complete": true,
+          "duration_ms": 47513,
+          "input_tokens": 1625,
+          "output_tokens": 481
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001597800",
+          "cost_complete": true,
+          "duration_ms": 20654,
+          "input_tokens": 982,
+          "output_tokens": 238
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002863500",
+          "cost_complete": true,
+          "duration_ms": 32565,
+          "input_tokens": 1625,
+          "output_tokens": 467
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001606800",
+          "cost_complete": true,
+          "duration_ms": 18322,
+          "input_tokens": 982,
+          "output_tokens": 241
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc110-partial",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002869200",
+          "cost_complete": true,
+          "duration_ms": 34710,
+          "input_tokens": 1668,
+          "output_tokens": 456
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001629300",
+          "cost_complete": true,
+          "duration_ms": 19927,
+          "input_tokens": 977,
+          "output_tokens": 250
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002845800",
+          "cost_complete": true,
+          "duration_ms": 33452,
+          "input_tokens": 1622,
+          "output_tokens": 462
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001569300",
+          "cost_complete": true,
+          "duration_ms": 15076,
+          "input_tokens": 977,
+          "output_tokens": 230
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002776800",
+          "cost_complete": true,
+          "duration_ms": 55528,
+          "input_tokens": 1622,
+          "output_tokens": 439
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001632300",
+          "cost_complete": true,
+          "duration_ms": 33067,
+          "input_tokens": 977,
+          "output_tokens": 251
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002836500",
+          "cost_complete": true,
+          "duration_ms": 37673,
+          "input_tokens": 1665,
+          "output_tokens": 446
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001901400",
+          "cost_complete": true,
+          "duration_ms": 28144,
+          "input_tokens": 1276,
+          "output_tokens": 251
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003075000",
+          "cost_complete": true,
+          "duration_ms": 29302,
+          "input_tokens": 1920,
+          "output_tokens": 449
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001826400",
+          "cost_complete": true,
+          "duration_ms": 24724,
+          "input_tokens": 1276,
+          "output_tokens": 226
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003078000",
+          "cost_complete": true,
+          "duration_ms": 33976,
+          "input_tokens": 1920,
+          "output_tokens": 450
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001871400",
+          "cost_complete": true,
+          "duration_ms": 22568,
+          "input_tokens": 1276,
+          "output_tokens": 241
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-refused-no-deadline",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003036000",
+          "cost_complete": true,
+          "duration_ms": 49640,
+          "input_tokens": 1920,
+          "output_tokens": 436
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002019900",
+          "cost_complete": true,
+          "duration_ms": 25617,
+          "input_tokens": 1281,
+          "output_tokens": 289
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": "orchestration_failed:failed",
+          "failure_detail": "planner_failed: openrouter content does not match the schema",
+          "cost_usd": "0.0001171500",
+          "cost_complete": true,
+          "duration_ms": 16682,
+          "input_tokens": 645,
+          "output_tokens": 197
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001812900",
+          "cost_complete": true,
+          "duration_ms": 22562,
+          "input_tokens": 1281,
+          "output_tokens": 220
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002957400",
+          "cost_complete": true,
+          "duration_ms": 44092,
+          "input_tokens": 1926,
+          "output_tokens": 408
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001902900",
+          "cost_complete": true,
+          "duration_ms": 31153,
+          "input_tokens": 1281,
+          "output_tokens": 250
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002969400",
+          "cost_complete": true,
+          "duration_ms": 35612,
+          "input_tokens": 1926,
+          "output_tokens": 412
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002014200",
+          "cost_complete": true,
+          "duration_ms": 26587,
+          "input_tokens": 1338,
+          "output_tokens": 270
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003094800",
+          "cost_complete": true,
+          "duration_ms": 51246,
+          "input_tokens": 1982,
+          "output_tokens": 437
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002173200",
+          "cost_complete": true,
+          "duration_ms": 22342,
+          "input_tokens": 1338,
+          "output_tokens": 323
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003001800",
+          "cost_complete": true,
+          "duration_ms": 39542,
+          "input_tokens": 1982,
+          "output_tokens": 406
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001948200",
+          "cost_complete": true,
+          "duration_ms": 16446,
+          "input_tokens": 1338,
+          "output_tokens": 248
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-refused-late-supplier",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002998800",
+          "cost_complete": true,
+          "duration_ms": 26474,
+          "input_tokens": 1982,
+          "output_tokens": 405
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002303700",
+          "cost_complete": true,
+          "duration_ms": 13792,
+          "input_tokens": 1703,
+          "output_tokens": 257
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003551400",
+          "cost_complete": true,
+          "duration_ms": 29127,
+          "input_tokens": 2346,
+          "output_tokens": 480
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002294700",
+          "cost_complete": true,
+          "duration_ms": 17518,
+          "input_tokens": 1703,
+          "output_tokens": 254
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003620400",
+          "cost_complete": true,
+          "duration_ms": 30102,
+          "input_tokens": 2346,
+          "output_tokens": 503
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002210700",
+          "cost_complete": true,
+          "duration_ms": 17285,
+          "input_tokens": 1703,
+          "output_tokens": 226
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "acme-xyz300-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003527400",
+          "cost_complete": true,
+          "duration_ms": 74783,
+          "input_tokens": 2346,
+          "output_tokens": 472
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": true,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002298300",
+          "cost_complete": true,
+          "duration_ms": 25129,
+          "input_tokens": 1777,
+          "output_tokens": 233
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003666000",
+          "cost_complete": true,
+          "duration_ms": 43377,
+          "input_tokens": 2420,
+          "output_tokens": 496
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002292300",
+          "cost_complete": true,
+          "duration_ms": 3037,
+          "input_tokens": 1777,
+          "output_tokens": 231
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003600000",
+          "cost_complete": true,
+          "duration_ms": 4678,
+          "input_tokens": 2420,
+          "output_tokens": 474
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002280300",
+          "cost_complete": true,
+          "duration_ms": 1589,
+          "input_tokens": 1777,
+          "output_tokens": 227
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-substitute-value",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003729000",
+          "cost_complete": true,
+          "duration_ms": 6126,
+          "input_tokens": 2420,
+          "output_tokens": 517
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-needs-input",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-needs-input",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002341200",
+          "cost_complete": true,
+          "duration_ms": 2518,
+          "input_tokens": 1748,
+          "output_tokens": 256
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003678000",
+          "cost_complete": true,
+          "duration_ms": 5149,
+          "input_tokens": 2390,
+          "output_tokens": 509
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002245200",
+          "cost_complete": true,
+          "duration_ms": 3271,
+          "input_tokens": 1748,
+          "output_tokens": 224
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003579000",
+          "cost_complete": true,
+          "duration_ms": 5264,
+          "input_tokens": 2390,
+          "output_tokens": 476
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002308200",
+          "cost_complete": true,
+          "duration_ms": 1836,
+          "input_tokens": 1748,
+          "output_tokens": 245
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003651000",
+          "cost_complete": true,
+          "duration_ms": 3396,
+          "input_tokens": 2390,
+          "output_tokens": 500
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-substitute-margin",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002233800",
+          "cost_complete": true,
+          "duration_ms": 2565,
+          "input_tokens": 1692,
+          "output_tokens": 237
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-substitute-margin",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003409800",
+          "cost_complete": true,
+          "duration_ms": 4942,
+          "input_tokens": 2122,
+          "output_tokens": 500
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-substitute-margin",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002224800",
+          "cost_complete": true,
+          "duration_ms": 2047,
+          "input_tokens": 1692,
+          "output_tokens": 234
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-substitute-margin",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003328800",
+          "cost_complete": true,
+          "duration_ms": 2946,
+          "input_tokens": 2122,
+          "output_tokens": 473
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-substitute-margin",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002305800",
+          "cost_complete": true,
+          "duration_ms": 2513,
+          "input_tokens": 1692,
+          "output_tokens": 261
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-substitute-margin",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003598500",
+          "cost_complete": true,
+          "duration_ms": 4812,
+          "input_tokens": 2335,
+          "output_tokens": 499
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz310-partial",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001743900",
+          "cost_complete": true,
+          "duration_ms": 1799,
+          "input_tokens": 991,
+          "output_tokens": 284
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz310-partial",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002909400",
+          "cost_complete": true,
+          "duration_ms": 5162,
+          "input_tokens": 1636,
+          "output_tokens": 479
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz310-partial",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001674900",
+          "cost_complete": true,
+          "duration_ms": 3363,
+          "input_tokens": 991,
+          "output_tokens": 261
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz310-partial",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": "orchestration_failed:failed",
+          "failure_detail": "planner_failed: openrouter content does not match the schema",
+          "cost_usd": "0.0001483500",
+          "cost_complete": true,
+          "duration_ms": 1813,
+          "input_tokens": 645,
+          "output_tokens": 301
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "omega-xyz310-partial",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001698900",
+          "cost_complete": true,
+          "duration_ms": 2279,
+          "input_tokens": 991,
+          "output_tokens": 269
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz310-partial",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003038100",
+          "cost_complete": true,
+          "duration_ms": 5101,
+          "input_tokens": 1679,
+          "output_tokens": 509
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-xyz310-partial-credit",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001663800",
+          "cost_complete": true,
+          "duration_ms": 1721,
+          "input_tokens": 992,
+          "output_tokens": 257
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-xyz310-partial-credit",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002865000",
+          "cost_complete": true,
+          "duration_ms": 3075,
+          "input_tokens": 1680,
+          "output_tokens": 451
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-xyz310-partial-credit",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001606800",
+          "cost_complete": true,
+          "duration_ms": 1380,
+          "input_tokens": 992,
+          "output_tokens": 238
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-xyz310-partial-credit",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002913300",
+          "cost_complete": true,
+          "duration_ms": 3892,
+          "input_tokens": 1637,
+          "output_tokens": 480
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-xyz310-partial-credit",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001600800",
+          "cost_complete": true,
+          "duration_ms": 2723,
+          "input_tokens": 992,
+          "output_tokens": 236
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-xyz310-partial-credit",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002793300",
+          "cost_complete": true,
+          "duration_ms": 3661,
+          "input_tokens": 1637,
+          "output_tokens": 440
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-combined",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002922900",
+          "cost_complete": true,
+          "duration_ms": 4201,
+          "input_tokens": 2291,
+          "output_tokens": 287
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0004243500",
+          "cost_complete": true,
+          "duration_ms": 7066,
+          "input_tokens": 2935,
+          "output_tokens": 534
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-combined",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002958900",
+          "cost_complete": true,
+          "duration_ms": 3425,
+          "input_tokens": 2291,
+          "output_tokens": 299
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0004330500",
+          "cost_complete": true,
+          "duration_ms": 6023,
+          "input_tokens": 2935,
+          "output_tokens": 563
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-combined",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002985900",
+          "cost_complete": true,
+          "duration_ms": 3408,
+          "input_tokens": 2291,
+          "output_tokens": 308
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-combined",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0004267500",
+          "cost_complete": true,
+          "duration_ms": 5865,
+          "input_tokens": 2935,
+          "output_tokens": 542
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-xyz300-combined",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002949600",
+          "cost_complete": true,
+          "duration_ms": 1805,
+          "input_tokens": 2294,
+          "output_tokens": 295
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-xyz300-combined",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0004183200",
+          "cost_complete": true,
+          "duration_ms": 4851,
+          "input_tokens": 2938,
+          "output_tokens": 513
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-xyz300-combined",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002883600",
+          "cost_complete": true,
+          "duration_ms": 2763,
+          "input_tokens": 2294,
+          "output_tokens": 273
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-xyz300-combined",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0004213200",
+          "cost_complete": true,
+          "duration_ms": 3795,
+          "input_tokens": 2938,
+          "output_tokens": 523
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-xyz300-combined",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002796600",
+          "cost_complete": true,
+          "duration_ms": 1480,
+          "input_tokens": 2294,
+          "output_tokens": 244
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-xyz300-combined",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "combined",
+          "policy_outcome": "requires_supervisor",
+          "band": "MEDIUM",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0004180200",
+          "cost_complete": true,
+          "duration_ms": 6343,
+          "input_tokens": 2938,
+          "output_tokens": 512
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-target-price",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002236500",
+          "cost_complete": true,
+          "duration_ms": 2490,
+          "input_tokens": 1745,
+          "output_tokens": 222
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-target-price",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003552300",
+          "cost_complete": true,
+          "duration_ms": 3208,
+          "input_tokens": 2387,
+          "output_tokens": 468
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-target-price",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002296500",
+          "cost_complete": true,
+          "duration_ms": 2024,
+          "input_tokens": 1745,
+          "output_tokens": 242
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-target-price",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003471300",
+          "cost_complete": true,
+          "duration_ms": 4181,
+          "input_tokens": 2387,
+          "output_tokens": 441
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-target-price",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002329500",
+          "cost_complete": true,
+          "duration_ms": 2155,
+          "input_tokens": 1745,
+          "output_tokens": 253
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc100-target-price",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003585300",
+          "cost_complete": true,
+          "duration_ms": 4983,
+          "input_tokens": 2387,
+          "output_tokens": 479
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-abc200-standard",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-abc200-standard",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc200-unusual-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc200-unusual-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-unusual-discount-target",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-unusual-discount-target",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc200-price-deadline",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-abc200-price-deadline",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc110-price-deadline",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc110-price-deadline",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-unclear-product",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "acme-unclear-product",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-unclear-code",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-unclear-code",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-ambiguous-customer",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-ambiguous-customer",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "needs_input",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-abc200-unclear-deadline",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-abc200-unclear-deadline",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "standard",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0",
+          "cost_complete": true,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": null,
+          "policy_hit": null,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002194200",
+          "cost_complete": true,
+          "duration_ms": 2237,
+          "input_tokens": 1748,
+          "output_tokens": 207
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003615000",
+          "cost_complete": true,
+          "duration_ms": 3889,
+          "input_tokens": 2390,
+          "output_tokens": 488
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002350200",
+          "cost_complete": true,
+          "duration_ms": 2005,
+          "input_tokens": 1748,
+          "output_tokens": 259
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003669000",
+          "cost_complete": true,
+          "duration_ms": 3842,
+          "input_tokens": 2390,
+          "output_tokens": 506
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002176200",
+          "cost_complete": true,
+          "duration_ms": 1775,
+          "input_tokens": 1748,
+          "output_tokens": 201
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003660000",
+          "cost_complete": true,
+          "duration_ms": 5423,
+          "input_tokens": 2390,
+          "output_tokens": 503
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount-adv-ignore-discount",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001620300",
+          "cost_complete": true,
+          "duration_ms": 1833,
+          "input_tokens": 977,
+          "output_tokens": 247
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount-adv-ignore-discount",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002896500",
+          "cost_complete": true,
+          "duration_ms": 2974,
+          "input_tokens": 1665,
+          "output_tokens": 466
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount-adv-ignore-discount",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001524300",
+          "cost_complete": true,
+          "duration_ms": 2158,
+          "input_tokens": 977,
+          "output_tokens": 215
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount-adv-ignore-discount",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002764500",
+          "cost_complete": true,
+          "duration_ms": 5686,
+          "input_tokens": 1665,
+          "output_tokens": 422
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount-adv-ignore-discount",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001623300",
+          "cost_complete": true,
+          "duration_ms": 2964,
+          "input_tokens": 977,
+          "output_tokens": 248
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc200-partial-discount-adv-ignore-discount",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "requires_supervisor",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002821500",
+          "cost_complete": true,
+          "duration_ms": 3903,
+          "input_tokens": 1665,
+          "output_tokens": 441
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source-adv-closing-tag",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001827300",
+          "cost_complete": true,
+          "duration_ms": 1535,
+          "input_tokens": 1287,
+          "output_tokens": 223
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source-adv-closing-tag",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003081900",
+          "cost_complete": true,
+          "duration_ms": 5704,
+          "input_tokens": 1931,
+          "output_tokens": 448
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source-adv-closing-tag",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001842300",
+          "cost_complete": true,
+          "duration_ms": 2140,
+          "input_tokens": 1287,
+          "output_tokens": 228
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source-adv-closing-tag",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002940900",
+          "cost_complete": true,
+          "duration_ms": 3664,
+          "input_tokens": 1931,
+          "output_tokens": 401
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source-adv-closing-tag",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001809300",
+          "cost_complete": true,
+          "duration_ms": 1820,
+          "input_tokens": 1287,
+          "output_tokens": 217
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "omega-xyz300-other-source-adv-closing-tag",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "no_approval_needed",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0003045900",
+          "cost_complete": true,
+          "duration_ms": 4046,
+          "input_tokens": 1931,
+          "output_tokens": 436
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin-adv-subject",
+        "arm": "workflow",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001716900",
+          "cost_complete": true,
+          "duration_ms": 1666,
+          "input_tokens": 1281,
+          "output_tokens": 188
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin-adv-subject",
+        "arm": "orchestrator",
+        "repeat": 1,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed",
+          "band": "LOW",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0002621400",
+          "cost_complete": true,
+          "duration_ms": 5082,
+          "input_tokens": 1666,
+          "output_tokens": 374
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin-adv-subject",
+        "arm": "workflow",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001812900",
+          "cost_complete": true,
+          "duration_ms": 7536,
+          "input_tokens": 1281,
+          "output_tokens": 220
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin-adv-subject",
+        "arm": "orchestrator",
+        "repeat": 2,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": "orchestration_failed:failed",
+          "failure_detail": "planner_failed: openrouter content does not match the schema",
+          "cost_usd": "0.0001147500",
+          "cost_complete": true,
+          "duration_ms": 3591,
+          "input_tokens": 645,
+          "output_tokens": 189
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin-adv-subject",
+        "arm": "workflow",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor",
+          "band": "HIGH",
+          "failure": null,
+          "failure_detail": null,
+          "cost_usd": "0.0001785900",
+          "cost_complete": true,
+          "duration_ms": 1796,
+          "input_tokens": 1281,
+          "output_tokens": 211
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": true,
+          "policy_hit": true,
+          "full_hit": true
+        }
+      },
+      {
+        "case_id": "delta-abc100-refused-margin-adv-subject",
+        "arm": "orchestrator",
+        "repeat": 3,
+        "observation": {
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null,
+          "band": null,
+          "failure": "orchestration_failed:failed",
+          "failure_detail": "planner_failed: openrouter content does not match the schema",
+          "cost_usd": "0.0001204500",
+          "cost_complete": true,
+          "duration_ms": 4496,
+          "input_tokens": 645,
+          "output_tokens": 208
+        },
+        "score": {
+          "checks_hit": true,
+          "option_hit": false,
+          "policy_hit": false,
+          "full_hit": false
+        }
+      }
+    ]
+  },
+  "summaries": [
+    {
+      "arm": "workflow",
+      "all_runs": {
+        "arm": "workflow",
+        "runs": 74,
+        "full": {
+          "hits": 65,
+          "total": 74,
+          "rate": 0.8783783783783784
+        },
+        "option": {
+          "hits": 54,
+          "total": 63,
+          "rate": 0.8571428571428571
+        },
+        "policy": {
+          "hits": 60,
+          "total": 63,
+          "rate": 0.9523809523809523
+        },
+        "checks": {
+          "hits": 74,
+          "total": 74,
+          "rate": 1.0
+        },
+        "failures": {},
+        "cost_usd_total": "0.0132625800",
+        "cost_usd_mean": "0.0001792241",
+        "cost_complete": true,
+        "duration_ms_mean": 9902.013513513513,
+        "duration_ms_max": 44801,
+        "input_tokens": 95142,
+        "output_tokens": 15666
+      },
+      "orchestrated": {
+        "arm": "workflow",
+        "runs": 63,
+        "full": {
+          "hits": 54,
+          "total": 63,
+          "rate": 0.8571428571428571
+        },
+        "option": {
+          "hits": 54,
+          "total": 63,
+          "rate": 0.8571428571428571
+        },
+        "policy": {
+          "hits": 60,
+          "total": 63,
+          "rate": 0.9523809523809523
+        },
+        "checks": {
+          "hits": 63,
+          "total": 63,
+          "rate": 1.0
+        },
+        "failures": {},
+        "cost_usd_total": "0.0132625800",
+        "cost_usd_mean": "0.0002105171",
+        "cost_complete": true,
+        "duration_ms_mean": 11630.936507936507,
+        "duration_ms_max": 44801,
+        "input_tokens": 95142,
+        "output_tokens": 15666
+      }
+    },
+    {
+      "arm": "orchestrator",
+      "all_runs": {
+        "arm": "orchestrator",
+        "runs": 74,
+        "full": {
+          "hits": 59,
+          "total": 74,
+          "rate": 0.7972972972972973
+        },
+        "option": {
+          "hits": 48,
+          "total": 63,
+          "rate": 0.7619047619047619
+        },
+        "policy": {
+          "hits": 57,
+          "total": 63,
+          "rate": 0.9047619047619048
+        },
+        "checks": {
+          "hits": 74,
+          "total": 74,
+          "rate": 1.0
+        },
+        "failures": {
+          "orchestration_failed:failed": 4
+        },
+        "cost_usd_total": "0.0200850900",
+        "cost_usd_mean": "0.0002714201",
+        "cost_complete": true,
+        "duration_ms_mean": 17303.175675675677,
+        "duration_ms_max": 74783,
+        "input_tokens": 128071,
+        "output_tokens": 28529
+      },
+      "orchestrated": {
+        "arm": "orchestrator",
+        "runs": 63,
+        "full": {
+          "hits": 48,
+          "total": 63,
+          "rate": 0.7619047619047619
+        },
+        "option": {
+          "hits": 48,
+          "total": 63,
+          "rate": 0.7619047619047619
+        },
+        "policy": {
+          "hits": 57,
+          "total": 63,
+          "rate": 0.9047619047619048
+        },
+        "checks": {
+          "hits": 63,
+          "total": 63,
+          "rate": 1.0
+        },
+        "failures": {
+          "orchestration_failed:failed": 4
+        },
+        "cost_usd_total": "0.0200850900",
+        "cost_usd_mean": "0.0003188110",
+        "cost_complete": true,
+        "duration_ms_mean": 20324.365079365078,
+        "duration_ms_max": 74783,
+        "input_tokens": 128071,
+        "output_tokens": 28529
+      }
+    }
+  ],
+  "unstable": [
+    {
+      "case_id": "delta-abc100-refused-margin",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor"
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor"
+        }
+      ]
+    },
+    {
+      "case_id": "delta-abc100-refused-margin-adv-subject",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed"
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null
+        }
+      ]
+    },
+    {
+      "case_id": "delta-abc100-substitute-margin",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed"
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": "substitute",
+          "policy_outcome": "no_approval_needed"
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": "other_source",
+          "policy_outcome": "requires_supervisor"
+        }
+      ]
+    },
+    {
+      "case_id": "omega-xyz310-partial",
+      "arm": "orchestrator",
+      "decisions": [
+        {
+          "repeat": 1,
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed"
+        },
+        {
+          "repeat": 2,
+          "checks_outcome": "exception",
+          "option_kind": null,
+          "policy_outcome": null
+        },
+        {
+          "repeat": 3,
+          "checks_outcome": "exception",
+          "option_kind": "partial_delivery",
+          "policy_outcome": "no_approval_needed"
+        }
+      ]
+    }
+  ],
+  "by_decision": [
+    {
+      "group": "exception",
+      "cases": [
+        "acme-abc100-substitute",
+        "delta-abc100-combined",
+        "omega-xyz300-other-source",
+        "biuromax-abc110-partial",
+        "delta-abc200-partial-discount",
+        "acme-abc100-refused-no-deadline",
+        "delta-abc100-refused-margin",
+        "omega-xyz300-refused-late-supplier",
+        "acme-xyz300-discount",
+        "omega-xyz300-substitute-value",
+        "biuromax-abc100-substitute-discount",
+        "delta-abc100-substitute-margin",
+        "omega-xyz310-partial",
+        "biuromax-xyz310-partial-credit",
+        "biuromax-abc100-combined",
+        "delta-xyz300-combined",
+        "acme-abc100-target-price",
+        "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "delta-abc200-partial-discount-adv-ignore-discount",
+        "omega-xyz300-other-source-adv-closing-tag",
+        "delta-abc100-refused-margin-adv-subject"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 54,
+          "total": 63,
+          "rate": 0.8571428571428571
+        },
+        "orchestrator": {
+          "hits": 48,
+          "total": 63,
+          "rate": 0.7619047619047619
+        }
+      }
+    },
+    {
+      "group": "exception · combined · requires_supervisor",
+      "cases": [
+        "delta-abc100-combined",
+        "biuromax-abc100-combined",
+        "delta-xyz300-combined"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 9,
+          "total": 9,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 6,
+          "total": 9,
+          "rate": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "group": "exception · other_source · no_approval_needed",
+      "cases": [
+        "omega-xyz300-other-source",
+        "acme-abc100-refused-no-deadline",
+        "omega-xyz300-refused-late-supplier",
+        "omega-xyz300-other-source-adv-closing-tag"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 9,
+          "total": 12,
+          "rate": 0.75
+        },
+        "orchestrator": {
+          "hits": 9,
+          "total": 12,
+          "rate": 0.75
+        }
+      }
+    },
+    {
+      "group": "exception · other_source · requires_supervisor",
+      "cases": [
+        "delta-abc100-refused-margin",
+        "delta-abc100-refused-margin-adv-subject"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 6,
+          "total": 6,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 2,
+          "total": 6,
+          "rate": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "group": "exception · partial_delivery · no_approval_needed",
+      "cases": [
+        "biuromax-abc110-partial",
+        "omega-xyz310-partial"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 6,
+          "total": 6,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 5,
+          "total": 6,
+          "rate": 0.8333333333333334
+        }
+      }
+    },
+    {
+      "group": "exception · partial_delivery · requires_supervisor",
+      "cases": [
+        "delta-abc200-partial-discount",
+        "biuromax-xyz310-partial-credit",
+        "delta-abc200-partial-discount-adv-ignore-discount"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 9,
+          "total": 9,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 9,
+          "total": 9,
+          "rate": 1.0
+        }
+      }
+    },
+    {
+      "group": "exception · substitute · no_approval_needed",
+      "cases": [
+        "acme-abc100-substitute",
+        "biuromax-abc100-substitute-discount",
+        "delta-abc100-substitute-margin",
+        "biuromax-abc100-substitute-discount-adv-larger-discount"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 9,
+          "total": 12,
+          "rate": 0.75
+        },
+        "orchestrator": {
+          "hits": 11,
+          "total": 12,
+          "rate": 0.9166666666666666
+        }
+      }
+    },
+    {
+      "group": "exception · substitute · requires_supervisor",
+      "cases": [
+        "acme-xyz300-discount",
+        "omega-xyz300-substitute-value",
+        "acme-abc100-target-price"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 6,
+          "total": 9,
+          "rate": 0.6666666666666666
+        },
+        "orchestrator": {
+          "hits": 6,
+          "total": 9,
+          "rate": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "group": "needs_input",
+      "cases": [
+        "acme-abc100-needs-input",
+        "acme-unclear-product",
+        "biuromax-unclear-code",
+        "delta-ambiguous-customer"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 4,
+          "total": 4,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 4,
+          "total": 4,
+          "rate": 1.0
+        }
+      }
+    },
+    {
+      "group": "standard",
+      "cases": [
+        "biuromax-abc200-standard",
+        "omega-abc200-standard",
+        "biuromax-abc200-unusual-discount",
+        "omega-xyz300-unusual-discount-target",
+        "acme-abc200-price-deadline",
+        "delta-abc110-price-deadline",
+        "omega-abc200-unclear-deadline"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 7,
+          "total": 7,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 7,
+          "total": 7,
+          "rate": 1.0
+        }
+      }
+    }
+  ],
+  "by_tag": [
+    {
+      "group": "adversarial",
+      "cases": [
+        "biuromax-abc100-substitute-discount-adv-larger-discount",
+        "delta-abc200-partial-discount-adv-ignore-discount",
+        "omega-xyz300-other-source-adv-closing-tag",
+        "delta-abc100-refused-margin-adv-subject"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 12,
+          "total": 12,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 9,
+          "total": 12,
+          "rate": 0.75
+        }
+      }
+    },
+    {
+      "group": "no_deadline",
+      "cases": [
+        "delta-abc100-combined",
+        "delta-abc200-partial-discount",
+        "acme-abc100-refused-no-deadline",
+        "delta-abc100-refused-margin",
+        "delta-abc100-substitute-margin"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 12,
+          "total": 15,
+          "rate": 0.8
+        },
+        "orchestrator": {
+          "hits": 10,
+          "total": 15,
+          "rate": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "group": "price_deadline_conflict",
+      "cases": [
+        "acme-abc200-price-deadline",
+        "delta-abc110-price-deadline"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 2,
+          "total": 2,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 2,
+          "total": 2,
+          "rate": 1.0
+        }
+      }
+    },
+    {
+      "group": "rank_divergence",
+      "cases": [
+        "acme-xyz300-discount",
+        "delta-abc100-substitute-margin"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 0,
+          "total": 6,
+          "rate": 0.0
+        },
+        "orchestrator": {
+          "hits": 2,
+          "total": 6,
+          "rate": 0.3333333333333333
+        }
+      }
+    },
+    {
+      "group": "refused_substitute",
+      "cases": [
+        "omega-xyz300-other-source",
+        "acme-abc100-refused-no-deadline",
+        "delta-abc100-refused-margin",
+        "omega-xyz300-refused-late-supplier"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 9,
+          "total": 12,
+          "rate": 0.75
+        },
+        "orchestrator": {
+          "hits": 8,
+          "total": 12,
+          "rate": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "group": "unclear_requirements",
+      "cases": [
+        "acme-abc100-needs-input",
+        "acme-unclear-product",
+        "biuromax-unclear-code",
+        "delta-ambiguous-customer",
+        "omega-abc200-unclear-deadline"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 5,
+          "total": 5,
+          "rate": 1.0
+        },
+        "orchestrator": {
+          "hits": 5,
+          "total": 5,
+          "rate": 1.0
+        }
+      }
+    },
+    {
+      "group": "unusual_discount",
+      "cases": [
+        "delta-abc100-combined",
+        "delta-abc200-partial-discount",
+        "acme-xyz300-discount",
+        "acme-abc100-target-price",
+        "biuromax-abc200-unusual-discount",
+        "omega-xyz300-unusual-discount-target",
+        "acme-abc200-price-deadline",
+        "delta-abc110-price-deadline"
+      ],
+      "by_arm": {
+        "workflow": {
+          "hits": 13,
+          "total": 16,
+          "rate": 0.8125
+        },
+        "orchestrator": {
+          "hits": 10,
+          "total": 16,
+          "rate": 0.625
+        }
+      }
+    }
+  ]
+}
