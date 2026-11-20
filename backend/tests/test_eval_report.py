@@ -7,7 +7,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from app.eval.cases import ExpectedDecision
-from app.eval.report import slug, write_report
+from app.eval.report import NO_VALUE, slug, write_report
 from app.eval.runner import EvalRun
 from app.eval.scoring import ArmName, ArmRun, Observation, Score
 from app.policy.schema import PolicyOutcome
@@ -94,6 +94,10 @@ def _eval_run(model: str | None = "openai/gpt-oss-120b") -> EvalRun:
             STANDARD_CASE: ExpectedDecision(checks_outcome="standard"),
             BROKEN_CASE: ExpectedDecision(checks_outcome="needs_input"),
         },
+        tags={
+            EXCEPTION_CASE: ["refused_substitute", "no_deadline"],
+            STANDARD_CASE: ["no_deadline"],
+        },
         not_orchestrated=[STANDARD_CASE],
         setup_errors=[(BROKEN_CASE, "checks outcome standard, expected needs_input")],
         runs=[
@@ -127,6 +131,8 @@ def test_markdown_has_every_section_and_the_numbers(tmp_path: Path) -> None:
         "# Workflow vs orchestrator evaluation",
         "## Arm comparison",
         "## Cases",
+        "## By expected decision",
+        "## By tag",
         "## Unstable cases",
         "## Failures",
         "## Setup errors",
@@ -188,6 +194,40 @@ def test_markdown_has_every_section_and_the_numbers(tmp_path: Path) -> None:
     ) in markdown
     assert "checks outcome standard, expected needs_input" in markdown
     assert "genai-prices" in markdown
+
+
+def test_grouped_sections_count_full_hits_per_arm(tmp_path: Path) -> None:
+    md_path, json_path = write_report(_eval_run(), tmp_path)
+    markdown = md_path.read_text(encoding="utf-8")
+
+    # arms in planner order: workflow, orchestrator
+    assert _row(markdown, "| exception | 1 |") == ["exception", "1", "2/2 (100%)", "1/2 (50%)"]
+    assert _row(markdown, "| exception · substitute · no_approval_needed |") == [
+        "exception · substitute · no_approval_needed",
+        "1",
+        "2/2 (100%)",
+        "1/2 (50%)",
+    ]
+    assert _row(markdown, "| standard |") == ["standard", "1", "1/1 (100%)", "1/1 (100%)"]
+    # the case with a setup error has no runs: its group shows no rate
+    assert _row(markdown, "| needs_input |") == ["needs_input", "1", NO_VALUE, NO_VALUE]
+    assert _row(markdown, "| no_deadline |") == ["no_deadline", "2", "3/3 (100%)", "2/3 (67%)"]
+    assert _row(markdown, "| refused_substitute |") == [
+        "refused_substitute",
+        "1",
+        "2/2 (100%)",
+        "1/2 (50%)",
+    ]
+
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    by_tag = {group["group"]: group for group in data["by_tag"]}
+    assert by_tag["no_deadline"]["cases"] == [EXCEPTION_CASE, STANDARD_CASE]
+    assert by_tag["no_deadline"]["by_arm"]["orchestrator"] == {
+        "hits": 2,
+        "total": 3,
+        "rate": 2 / 3,
+    }
+    assert {group["group"] for group in data["by_decision"]} >= {"exception", "standard"}
 
 
 def test_json_holds_every_run_and_the_summaries(tmp_path: Path) -> None:

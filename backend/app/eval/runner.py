@@ -28,7 +28,7 @@ from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.draft.drafter import FakeDrafter
-from app.eval.cases import EvalCase, ExpectedDecision
+from app.eval.cases import CaseTag, EvalCase, ExpectedDecision
 from app.eval.scoring import (
     FAILURE_UNEXPECTED_PREFIX,
     ArmName,
@@ -88,6 +88,7 @@ class EvalRun(BaseModel):
     cases_sha256: str
     cases: list[str]  # case ids in run order
     expected: dict[str, ExpectedDecision]  # case id -> label
+    tags: dict[str, list[CaseTag]] = {}  # case id -> tags
     not_orchestrated: list[str]  # case ids without an exception: no arm run differs
     setup_errors: list[tuple[str, str]]  # (case id, reason)
     runs: list[ArmRun]
@@ -256,6 +257,7 @@ def _run_locked(
         cases_sha256=cases_version,
         cases=[case.id for case in cases],
         expected={case.id: case.expected for case in cases},
+        tags={case.id: case.tags for case in cases},
         not_orchestrated=not_orchestrated,
         setup_errors=setup_errors,
         runs=runs,

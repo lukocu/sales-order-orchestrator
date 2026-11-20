@@ -15,7 +15,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, computed_field
 
 from app.checks.schema import Outcome
-from app.eval.cases import EvalCase
+from app.eval.cases import EvalCase, ExpectedDecision
 from app.parsing.service import AnalysisView
 from app.policy.schema import PolicyOutcome
 from app.recommendation.schema import ConfidenceBand, OptionKind
@@ -238,7 +238,11 @@ def observe(view: AnalysisView) -> Observation:
 def score(case: EvalCase, obs: Observation) -> Score:
     """Hits against the label. An exception needs both the option kind and the verdict; a
     failure without a decision misses all three."""
-    expected = case.expected
+    return score_against(case.expected, obs)
+
+
+def score_against(expected: ExpectedDecision, obs: Observation) -> Score:
+    """Hits against an explicit decision, e.g. the rule-based path's `case.rule_based`."""
     checks_hit = obs.checks_outcome == expected.checks_outcome
     if expected.checks_outcome != "exception":
         return Score(checks_hit=checks_hit, option_hit=None, policy_hit=None, full_hit=checks_hit)

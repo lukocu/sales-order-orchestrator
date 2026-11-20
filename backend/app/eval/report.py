@@ -49,6 +49,16 @@ class ArmReport(BaseModel):
     orchestrated: ArmSummary | None
 
 
+class GroupAccuracy(BaseModel):
+    """Full accuracy per arm over the runs of the cases of one group."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    group: str
+    cases: list[str]  # case ids, in run order
+    by_arm: dict[ArmName, Accuracy]
+
+
 class EvalReport(BaseModel):
     """The JSON report: the run as it was measured plus what the Markdown shows."""
 
@@ -57,6 +67,8 @@ class EvalReport(BaseModel):
     run: EvalRun
     summaries: list[ArmReport]
     unstable: list[Instability]
+    by_decision: list[GroupAccuracy] = []
+    by_tag: list[GroupAccuracy] = []
 
 
 def build_report(run: EvalRun) -> EvalReport:
@@ -71,7 +83,47 @@ def build_report(run: EvalRun) -> EvalReport:
                 orchestrated=summarize(orchestrated) if orchestrated else None,
             )
         )
-    return EvalReport(run=run, summaries=summaries, unstable=instability(run.runs))
+    return EvalReport(
+        run=run,
+        summaries=summaries,
+        unstable=instability(run.runs),
+        by_decision=_groups(run, _decision_groups(run)),
+        by_tag=_groups(run, _tag_groups(run)),
+    )
+
+
+def _decision_groups(run: EvalRun) -> dict[str, list[str]]:
+    """Case ids by expected checks outcome and, for an exception, by option kind · verdict."""
+    groups: dict[str, list[str]] = {}
+    for case_id in run.cases:
+        expected = run.expected.get(case_id)
+        if expected is None:
+            continue
+        groups.setdefault(expected.checks_outcome, []).append(case_id)
+        if expected.checks_outcome == "exception":
+            name = f"exception · {expected.option_kind} · {expected.policy_outcome}"
+            groups.setdefault(name, []).append(case_id)
+    return dict(sorted(groups.items()))
+
+
+def _tag_groups(run: EvalRun) -> dict[str, list[str]]:
+    groups: dict[str, list[str]] = {}
+    for case_id in run.cases:
+        for tag in run.tags.get(case_id, []):
+            groups.setdefault(tag, []).append(case_id)
+    return dict(sorted(groups.items()))
+
+
+def _groups(run: EvalRun, groups: dict[str, list[str]]) -> list[GroupAccuracy]:
+    arms = _arms(run)
+    result: list[GroupAccuracy] = []
+    for name, case_ids in groups.items():
+        by_arm: dict[ArmName, Accuracy] = {}
+        for arm in arms:
+            hits = [r.score.full_hit for r in run.runs if r.arm == arm and r.case_id in case_ids]
+            by_arm[arm] = Accuracy(hits=sum(hits), total=len(hits))
+        result.append(GroupAccuracy(group=name, cases=case_ids, by_arm=by_arm))
+    return result
 
 
 def write_report(run: EvalRun, out_dir: Path) -> tuple[Path, Path]:
@@ -120,6 +172,8 @@ def render_markdown(report: EvalReport) -> str:
         _metadata(run),
         _comparison(report),
         _cases(run),
+        _grouped("By expected decision", "Expected decision", report.by_decision, run),
+        _grouped("By tag", "Tag", report.by_tag, run),
         _unstable(report.unstable),
         _failures(run),
         _setup_errors(run),
@@ -217,6 +271,27 @@ def _cases(run: EvalRun) -> str:
                 label += ", no orchestration"
             hits = sum(r.score.full_hit for r in case_runs)
             cells += [label, f"{hits}/{len(case_runs)}"]
+        lines.append(_row(cells))
+    return "\n".join(lines)
+
+
+def _grouped(title: str, label: str, groups: list[GroupAccuracy], run: EvalRun) -> str:
+    arms = _arms(run)
+    lines = [
+        f"## {title}",
+        "",
+        "Full accuracy per arm over every run of the cases in the group; a case can belong to "
+        "several groups.",
+        "",
+    ]
+    if not groups:
+        lines.append("None.")
+        return "\n".join(lines)
+    header = [label, "Cases", *arms]
+    lines += [_row(header), "|" + "---|" * len(header)]
+    for group in groups:
+        cells = [group.group, str(len(group.cases))]
+        cells += [_accuracy(group.by_arm[arm]) if arm in group.by_arm else NO_VALUE for arm in arms]
         lines.append(_row(cells))
     return "\n".join(lines)
 

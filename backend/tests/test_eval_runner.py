@@ -23,6 +23,7 @@ from app.eval.runner import (
     cases_sha256,
     run_eval,
 )
+from app.eval.scoring import score_against
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import PlannerRateLimited, PlanningResult, RuleBasedPlanner
 from app.orchestration.schema import PlanFacts
@@ -135,7 +136,13 @@ def test_full_set_matches_the_labels_and_leaves_no_rows(
     assert result.cases == [case.id for case in cases]
     workflow = [run for run in result.runs if run.arm == "workflow"]
     assert sorted(run.case_id for run in workflow) == sorted(case.id for case in cases)
-    misses = [run.case_id for run in workflow if not run.score.full_hit]
+    # The fake path is checked against its own target: the label, or a documented departure.
+    targets = {case.id: case.rule_based or case.expected for case in cases}
+    misses = [
+        run.case_id
+        for run in workflow
+        if not score_against(targets[run.case_id], run.observation).full_hit
+    ]
     assert misses == []
     assert sorted(result.not_orchestrated) == sorted(
         case.id for case in cases if case.expected.checks_outcome != "exception"
