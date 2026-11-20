@@ -1,0 +1,5518 @@
+{
+  "started_at": "2026-11-20T22:29:05.269455Z",
+  "finished_at": "2026-11-20T22:38:48.860665Z",
+  "provider": "openrouter",
+  "model": "qwen/qwen3-30b-a3b-instruct-2507",
+  "extractor": "openrouter",
+  "repeats": 3,
+  "cases_sha256": "5c3afa1f769d86c3187ba74f11a21dd32bca3a7b894070eb3837326433065de0",
+  "cases": [
+    {
+      "id": "dl-do-piatku",
+      "subject": "Zapytanie ofertowe ABC-100",
+      "body": "Dzień dobry,\n\nprosimy o ofertę na 80 szt. ABC-100 z dostawą do piątku.\n\nPozdrawiam\nMarek Nowak\nDział zakupów, ACME Sp. z o.o.",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 80
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-06",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Odebrane w poniedziałek 2026-11-02; najbliższy piątek to 2026-11-06 (+4 dni). Podpis: dział zakupów firmy ACME. Brak wzmianki o zamienniku i cenie.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent",
+        "quantity_variant"
+      ]
+    },
+    {
+      "id": "dl-konca-tygodnia",
+      "subject": "ABC-200 – zamówienie",
+      "body": "Dzień dobry,\n\nchcemy zamówić 20 sztuk ABC-200, dostawa najlepiej do końca tygodnia. Bez zamienników, tylko oryginał.\n\nZ poważaniem\nAnna Wrona\nBiuro Max",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 20
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-06",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": false
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Czwartek 2026-11-05; koniec tygodnia to piątek 2026-11-06 (+1 dzień). „Bez zamienników, tylko oryginał” = zamiennik niedozwolony.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_stated",
+        "price_absent",
+        "quantity_variant"
+      ]
+    },
+    {
+      "id": "dl-konca-miesiaca",
+      "subject": "Zapytanie XYZ-300",
+      "body": "Szanowni Państwo,\n\npotrzebujemy 150 szt. XYZ-300 do końca miesiąca. Zamiennik jest akceptowalny, jeśli zabraknie towaru.\n\nPozdrawiam,\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 150
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-30",
+          "weekday": "monday"
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": true
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Listopad ma 30 dni, więc koniec miesiąca to poniedziałek 2026-11-30. „Zamiennik jest akceptowalny” = zamiennik dozwolony.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_stated",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-w-ciagu-14-dni",
+      "subject": "Pilne: ABC-100",
+      "body": "Dzień dobry,\n\nproszę o ofertę: ABC-100, 60 sztuk, dostawa w ciągu 14 dni. Prosimy o najlepszą cenę.\n\nPozdrawiamy\nNova Tech Sp. z o.o.",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 60
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-16",
+          "weekday": "monday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "best_price",
+          "value": null
+        }
+      },
+      "rationale": "2026-11-02 + 14 dni = 2026-11-16 (poniedziałek). „Najlepsza cena” = best_price bez wartości. Zamiennik nie wspomniany.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_best",
+        "quantity_variant"
+      ]
+    },
+    {
+      "id": "dl-za-3-dni",
+      "subject": "Zapytanie",
+      "body": "Hej, ile kosztuje ABC-200? Potrzebuję 12 szt. za 3 dni. Jeśli nie macie, może być inny model.\n\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 12
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-08",
+          "weekday": "sunday"
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": true
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "2026-11-05 + 3 dni = 2026-11-08 (niedziela). „Może być inny model” = zamiennik dozwolony. Pytanie o cenę nie jest ceną docelową ani rabatem.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_stated",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-jutro",
+      "subject": "Pilne zamówienie",
+      "body": "Dzień dobry,\n\npotrzebujemy na jutro 5 szt. XYZ-300. Tylko ten model, nie przyjmiemy zamiennika.\n\nJan Kowalski\nZakłady Mechaniczne Kowalski",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Zakłady Mechaniczne Kowalski"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 5
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-04",
+          "weekday": "wednesday"
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": false
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Wtorek 2026-11-03, jutro = 2026-11-04 (środa). „Nie przyjmiemy zamiennika” = niedozwolony.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_stated",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-pojutrze",
+      "subject": "ABC-100",
+      "body": "Proszę o dostawę pojutrze: 40 szt. ABC-100.\n\nZ poważaniem\nEwa Nowak\nBiuro Max",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 40
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-06",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Środa 2026-11-04, pojutrze = 2026-11-06 (piątek).",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-data-20-11",
+      "subject": "Zapytanie o ABC-200",
+      "body": "Dzień dobry,\n\nprosimy o wycenę 200 szt. ABC-200, termin dostawy: 20.11. Przy tej ilości prosimy o rabat 5%.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 200
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-20",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "discount_percent",
+          "value": "5"
+        }
+      },
+      "rationale": "20.11 bez roku, odebrane 2026-11-02, więc 2026-11-20 (piątek; 2 listopada to poniedziałek, 9, 16 i 23 poniedziałki). Rabat 5% = discount_percent 5.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_discount"
+      ]
+    },
+    {
+      "id": "dl-w-ciagu-tygodnia",
+      "subject": "XYZ-300 – oferta",
+      "body": "Dzień dobry,\n\npotrzebujemy 30 szt. XYZ-300, dostawa w ciągu tygodnia.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-11-06T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 30
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-13",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Piątek 2026-11-06 + 7 dni = 2026-11-13 (piątek).",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-pelna-data",
+      "subject": "Zapytanie ofertowe",
+      "body": "Dzień dobry,\n\nzamierzamy zamówić 1000 szt. ABC-100, dostawa do 15.12.2026. Nasza cena docelowa to 12,50 zł za sztukę.\n\nZ poważaniem\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 1000
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-12-15",
+          "weekday": "tuesday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "target_price",
+          "value": "12.50"
+        }
+      },
+      "rationale": "Data podana wprost: 2026-12-15; 1 grudnia 2026 to wtorek, więc 15 grudnia też wtorek. Cena docelowa 12,50 zł za sztukę = target_price 12.50.",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_target"
+      ]
+    },
+    {
+      "id": "dl-weekend-sobota",
+      "subject": "ABC-100",
+      "body": "Dzień dobry,\n\nprosimy o 15 szt. ABC-100 do poniedziałku.\n\nPozdrawiam\nEwa Nowak\nBiuro Max",
+      "received_at": "2026-11-07T10:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 15
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-09",
+          "weekday": "monday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Sobota 2026-11-07, najbliższy poniedziałek to 2026-11-09 (+2 dni).",
+      "tags": [
+        "deadline_supported",
+        "weekend_reference",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-weekend-niedziela",
+      "subject": "XYZ-300",
+      "body": "Dzień dobry,\n\npotrzebujemy 8 szt. XYZ-300 pojutrze.\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-08T10:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 8
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-10",
+          "weekday": "tuesday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Niedziela 2026-11-08, pojutrze = 2026-11-10 (wtorek).",
+      "tags": [
+        "deadline_supported",
+        "weekend_reference",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-rollover-data",
+      "subject": "Zapytanie ABC-200",
+      "body": "Dzień dobry,\n\nprosimy o 90 szt. ABC-200 z dostawą do 5.01.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+      "received_at": "2026-12-28T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 90
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2027-01-05",
+          "weekday": "tuesday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Odebrane 2026-12-28; 5.01 jest przed nami dopiero w następnym roku: 2027-01-05 (1 stycznia 2027 to piątek, więc 5 stycznia to wtorek).",
+      "tags": [
+        "deadline_supported",
+        "year_rollover",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-rollover-14-dni",
+      "subject": "ABC-100 – oferta",
+      "body": "Dzień dobry,\n\npotrzebujemy 45 szt. ABC-100, dostawa w ciągu 14 dni.\n\nZ poważaniem\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-12-28T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 45
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2027-01-11",
+          "weekday": "monday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "2026-12-28 + 14 dni: 3 dni do 31 grudnia, 11 dni stycznia = 2027-01-11 (poniedziałek).",
+      "tags": [
+        "deadline_supported",
+        "year_rollover",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-luty-koniec-miesiaca",
+      "subject": "XYZ-300",
+      "body": "Dzień dobry,\n\nprosimy o ofertę na 25 szt. XYZ-300 z dostawą do końca miesiąca.\n\nPozdrawiam\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2027-02-10T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 25
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2027-02-28",
+          "weekday": "sunday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Luty 2027 nie jest przestępny (28 dni), więc koniec miesiąca to 2027-02-28 (1 lutego 2027 to poniedziałek, 28 lutego niedziela).",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-luty-za-20-dni",
+      "subject": "ABC-200",
+      "body": "Dzień dobry,\n\npotrzebujemy 35 szt. ABC-200 za 20 dni.\n\nZ poważaniem\nAnna Wrona\nBiuro Max",
+      "received_at": "2027-02-10T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 35
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2027-03-02",
+          "weekday": "tuesday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "2027-02-10 + 20 dni: 18 dni do 28 lutego, 2 dni marca = 2027-03-02 (wtorek; 1 marca 2027 to poniedziałek).",
+      "tags": [
+        "deadline_supported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-na-piatek",
+      "subject": "ABC-100",
+      "body": "Dzień dobry,\n\nprosimy o 70 szt. ABC-100. Towar jest nam potrzebny na piątek.\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 70
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-06",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Na piątek” znaczy dla klienta jednoznacznie najbliższy piątek: poniedziałek 2026-11-02 + 4 dni = 2026-11-06. Zwrot spoza gramatyki „do piątku”.",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-w-piatek",
+      "subject": "XYZ-300",
+      "body": "Dzień dobry,\n\nprosimy o 10 szt. XYZ-300, dostawa w piątek.\n\nPozdrawiam\nJan Kowalski\nZakłady Mechaniczne Kowalski",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Zakłady Mechaniczne Kowalski"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 10
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-06",
+          "weekday": "friday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Wtorek 2026-11-03; najbliższy piątek to 2026-11-06 (+3 dni).",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-za-tydzien",
+      "subject": "Zapytanie ABC-200",
+      "body": "Dzień dobry,\n\npotrzebujemy 55 szt. ABC-200 za tydzień.\n\nZ poważaniem\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 55
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-09",
+          "weekday": "monday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Za tydzień” = +7 dni: 2026-11-02 + 7 = 2026-11-09 (poniedziałek). Zwrot spoza gramatyki (obsługiwane jest „za N dni”).",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-za-trzy-dni-slownie",
+      "subject": "ABC-100",
+      "body": "Dzień dobry,\n\nprosimy o 18 szt. ABC-100, dostawa za trzy dni.\n\nPozdrawiam\nEwa Nowak\nBiuro Max",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 18
+        },
+        "deadline": {
+          "flagged": false,
+          "value": "2026-11-08",
+          "weekday": "sunday"
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Czwartek 2026-11-05 + 3 dni = 2026-11-08 (niedziela). Liczba słownie, której reguły nie czytają.",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-przyszly-tydzien",
+      "subject": "Zapytanie XYZ-300",
+      "body": "Dzień dobry,\n\nprosimy o ofertę na 22 szt. XYZ-300, potrzebne w przyszłym tygodniu.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 22
+        },
+        "deadline": {
+          "flagged": true,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„W przyszłym tygodniu” nie wskazuje dnia: żadna konkretna data nie jest poprawna, więc brak daty musi być oznaczony jako niepewny.",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-na-swieta",
+      "subject": "ABC-100 na święta",
+      "body": "Dzień dobry,\n\npotrzebujemy 500 szt. ABC-100 na święta.\n\nZ poważaniem\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 500
+        },
+        "deadline": {
+          "flagged": true,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Na święta” nie wskazuje dnia (które święta i który dzień przed nimi?), więc poprawny wynik to brak daty oznaczony jako niepewny.",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "dl-jak-najszybciej",
+      "subject": "Pilne ABC-200",
+      "body": "Dzień dobry,\n\nprosimy o 14 szt. ABC-200 jak najszybciej.\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 14
+        },
+        "deadline": {
+          "flagged": true,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Jak najszybciej” to pilność bez daty: brak daty oznaczony jako niepewny.",
+      "tags": [
+        "deadline_unsupported",
+        "customer_signature",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "klient-brak-podpisu",
+      "subject": "ABC-100",
+      "body": "Dzień dobry, poproszę 25 szt. ABC-100. Pozdrawiam",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": true,
+          "value": null
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 25
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Sama formułka grzecznościowa, żadnej nazwy firmy ani podpisu: klienta nie da się ustalić, więc brak musi być oznaczony.",
+      "tags": [
+        "customer_missing",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "klient-w-tresci",
+      "subject": "Zapytanie o XYZ-300",
+      "body": "Dzień dobry, piszę w imieniu firmy Budowlanka Plus. Potrzebujemy 70 szt. XYZ-300, proszę o ofertę.",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Budowlanka Plus"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 70
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Nazwa firmy jest podana w treści, nie w podpisie. Terminu brak.",
+      "tags": [
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "klient-podpis-dzial",
+      "subject": "Wycena ABC-200",
+      "body": "Dzień dobry,\n\nprosimy o wycenę 40 szt. ABC-200.\n\nZ poważaniem\nDział zakupów\nZakłady Mechaniczne Kowalski",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Zakłady Mechaniczne Kowalski"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 40
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Podpis zawiera tylko dział i nazwę firmy, bez osoby. Terminu brak.",
+      "tags": [
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "ilosc-brak",
+      "subject": "ABC-200",
+      "body": "Dzień dobry,\n\nproszę o ofertę na ABC-200, ilość do ustalenia.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": true,
+          "value": null
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Klient wprost nie podaje ilości, więc ilość musi być pusta i oznaczona.",
+      "tags": [
+        "quantity_variant",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "ilosc-slownie",
+      "subject": "Zapytanie ABC-100",
+      "body": "Dzień dobry,\n\nprosimy o ofertę na dwadzieścia pięć sztuk ABC-100.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-11-06T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 25
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Dwadzieścia pięć = 25.",
+      "tags": [
+        "quantity_variant",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "ilosc-i-kod-w-temacie",
+      "subject": "Zapytanie: 80 sztuk XYZ-300",
+      "body": "Dzień dobry,\n\nprosimy o wycenę jak w temacie.\n\nPozdrawiam\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 80
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Ilość i kod są tylko w temacie wiadomości.",
+      "tags": [
+        "quantity_variant",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "ilosc-x",
+      "subject": "Zamówienie",
+      "body": "Dzień dobry,\n\nzamawiamy 10 x ABC-100.\n\nPozdrawiam\nEwa Nowak\nBiuro Max",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 10
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„10 x ABC-100” = 10 sztuk.",
+      "tags": [
+        "quantity_variant",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "kod-male-litery",
+      "subject": "zapytanie",
+      "body": "Dzień dobry,\n\nczy macie abc-100 w ilości 120 szt.?\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 120
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Kod napisany małymi literami; sprawdzenie magazynu porównuje kody bez względu na wielkość liter, więc ABC-100 jest poprawnym odczytem.",
+      "tags": [
+        "quantity_variant",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "ilosc-liczba-w-kodzie",
+      "subject": "XYZ-300 w ilości 300 szt.",
+      "body": "Dzień dobry,\n\nprosimy o ofertę, kod i ilość w temacie.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 300
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Liczba 300 występuje w kodzie XYZ-300 i jako ilość; ilość to 300 szt., kod XYZ-300.",
+      "tags": [
+        "quantity_variant",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "zamiennik-bez-zamiennikow",
+      "subject": "ABC-200",
+      "body": "Dzień dobry,\n\nprosimy o 16 szt. ABC-200, bez zamienników.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+      "received_at": "2026-11-06T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 16
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": false
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Bez zamienników” = zamiennik niedozwolony.",
+      "tags": [
+        "substitute_stated",
+        "customer_signature",
+        "deadline_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "zamiennik-nie-akceptujemy",
+      "subject": "ABC-100 – zamówienie",
+      "body": "Dzień dobry,\n\nzamawiamy 33 szt. ABC-100. Nie akceptujemy innych modeli.\n\nZ poważaniem\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 33
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": false
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Nie akceptujemy innych modeli” = zamiennik niedozwolony.",
+      "tags": [
+        "substitute_stated",
+        "customer_signature",
+        "deadline_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "zamiennik-podobny-model",
+      "subject": "XYZ-300",
+      "body": "Dzień dobry,\n\nszukamy 28 szt. XYZ-300. Jeśli nie macie pełnej ilości, możemy wziąć podobny model o zbliżonych parametrach.\n\nPozdrawiam\nAnna Wrona\nBiuro Max",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 28
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": true
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Możemy wziąć podobny model” = zamiennik dozwolony.",
+      "tags": [
+        "substitute_stated",
+        "customer_signature",
+        "deadline_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "zamiennik-rowniez-zamiennik",
+      "subject": "Zapytanie ABC-200",
+      "body": "Dzień dobry,\n\nprosimy o 44 szt. ABC-200, dopuszczamy także zamiennik.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 44
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": true
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Dopuszczamy także zamiennik” = zamiennik dozwolony.",
+      "tags": [
+        "substitute_stated",
+        "customer_signature",
+        "deadline_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "zamiennik-tylko-oryginal",
+      "subject": "ABC-100 oryginał",
+      "body": "Dzień dobry,\n\npotrzebujemy 50 szt. ABC-100, wyłącznie oryginał.\n\nZ poważaniem\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 50
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": false,
+          "value": false
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "„Wyłącznie oryginał” = zamiennik niedozwolony.",
+      "tags": [
+        "substitute_stated",
+        "customer_signature",
+        "deadline_absent",
+        "price_absent"
+      ]
+    },
+    {
+      "id": "cena-rabat-przecinek",
+      "subject": "XYZ-300 – rabat",
+      "body": "Dzień dobry,\n\nprosimy o 300 szt. XYZ-300. Oczekujemy rabatu 7,5% od ceny katalogowej.\n\nPozdrawiam\nTomasz Lewandowski\nHurtownia Delta",
+      "received_at": "2026-11-06T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Hurtownia Delta"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 300
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "discount_percent",
+          "value": "7.5"
+        }
+      },
+      "rationale": "Rabat 7,5% (przecinek dziesiętny) = discount_percent 7.5.",
+      "tags": [
+        "price_discount",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent"
+      ]
+    },
+    {
+      "id": "cena-rabat-pelny",
+      "subject": "Prośba o rabat",
+      "body": "Dzień dobry,\n\nprzy zamówieniu 500 szt. ABC-100 prosimy o rabat 25%.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+      "received_at": "2026-11-02T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "ACME"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 500
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "discount_percent",
+          "value": "25"
+        }
+      },
+      "rationale": "Rabat 25% = discount_percent 25.",
+      "tags": [
+        "price_discount",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent"
+      ]
+    },
+    {
+      "id": "cena-docelowa-za-sztuke",
+      "subject": "Zapytanie ABC-200",
+      "body": "Dzień dobry,\n\nzamówimy 100 szt. ABC-200, jeśli cena nie przekroczy 45 zł za sztukę.\n\nZ poważaniem\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+      "received_at": "2026-11-03T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Nova Tech"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-200"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 100
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "target_price",
+          "value": "45"
+        }
+      },
+      "rationale": "Górna granica 45 zł za sztukę = cena docelowa target_price 45 (za sztukę, nie za całość).",
+      "tags": [
+        "price_target",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent"
+      ]
+    },
+    {
+      "id": "cena-najlepsza",
+      "subject": "Najlepsza cena XYZ-300",
+      "body": "Dzień dobry,\n\nproszę o najlepszą cenę na 75 szt. XYZ-300.\n\nPozdrawiam\nAnna Wrona\nBiuro Max",
+      "received_at": "2026-11-04T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Biuro Max"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "XYZ-300"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 75
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "best_price",
+          "value": null
+        }
+      },
+      "rationale": "Prośba o najlepszą cenę = best_price bez wartości.",
+      "tags": [
+        "price_best",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent"
+      ]
+    },
+    {
+      "id": "cena-brak-pytanie-o-cene",
+      "subject": "ABC-100",
+      "body": "Dzień dobry,\n\nile kosztuje 24 szt. ABC-100?\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+      "received_at": "2026-11-05T09:00:00+01:00",
+      "expected": {
+        "customer": {
+          "flagged": false,
+          "value": "Sklep Domowy Ela"
+        },
+        "product_code": {
+          "flagged": false,
+          "value": "ABC-100"
+        },
+        "quantity": {
+          "flagged": false,
+          "value": 24
+        },
+        "deadline": {
+          "flagged": false,
+          "value": null,
+          "weekday": null
+        },
+        "substitute_allowed": {
+          "flagged": true,
+          "value": null
+        },
+        "price": {
+          "flagged": false,
+          "kind": "none",
+          "value": null
+        }
+      },
+      "rationale": "Zwykłe pytanie o cenę nie zawiera ani rabatu, ani ceny docelowej, ani prośby o najlepszą cenę, więc price = none.",
+      "tags": [
+        "price_absent",
+        "customer_signature",
+        "deadline_absent",
+        "substitute_absent"
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "dl-do-piatku",
+      "repeat": 1,
+      "duration_ms": 11971,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 80,
+        "deadline": "2026-11-06",
+        "deadline_text": "do piątku",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 602,
+      "output_tokens": 100
+    },
+    {
+      "case_id": "dl-konca-tygodnia",
+      "repeat": 1,
+      "duration_ms": 2731,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-200",
+        "quantity": 20,
+        "deadline": "2026-11-06",
+        "deadline_text": "do końca tygodnia",
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-konca-miesiaca",
+      "repeat": 1,
+      "duration_ms": 3894,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 150,
+        "deadline": "2026-11-30",
+        "deadline_text": "do końca miesiąca",
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 603,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-w-ciagu-14-dni",
+      "repeat": 1,
+      "duration_ms": 3201,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 60,
+        "deadline": "2026-11-16",
+        "deadline_text": "w ciągu 14 dni",
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "najlepszą cenę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 110
+    },
+    {
+      "case_id": "dl-za-3-dni",
+      "repeat": 1,
+      "duration_ms": 3997,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-200",
+        "quantity": 12,
+        "deadline": "2026-11-08",
+        "deadline_text": "za 3 dni",
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 588,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-jutro",
+      "repeat": 1,
+      "duration_ms": 2873,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "XYZ-300",
+        "quantity": 5,
+        "deadline": "2026-11-04",
+        "deadline_text": "na jutro",
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 592,
+      "output_tokens": 103
+    },
+    {
+      "case_id": "dl-pojutrze",
+      "repeat": 1,
+      "duration_ms": 2740,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 40,
+        "deadline": "2026-11-06",
+        "deadline_text": "pojutrze",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 570,
+      "output_tokens": 96
+    },
+    {
+      "case_id": "dl-data-20-11",
+      "repeat": 1,
+      "duration_ms": 4369,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 200,
+        "deadline": "2026-11-20",
+        "deadline_text": "20.11.",
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "5.0",
+        "price_text": "rabat 5%"
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 611,
+      "output_tokens": 108
+    },
+    {
+      "case_id": "dl-w-ciagu-tygodnia",
+      "repeat": 1,
+      "duration_ms": 2636,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 30,
+        "deadline": "2026-11-13",
+        "deadline_text": "w ciągu tygodnia",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 585,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-pelna-data",
+      "repeat": 1,
+      "duration_ms": 7775,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 1000,
+        "deadline": "2026-12-15",
+        "deadline_text": "do 15.12.2026",
+        "substitute_allowed": null,
+        "price_kind": "target_price",
+        "price_value": "12.5",
+        "price_text": "nasza cena docelowa to 12,50 zł za sztukę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 615,
+      "output_tokens": 132
+    },
+    {
+      "case_id": "dl-weekend-sobota",
+      "repeat": 1,
+      "duration_ms": 2574,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 15,
+        "deadline": "2026-11-09",
+        "deadline_text": "do poniedziałku",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 575,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-weekend-niedziela",
+      "repeat": 1,
+      "duration_ms": 4164,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "XYZ-300",
+        "quantity": 8,
+        "deadline": "2026-11-10",
+        "deadline_text": "pojutrze",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 580,
+      "output_tokens": 98
+    },
+    {
+      "case_id": "dl-rollover-data",
+      "repeat": 1,
+      "duration_ms": 10721,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 90,
+        "deadline": "2027-01-05",
+        "deadline_text": "do 5.01",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 590,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-rollover-14-dni",
+      "repeat": 1,
+      "duration_ms": 2717,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 45,
+        "deadline": "2027-01-11",
+        "deadline_text": "w ciągu 14 dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 587,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "dl-luty-koniec-miesiaca",
+      "repeat": 1,
+      "duration_ms": 3069,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 25,
+        "deadline": "2027-02-28",
+        "deadline_text": "do końca miesiąca",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 98
+    },
+    {
+      "case_id": "dl-luty-za-20-dni",
+      "repeat": 1,
+      "duration_ms": 2440,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-200",
+        "quantity": 35,
+        "deadline": "2027-03-02",
+        "deadline_text": "za 20 dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 575,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-na-piatek",
+      "repeat": 1,
+      "duration_ms": 3600,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 70,
+        "deadline": "2026-11-05",
+        "deadline_text": "na piątek",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 590,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-w-piatek",
+      "repeat": 1,
+      "duration_ms": 9245,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "XYZ-300",
+        "quantity": 10,
+        "deadline": "2026-11-06",
+        "deadline_text": "w piątek",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 103
+    },
+    {
+      "case_id": "dl-za-tydzien",
+      "repeat": 1,
+      "duration_ms": 12507,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 55,
+        "deadline": "2026-11-09",
+        "deadline_text": "za tydzień",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 585,
+      "output_tokens": 100
+    },
+    {
+      "case_id": "dl-za-trzy-dni-slownie",
+      "repeat": 1,
+      "duration_ms": 2848,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 18,
+        "deadline": "2026-11-08",
+        "deadline_text": "za trzy dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 577,
+      "output_tokens": 96
+    },
+    {
+      "case_id": "dl-przyszly-tydzien",
+      "repeat": 1,
+      "duration_ms": 2862,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 22,
+        "deadline": "2026-11-11",
+        "deadline_text": "w przyszłym tygodniu",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 596,
+      "output_tokens": 105
+    },
+    {
+      "case_id": "dl-na-swieta",
+      "repeat": 1,
+      "duration_ms": 2746,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 500,
+        "deadline": null,
+        "deadline_text": "na święta",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 584,
+      "output_tokens": 89
+    },
+    {
+      "case_id": "dl-jak-najszybciej",
+      "repeat": 1,
+      "duration_ms": 2793,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-200",
+        "quantity": 14,
+        "deadline": null,
+        "deadline_text": "jak najszybciej",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 91
+    },
+    {
+      "case_id": "klient-brak-podpisu",
+      "repeat": 1,
+      "duration_ms": 2137,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": null,
+        "product_code": "ABC-100",
+        "quantity": 25,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "customer",
+        "substitute_allowed"
+      ],
+      "input_tokens": 560,
+      "output_tokens": 79
+    },
+    {
+      "case_id": "klient-w-tresci",
+      "repeat": 1,
+      "duration_ms": 10757,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Budowlanka Plus",
+        "product_code": "XYZ-300",
+        "quantity": 70,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 581,
+      "output_tokens": 83
+    },
+    {
+      "case_id": "klient-podpis-dzial",
+      "repeat": 1,
+      "duration_ms": 3563,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "ABC-200",
+        "quantity": 40,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 90
+    },
+    {
+      "case_id": "ilosc-brak",
+      "repeat": 1,
+      "duration_ms": 3415,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": null,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "quantity",
+        "substitute_allowed"
+      ],
+      "input_tokens": 579,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "ilosc-slownie",
+      "repeat": 1,
+      "duration_ms": 3138,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 25,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 588,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "ilosc-i-kod-w-temacie",
+      "repeat": 1,
+      "duration_ms": 11834,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 80,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 583,
+      "output_tokens": 83
+    },
+    {
+      "case_id": "ilosc-x",
+      "repeat": 1,
+      "duration_ms": 2169,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 10,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 568,
+      "output_tokens": 82
+    },
+    {
+      "case_id": "kod-male-litery",
+      "repeat": 1,
+      "duration_ms": 2754,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "abc-100",
+        "quantity": 120,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 579,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "ilosc-liczba-w-kodzie",
+      "repeat": 1,
+      "duration_ms": 2547,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 300,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 584,
+      "output_tokens": 87
+    },
+    {
+      "case_id": "zamiennik-bez-zamiennikow",
+      "repeat": 1,
+      "duration_ms": 7752,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 16,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 582,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "zamiennik-nie-akceptujemy",
+      "repeat": 1,
+      "duration_ms": 2764,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 33,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 588,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "zamiennik-podobny-model",
+      "repeat": 1,
+      "duration_ms": 2418,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "XYZ-300",
+        "quantity": 28,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 597,
+      "output_tokens": 82
+    },
+    {
+      "case_id": "zamiennik-rowniez-zamiennik",
+      "repeat": 1,
+      "duration_ms": 4027,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 44,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 589,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "zamiennik-tylko-oryginal",
+      "repeat": 1,
+      "duration_ms": 3245,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 50,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 587,
+      "output_tokens": 85
+    },
+    {
+      "case_id": "cena-rabat-przecinek",
+      "repeat": 1,
+      "duration_ms": 2797,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 300,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "7.5",
+        "price_text": "rabatu 7,5% od ceny katalogowej"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 596,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "cena-rabat-pelny",
+      "repeat": 1,
+      "duration_ms": 2938,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 500,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "25.0",
+        "price_text": "rabat 25%"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 588,
+      "output_tokens": 95
+    },
+    {
+      "case_id": "cena-docelowa-za-sztuke",
+      "repeat": 1,
+      "duration_ms": 3263,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 100,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "target_price",
+        "price_value": "45.0",
+        "price_text": "jeśli cena nie przekroczy 45 zł za sztukę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 107
+    },
+    {
+      "case_id": "cena-najlepsza",
+      "repeat": 1,
+      "duration_ms": 2598,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "XYZ-300",
+        "quantity": 75,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "najlepszą cenę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 581,
+      "output_tokens": 90
+    },
+    {
+      "case_id": "cena-brak-pytanie-o-cene",
+      "repeat": 1,
+      "duration_ms": 2638,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "silent_wrong"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 24,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "ile kosztuje 24 szt. ABC-100?"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 577,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-do-piatku",
+      "repeat": 2,
+      "duration_ms": 3005,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 80,
+        "deadline": "2026-11-06",
+        "deadline_text": "do piątku",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 602,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-konca-tygodnia",
+      "repeat": 2,
+      "duration_ms": 2608,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-200",
+        "quantity": 20,
+        "deadline": "2026-11-06",
+        "deadline_text": "do końca tygodnia",
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-konca-miesiaca",
+      "repeat": 2,
+      "duration_ms": 7097,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 150,
+        "deadline": "2026-11-30",
+        "deadline_text": "do końca miesiąca",
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 603,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-w-ciagu-14-dni",
+      "repeat": 2,
+      "duration_ms": 3207,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 60,
+        "deadline": "2026-11-16",
+        "deadline_text": "w ciągu 14 dni",
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "najlepszą cenę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 110
+    },
+    {
+      "case_id": "dl-za-3-dni",
+      "repeat": 2,
+      "duration_ms": 2911,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-200",
+        "quantity": 12,
+        "deadline": "2026-11-08",
+        "deadline_text": "za 3 dni",
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 588,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-jutro",
+      "repeat": 2,
+      "duration_ms": 2778,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "XYZ-300",
+        "quantity": 5,
+        "deadline": "2026-11-04",
+        "deadline_text": "na jutro",
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 592,
+      "output_tokens": 103
+    },
+    {
+      "case_id": "dl-pojutrze",
+      "repeat": 2,
+      "duration_ms": 2486,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 40,
+        "deadline": "2026-11-06",
+        "deadline_text": "pojutrze",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 570,
+      "output_tokens": 96
+    },
+    {
+      "case_id": "dl-data-20-11",
+      "repeat": 2,
+      "duration_ms": 2918,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 200,
+        "deadline": "2026-11-20",
+        "deadline_text": "20.11.",
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "5.0",
+        "price_text": "rabat 5%"
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 611,
+      "output_tokens": 108
+    },
+    {
+      "case_id": "dl-w-ciagu-tygodnia",
+      "repeat": 2,
+      "duration_ms": 4689,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 30,
+        "deadline": "2026-11-13",
+        "deadline_text": "w ciągu tygodnia",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 585,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-pelna-data",
+      "repeat": 2,
+      "duration_ms": 4259,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 1000,
+        "deadline": "2026-12-15",
+        "deadline_text": "do 15.12.2026",
+        "substitute_allowed": null,
+        "price_kind": "target_price",
+        "price_value": "12.5",
+        "price_text": "nasza cena docelowa to 12,50 zł za sztukę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 615,
+      "output_tokens": 132
+    },
+    {
+      "case_id": "dl-weekend-sobota",
+      "repeat": 2,
+      "duration_ms": 7298,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 15,
+        "deadline": "2026-11-09",
+        "deadline_text": "do poniedziałku",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 575,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-weekend-niedziela",
+      "repeat": 2,
+      "duration_ms": 3435,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "XYZ-300",
+        "quantity": 8,
+        "deadline": "2026-11-10",
+        "deadline_text": "pojutrze",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 580,
+      "output_tokens": 98
+    },
+    {
+      "case_id": "dl-rollover-data",
+      "repeat": 2,
+      "duration_ms": 2874,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 90,
+        "deadline": "2027-01-05",
+        "deadline_text": "do 5.01",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 590,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "dl-rollover-14-dni",
+      "repeat": 2,
+      "duration_ms": 3063,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 45,
+        "deadline": "2027-01-11",
+        "deadline_text": "w ciągu 14 dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 587,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "dl-luty-koniec-miesiaca",
+      "repeat": 2,
+      "duration_ms": 3131,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 25,
+        "deadline": "2027-02-28",
+        "deadline_text": "do końca miesiąca",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 98
+    },
+    {
+      "case_id": "dl-luty-za-20-dni",
+      "repeat": 2,
+      "duration_ms": 2570,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-200",
+        "quantity": 35,
+        "deadline": "2027-03-02",
+        "deadline_text": "za 20 dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 575,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-na-piatek",
+      "repeat": 2,
+      "duration_ms": 3084,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 70,
+        "deadline": "2026-11-06",
+        "deadline_text": "na piątek",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 590,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-w-piatek",
+      "repeat": 2,
+      "duration_ms": 3216,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "XYZ-300",
+        "quantity": 10,
+        "deadline": "2026-11-05",
+        "deadline_text": "w piątek",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 104
+    },
+    {
+      "case_id": "dl-za-tydzien",
+      "repeat": 2,
+      "duration_ms": 2751,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 55,
+        "deadline": "2026-11-09",
+        "deadline_text": "za tydzień",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 585,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-za-trzy-dni-slownie",
+      "repeat": 2,
+      "duration_ms": 2652,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 18,
+        "deadline": "2026-11-08",
+        "deadline_text": "za trzy dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 577,
+      "output_tokens": 96
+    },
+    {
+      "case_id": "dl-przyszly-tydzien",
+      "repeat": 2,
+      "duration_ms": 2894,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 22,
+        "deadline": "2026-11-11",
+        "deadline_text": "w przyszłym tygodniu",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 596,
+      "output_tokens": 105
+    },
+    {
+      "case_id": "dl-na-swieta",
+      "repeat": 2,
+      "duration_ms": 2872,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 500,
+        "deadline": null,
+        "deadline_text": "na święta",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 584,
+      "output_tokens": 89
+    },
+    {
+      "case_id": "dl-jak-najszybciej",
+      "repeat": 2,
+      "duration_ms": 3219,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-200",
+        "quantity": 14,
+        "deadline": "2026-11-05",
+        "deadline_text": "jak najszybciej",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "klient-brak-podpisu",
+      "repeat": 2,
+      "duration_ms": 2552,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": null,
+        "product_code": "ABC-100",
+        "quantity": 25,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "customer",
+        "substitute_allowed"
+      ],
+      "input_tokens": 560,
+      "output_tokens": 79
+    },
+    {
+      "case_id": "klient-w-tresci",
+      "repeat": 2,
+      "duration_ms": 2858,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Budowlanka Plus",
+        "product_code": "XYZ-300",
+        "quantity": 70,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 581,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "klient-podpis-dzial",
+      "repeat": 2,
+      "duration_ms": 2723,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "ABC-200",
+        "quantity": 40,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 90
+    },
+    {
+      "case_id": "ilosc-brak",
+      "repeat": 2,
+      "duration_ms": 2229,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": null,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "quantity",
+        "substitute_allowed"
+      ],
+      "input_tokens": 579,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "ilosc-slownie",
+      "repeat": 2,
+      "duration_ms": 2381,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 25,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 588,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "ilosc-i-kod-w-temacie",
+      "repeat": 2,
+      "duration_ms": 2520,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 80,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 583,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "ilosc-x",
+      "repeat": 2,
+      "duration_ms": 7707,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 10,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 568,
+      "output_tokens": 82
+    },
+    {
+      "case_id": "kod-male-litery",
+      "repeat": 2,
+      "duration_ms": 3177,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "abc-100",
+        "quantity": 120,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 579,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "ilosc-liczba-w-kodzie",
+      "repeat": 2,
+      "duration_ms": 2416,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 300,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 584,
+      "output_tokens": 87
+    },
+    {
+      "case_id": "zamiennik-bez-zamiennikow",
+      "repeat": 2,
+      "duration_ms": 6986,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 16,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 582,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "zamiennik-nie-akceptujemy",
+      "repeat": 2,
+      "duration_ms": 2676,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 33,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 588,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "zamiennik-podobny-model",
+      "repeat": 2,
+      "duration_ms": 2667,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "XYZ-300",
+        "quantity": 28,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 597,
+      "output_tokens": 82
+    },
+    {
+      "case_id": "zamiennik-rowniez-zamiennik",
+      "repeat": 2,
+      "duration_ms": 2746,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 44,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 589,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "zamiennik-tylko-oryginal",
+      "repeat": 2,
+      "duration_ms": 2541,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 50,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 587,
+      "output_tokens": 85
+    },
+    {
+      "case_id": "cena-rabat-przecinek",
+      "repeat": 2,
+      "duration_ms": 3907,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 300,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "7.5",
+        "price_text": "rabatu 7,5% od ceny katalogowej"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 596,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "cena-rabat-pelny",
+      "repeat": 2,
+      "duration_ms": 2601,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 500,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "25.0",
+        "price_text": "rabat 25%"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 588,
+      "output_tokens": 95
+    },
+    {
+      "case_id": "cena-docelowa-za-sztuke",
+      "repeat": 2,
+      "duration_ms": 3473,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 100,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "target_price",
+        "price_value": "45.0",
+        "price_text": "jeśli cena nie przekroczy 45 zł za sztukę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 107
+    },
+    {
+      "case_id": "cena-najlepsza",
+      "repeat": 2,
+      "duration_ms": 2874,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "XYZ-300",
+        "quantity": 75,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "najlepszą cenę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 581,
+      "output_tokens": 90
+    },
+    {
+      "case_id": "cena-brak-pytanie-o-cene",
+      "repeat": 2,
+      "duration_ms": 2807,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 24,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 577,
+      "output_tokens": 85
+    },
+    {
+      "case_id": "dl-do-piatku",
+      "repeat": 3,
+      "duration_ms": 7217,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 80,
+        "deadline": "2026-11-06",
+        "deadline_text": "do piątku",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 602,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-konca-tygodnia",
+      "repeat": 3,
+      "duration_ms": 2527,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-200",
+        "quantity": 20,
+        "deadline": "2026-11-06",
+        "deadline_text": "do końca tygodnia",
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-konca-miesiaca",
+      "repeat": 3,
+      "duration_ms": 7283,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 150,
+        "deadline": "2026-11-30",
+        "deadline_text": "do końca miesiąca",
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 603,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-w-ciagu-14-dni",
+      "repeat": 3,
+      "duration_ms": 3894,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 60,
+        "deadline": "2026-11-16",
+        "deadline_text": "w ciągu 14 dni",
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "najlepszą cenę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 110
+    },
+    {
+      "case_id": "dl-za-3-dni",
+      "repeat": 3,
+      "duration_ms": 8121,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-200",
+        "quantity": 12,
+        "deadline": "2026-11-08",
+        "deadline_text": "za 3 dni",
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 588,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-jutro",
+      "repeat": 3,
+      "duration_ms": 3069,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "XYZ-300",
+        "quantity": 5,
+        "deadline": "2026-11-04",
+        "deadline_text": "na jutro",
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 592,
+      "output_tokens": 103
+    },
+    {
+      "case_id": "dl-pojutrze",
+      "repeat": 3,
+      "duration_ms": 2694,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 40,
+        "deadline": "2026-11-06",
+        "deadline_text": "pojutrze",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 570,
+      "output_tokens": 96
+    },
+    {
+      "case_id": "dl-data-20-11",
+      "repeat": 3,
+      "duration_ms": 3162,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 200,
+        "deadline": "2026-11-20",
+        "deadline_text": "20.11.",
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "5.0",
+        "price_text": "rabat 5%"
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 611,
+      "output_tokens": 108
+    },
+    {
+      "case_id": "dl-w-ciagu-tygodnia",
+      "repeat": 3,
+      "duration_ms": 8221,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 30,
+        "deadline": "2026-11-13",
+        "deadline_text": "w ciągu tygodnia",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 585,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-pelna-data",
+      "repeat": 3,
+      "duration_ms": 3754,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 1000,
+        "deadline": "2026-12-15",
+        "deadline_text": "do 15.12.2026",
+        "substitute_allowed": null,
+        "price_kind": "target_price",
+        "price_value": "12.5",
+        "price_text": "nasza cena docelowa to 12,50 zł za sztukę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 615,
+      "output_tokens": 132
+    },
+    {
+      "case_id": "dl-weekend-sobota",
+      "repeat": 3,
+      "duration_ms": 6421,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 15,
+        "deadline": "2026-11-09",
+        "deadline_text": "do poniedziałku",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 575,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-weekend-niedziela",
+      "repeat": 3,
+      "duration_ms": 3626,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "XYZ-300",
+        "quantity": 8,
+        "deadline": "2026-11-10",
+        "deadline_text": "pojutrze",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 580,
+      "output_tokens": 98
+    },
+    {
+      "case_id": "dl-rollover-data",
+      "repeat": 3,
+      "duration_ms": 3197,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 90,
+        "deadline": "2027-01-05",
+        "deadline_text": "do 5.01",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 590,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "dl-rollover-14-dni",
+      "repeat": 3,
+      "duration_ms": 3135,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 45,
+        "deadline": "2027-01-11",
+        "deadline_text": "w ciągu 14 dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 587,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "dl-luty-koniec-miesiaca",
+      "repeat": 3,
+      "duration_ms": 3067,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 25,
+        "deadline": "2027-02-28",
+        "deadline_text": "do końca miesiąca",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 98
+    },
+    {
+      "case_id": "dl-luty-za-20-dni",
+      "repeat": 3,
+      "duration_ms": 3281,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-200",
+        "quantity": 35,
+        "deadline": "2027-03-02",
+        "deadline_text": "za 20 dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 575,
+      "output_tokens": 97
+    },
+    {
+      "case_id": "dl-na-piatek",
+      "repeat": 3,
+      "duration_ms": 2964,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 70,
+        "deadline": "2026-11-06",
+        "deadline_text": "na piątek",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 590,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-w-piatek",
+      "repeat": 3,
+      "duration_ms": 3070,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "XYZ-300",
+        "quantity": 10,
+        "deadline": "2026-11-05",
+        "deadline_text": "w piątek",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 104
+    },
+    {
+      "case_id": "dl-za-tydzien",
+      "repeat": 3,
+      "duration_ms": 5905,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 55,
+        "deadline": "2026-11-09",
+        "deadline_text": "za tydzień",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 585,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "dl-za-trzy-dni-slownie",
+      "repeat": 3,
+      "duration_ms": 2636,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 18,
+        "deadline": "2026-11-08",
+        "deadline_text": "za trzy dni",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 577,
+      "output_tokens": 96
+    },
+    {
+      "case_id": "dl-przyszly-tydzien",
+      "repeat": 3,
+      "duration_ms": 3220,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 22,
+        "deadline": "2026-11-11",
+        "deadline_text": "w przyszłym tygodniu",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 596,
+      "output_tokens": 105
+    },
+    {
+      "case_id": "dl-na-swieta",
+      "repeat": 3,
+      "duration_ms": 3370,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 500,
+        "deadline": "2026-12-24",
+        "deadline_text": "na święta",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 584,
+      "output_tokens": 99
+    },
+    {
+      "case_id": "dl-jak-najszybciej",
+      "repeat": 3,
+      "duration_ms": 12196,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "flagged_miss",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-200",
+        "quantity": 14,
+        "deadline": "2026-11-05",
+        "deadline_text": "jak najszybciej",
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "deadline",
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 101
+    },
+    {
+      "case_id": "klient-brak-podpisu",
+      "repeat": 3,
+      "duration_ms": 2522,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": null,
+        "product_code": "ABC-100",
+        "quantity": 25,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "customer",
+        "substitute_allowed"
+      ],
+      "input_tokens": 560,
+      "output_tokens": 79
+    },
+    {
+      "case_id": "klient-w-tresci",
+      "repeat": 3,
+      "duration_ms": 2691,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Budowlanka Plus",
+        "product_code": "XYZ-300",
+        "quantity": 70,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 581,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "klient-podpis-dzial",
+      "repeat": 3,
+      "duration_ms": 2419,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Zakłady Mechaniczne Kowalski",
+        "product_code": "ABC-200",
+        "quantity": 40,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 586,
+      "output_tokens": 90
+    },
+    {
+      "case_id": "ilosc-brak",
+      "repeat": 3,
+      "duration_ms": 3570,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": null,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "quantity",
+        "substitute_allowed"
+      ],
+      "input_tokens": 579,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "ilosc-slownie",
+      "repeat": 3,
+      "duration_ms": 2630,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 25,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 588,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "ilosc-i-kod-w-temacie",
+      "repeat": 3,
+      "duration_ms": 2380,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 80,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 583,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "ilosc-x",
+      "repeat": 3,
+      "duration_ms": 2233,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "ABC-100",
+        "quantity": 10,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 568,
+      "output_tokens": 82
+    },
+    {
+      "case_id": "kod-male-litery",
+      "repeat": 3,
+      "duration_ms": 2939,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "abc-100",
+        "quantity": 120,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 579,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "ilosc-liczba-w-kodzie",
+      "repeat": 3,
+      "duration_ms": 2600,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "XYZ-300",
+        "quantity": 300,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 584,
+      "output_tokens": 87
+    },
+    {
+      "case_id": "zamiennik-bez-zamiennikow",
+      "repeat": 3,
+      "duration_ms": 5041,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 16,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 582,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "zamiennik-nie-akceptujemy",
+      "repeat": 3,
+      "duration_ms": 2247,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "ABC-100",
+        "quantity": 33,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 588,
+      "output_tokens": 84
+    },
+    {
+      "case_id": "zamiennik-podobny-model",
+      "repeat": 3,
+      "duration_ms": 2701,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "XYZ-300",
+        "quantity": 28,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 597,
+      "output_tokens": 82
+    },
+    {
+      "case_id": "zamiennik-rowniez-zamiennik",
+      "repeat": 3,
+      "duration_ms": 2666,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 44,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": true,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 589,
+      "output_tokens": 86
+    },
+    {
+      "case_id": "zamiennik-tylko-oryginal",
+      "repeat": 3,
+      "duration_ms": 2591,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 50,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": false,
+        "price_kind": "none",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [],
+      "input_tokens": 587,
+      "output_tokens": 85
+    },
+    {
+      "case_id": "cena-rabat-przecinek",
+      "repeat": 3,
+      "duration_ms": 4721,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Hurtownia Delta",
+        "product_code": "XYZ-300",
+        "quantity": 300,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "7.5",
+        "price_text": "rabatu 7,5% od ceny katalogowej"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 596,
+      "output_tokens": 102
+    },
+    {
+      "case_id": "cena-rabat-pelny",
+      "repeat": 3,
+      "duration_ms": 2749,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "ACME Sp. z o.o.",
+        "product_code": "ABC-100",
+        "quantity": 500,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "discount_percent",
+        "price_value": "25.0",
+        "price_text": "rabat 25%"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 588,
+      "output_tokens": 95
+    },
+    {
+      "case_id": "cena-docelowa-za-sztuke",
+      "repeat": 3,
+      "duration_ms": 7386,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Nova Tech Sp. z o.o.",
+        "product_code": "ABC-200",
+        "quantity": 100,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "target_price",
+        "price_value": "45.0",
+        "price_text": "jeśli cena nie przekroczy 45 zł za sztukę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 598,
+      "output_tokens": 107
+    },
+    {
+      "case_id": "cena-najlepsza",
+      "repeat": 3,
+      "duration_ms": 2967,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "hit"
+      },
+      "parsed": {
+        "customer": "Biuro Max",
+        "product_code": "XYZ-300",
+        "quantity": 75,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": "najlepszą cenę"
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 581,
+      "output_tokens": 90
+    },
+    {
+      "case_id": "cena-brak-pytanie-o-cene",
+      "repeat": 3,
+      "duration_ms": 4770,
+      "failure": null,
+      "outcomes": {
+        "customer": "hit",
+        "product_code": "hit",
+        "quantity": "hit",
+        "deadline": "hit",
+        "substitute_allowed": "hit",
+        "price": "silent_wrong"
+      },
+      "parsed": {
+        "customer": "Sklep Domowy Ela",
+        "product_code": "ABC-100",
+        "quantity": 24,
+        "deadline": null,
+        "deadline_text": null,
+        "substitute_allowed": null,
+        "price_kind": "best_price",
+        "price_value": null,
+        "price_text": null
+      },
+      "uncertain": [
+        "substitute_allowed"
+      ],
+      "input_tokens": 577,
+      "output_tokens": 86
+    }
+  ]
+}

@@ -1,0 +1,1737 @@
+[
+  {
+    "id": "dl-do-piatku",
+    "subject": "Zapytanie ofertowe ABC-100",
+    "body": "Dzień dobry,\n\nprosimy o ofertę na 80 szt. ABC-100 z dostawą do piątku.\n\nPozdrawiam\nMarek Nowak\nDział zakupów, ACME Sp. z o.o.",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 80,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-06",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Odebrane w poniedziałek 2026-11-02; najbliższy piątek to 2026-11-06 (+4 dni). Podpis: dział zakupów firmy ACME. Brak wzmianki o zamienniku i cenie.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent",
+      "quantity_variant"
+    ]
+  },
+  {
+    "id": "dl-konca-tygodnia",
+    "subject": "ABC-200 – zamówienie",
+    "body": "Dzień dobry,\n\nchcemy zamówić 20 sztuk ABC-200, dostawa najlepiej do końca tygodnia. Bez zamienników, tylko oryginał.\n\nZ poważaniem\nAnna Wrona\nBiuro Max",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 20,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-06",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": false,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Czwartek 2026-11-05; koniec tygodnia to piątek 2026-11-06 (+1 dzień). „Bez zamienników, tylko oryginał” = zamiennik niedozwolony.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_stated",
+      "price_absent",
+      "quantity_variant"
+    ]
+  },
+  {
+    "id": "dl-konca-miesiaca",
+    "subject": "Zapytanie XYZ-300",
+    "body": "Szanowni Państwo,\n\npotrzebujemy 150 szt. XYZ-300 do końca miesiąca. Zamiennik jest akceptowalny, jeśli zabraknie towaru.\n\nPozdrawiam,\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 150,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-30",
+        "weekday": "monday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": true,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Listopad ma 30 dni, więc koniec miesiąca to poniedziałek 2026-11-30. „Zamiennik jest akceptowalny” = zamiennik dozwolony.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_stated",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-w-ciagu-14-dni",
+    "subject": "Pilne: ABC-100",
+    "body": "Dzień dobry,\n\nproszę o ofertę: ABC-100, 60 sztuk, dostawa w ciągu 14 dni. Prosimy o najlepszą cenę.\n\nPozdrawiamy\nNova Tech Sp. z o.o.",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 60,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-16",
+        "weekday": "monday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "best_price",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "2026-11-02 + 14 dni = 2026-11-16 (poniedziałek). „Najlepsza cena” = best_price bez wartości. Zamiennik nie wspomniany.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_best",
+      "quantity_variant"
+    ]
+  },
+  {
+    "id": "dl-za-3-dni",
+    "subject": "Zapytanie",
+    "body": "Hej, ile kosztuje ABC-200? Potrzebuję 12 szt. za 3 dni. Jeśli nie macie, może być inny model.\n\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 12,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-08",
+        "weekday": "sunday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": true,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "2026-11-05 + 3 dni = 2026-11-08 (niedziela). „Może być inny model” = zamiennik dozwolony. Pytanie o cenę nie jest ceną docelową ani rabatem.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_stated",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-jutro",
+    "subject": "Pilne zamówienie",
+    "body": "Dzień dobry,\n\npotrzebujemy na jutro 5 szt. XYZ-300. Tylko ten model, nie przyjmiemy zamiennika.\n\nJan Kowalski\nZakłady Mechaniczne Kowalski",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Zakłady Mechaniczne Kowalski",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 5,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-04",
+        "weekday": "wednesday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": false,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Wtorek 2026-11-03, jutro = 2026-11-04 (środa). „Nie przyjmiemy zamiennika” = niedozwolony.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_stated",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-pojutrze",
+    "subject": "ABC-100",
+    "body": "Proszę o dostawę pojutrze: 40 szt. ABC-100.\n\nZ poważaniem\nEwa Nowak\nBiuro Max",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 40,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-06",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Środa 2026-11-04, pojutrze = 2026-11-06 (piątek).",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-data-20-11",
+    "subject": "Zapytanie o ABC-200",
+    "body": "Dzień dobry,\n\nprosimy o wycenę 200 szt. ABC-200, termin dostawy: 20.11. Przy tej ilości prosimy o rabat 5%.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 200,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-20",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "discount_percent",
+        "value": "5",
+        "flagged": false
+      }
+    },
+    "rationale": "20.11 bez roku, odebrane 2026-11-02, więc 2026-11-20 (piątek; 2 listopada to poniedziałek, 9, 16 i 23 poniedziałki). Rabat 5% = discount_percent 5.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_discount"
+    ]
+  },
+  {
+    "id": "dl-w-ciagu-tygodnia",
+    "subject": "XYZ-300 – oferta",
+    "body": "Dzień dobry,\n\npotrzebujemy 30 szt. XYZ-300, dostawa w ciągu tygodnia.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-11-06T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 30,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-13",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Piątek 2026-11-06 + 7 dni = 2026-11-13 (piątek).",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-pelna-data",
+    "subject": "Zapytanie ofertowe",
+    "body": "Dzień dobry,\n\nzamierzamy zamówić 1000 szt. ABC-100, dostawa do 15.12.2026. Nasza cena docelowa to 12,50 zł za sztukę.\n\nZ poważaniem\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 1000,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-12-15",
+        "weekday": "tuesday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "target_price",
+        "value": "12.50",
+        "flagged": false
+      }
+    },
+    "rationale": "Data podana wprost: 2026-12-15; 1 grudnia 2026 to wtorek, więc 15 grudnia też wtorek. Cena docelowa 12,50 zł za sztukę = target_price 12.50.",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_target"
+    ]
+  },
+  {
+    "id": "dl-weekend-sobota",
+    "subject": "ABC-100",
+    "body": "Dzień dobry,\n\nprosimy o 15 szt. ABC-100 do poniedziałku.\n\nPozdrawiam\nEwa Nowak\nBiuro Max",
+    "received_at": "2026-11-07T10:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 15,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-09",
+        "weekday": "monday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Sobota 2026-11-07, najbliższy poniedziałek to 2026-11-09 (+2 dni).",
+    "tags": [
+      "deadline_supported",
+      "weekend_reference",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-weekend-niedziela",
+    "subject": "XYZ-300",
+    "body": "Dzień dobry,\n\npotrzebujemy 8 szt. XYZ-300 pojutrze.\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-08T10:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 8,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-10",
+        "weekday": "tuesday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Niedziela 2026-11-08, pojutrze = 2026-11-10 (wtorek).",
+    "tags": [
+      "deadline_supported",
+      "weekend_reference",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-rollover-data",
+    "subject": "Zapytanie ABC-200",
+    "body": "Dzień dobry,\n\nprosimy o 90 szt. ABC-200 z dostawą do 5.01.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+    "received_at": "2026-12-28T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 90,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2027-01-05",
+        "weekday": "tuesday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Odebrane 2026-12-28; 5.01 jest przed nami dopiero w następnym roku: 2027-01-05 (1 stycznia 2027 to piątek, więc 5 stycznia to wtorek).",
+    "tags": [
+      "deadline_supported",
+      "year_rollover",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-rollover-14-dni",
+    "subject": "ABC-100 – oferta",
+    "body": "Dzień dobry,\n\npotrzebujemy 45 szt. ABC-100, dostawa w ciągu 14 dni.\n\nZ poważaniem\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-12-28T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 45,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2027-01-11",
+        "weekday": "monday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "2026-12-28 + 14 dni: 3 dni do 31 grudnia, 11 dni stycznia = 2027-01-11 (poniedziałek).",
+    "tags": [
+      "deadline_supported",
+      "year_rollover",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-luty-koniec-miesiaca",
+    "subject": "XYZ-300",
+    "body": "Dzień dobry,\n\nprosimy o ofertę na 25 szt. XYZ-300 z dostawą do końca miesiąca.\n\nPozdrawiam\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2027-02-10T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 25,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2027-02-28",
+        "weekday": "sunday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Luty 2027 nie jest przestępny (28 dni), więc koniec miesiąca to 2027-02-28 (1 lutego 2027 to poniedziałek, 28 lutego niedziela).",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-luty-za-20-dni",
+    "subject": "ABC-200",
+    "body": "Dzień dobry,\n\npotrzebujemy 35 szt. ABC-200 za 20 dni.\n\nZ poważaniem\nAnna Wrona\nBiuro Max",
+    "received_at": "2027-02-10T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 35,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2027-03-02",
+        "weekday": "tuesday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "2027-02-10 + 20 dni: 18 dni do 28 lutego, 2 dni marca = 2027-03-02 (wtorek; 1 marca 2027 to poniedziałek).",
+    "tags": [
+      "deadline_supported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-na-piatek",
+    "subject": "ABC-100",
+    "body": "Dzień dobry,\n\nprosimy o 70 szt. ABC-100. Towar jest nam potrzebny na piątek.\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 70,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-06",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Na piątek” znaczy dla klienta jednoznacznie najbliższy piątek: poniedziałek 2026-11-02 + 4 dni = 2026-11-06. Zwrot spoza gramatyki „do piątku”.",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-w-piatek",
+    "subject": "XYZ-300",
+    "body": "Dzień dobry,\n\nprosimy o 10 szt. XYZ-300, dostawa w piątek.\n\nPozdrawiam\nJan Kowalski\nZakłady Mechaniczne Kowalski",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Zakłady Mechaniczne Kowalski",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 10,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-06",
+        "weekday": "friday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Wtorek 2026-11-03; najbliższy piątek to 2026-11-06 (+3 dni).",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-za-tydzien",
+    "subject": "Zapytanie ABC-200",
+    "body": "Dzień dobry,\n\npotrzebujemy 55 szt. ABC-200 za tydzień.\n\nZ poważaniem\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 55,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-09",
+        "weekday": "monday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Za tydzień” = +7 dni: 2026-11-02 + 7 = 2026-11-09 (poniedziałek). Zwrot spoza gramatyki (obsługiwane jest „za N dni”).",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-za-trzy-dni-slownie",
+    "subject": "ABC-100",
+    "body": "Dzień dobry,\n\nprosimy o 18 szt. ABC-100, dostawa za trzy dni.\n\nPozdrawiam\nEwa Nowak\nBiuro Max",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 18,
+        "flagged": false
+      },
+      "deadline": {
+        "value": "2026-11-08",
+        "weekday": "sunday",
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Czwartek 2026-11-05 + 3 dni = 2026-11-08 (niedziela). Liczba słownie, której reguły nie czytają.",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-przyszly-tydzien",
+    "subject": "Zapytanie XYZ-300",
+    "body": "Dzień dobry,\n\nprosimy o ofertę na 22 szt. XYZ-300, potrzebne w przyszłym tygodniu.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 22,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": true
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„W przyszłym tygodniu” nie wskazuje dnia: żadna konkretna data nie jest poprawna, więc brak daty musi być oznaczony jako niepewny.",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-na-swieta",
+    "subject": "ABC-100 na święta",
+    "body": "Dzień dobry,\n\npotrzebujemy 500 szt. ABC-100 na święta.\n\nZ poważaniem\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 500,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": true
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Na święta” nie wskazuje dnia (które święta i który dzień przed nimi?), więc poprawny wynik to brak daty oznaczony jako niepewny.",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "dl-jak-najszybciej",
+    "subject": "Pilne ABC-200",
+    "body": "Dzień dobry,\n\nprosimy o 14 szt. ABC-200 jak najszybciej.\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 14,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": true
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Jak najszybciej” to pilność bez daty: brak daty oznaczony jako niepewny.",
+    "tags": [
+      "deadline_unsupported",
+      "customer_signature",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "klient-brak-podpisu",
+    "subject": "ABC-100",
+    "body": "Dzień dobry, poproszę 25 szt. ABC-100. Pozdrawiam",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": null,
+        "flagged": true
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 25,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Sama formułka grzecznościowa, żadnej nazwy firmy ani podpisu: klienta nie da się ustalić, więc brak musi być oznaczony.",
+    "tags": [
+      "customer_missing",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "klient-w-tresci",
+    "subject": "Zapytanie o XYZ-300",
+    "body": "Dzień dobry, piszę w imieniu firmy Budowlanka Plus. Potrzebujemy 70 szt. XYZ-300, proszę o ofertę.",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Budowlanka Plus",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 70,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Nazwa firmy jest podana w treści, nie w podpisie. Terminu brak.",
+    "tags": [
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "klient-podpis-dzial",
+    "subject": "Wycena ABC-200",
+    "body": "Dzień dobry,\n\nprosimy o wycenę 40 szt. ABC-200.\n\nZ poważaniem\nDział zakupów\nZakłady Mechaniczne Kowalski",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Zakłady Mechaniczne Kowalski",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 40,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Podpis zawiera tylko dział i nazwę firmy, bez osoby. Terminu brak.",
+    "tags": [
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "ilosc-brak",
+    "subject": "ABC-200",
+    "body": "Dzień dobry,\n\nproszę o ofertę na ABC-200, ilość do ustalenia.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": null,
+        "flagged": true
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Klient wprost nie podaje ilości, więc ilość musi być pusta i oznaczona.",
+    "tags": [
+      "quantity_variant",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "ilosc-slownie",
+    "subject": "Zapytanie ABC-100",
+    "body": "Dzień dobry,\n\nprosimy o ofertę na dwadzieścia pięć sztuk ABC-100.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-11-06T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 25,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Dwadzieścia pięć = 25.",
+    "tags": [
+      "quantity_variant",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "ilosc-i-kod-w-temacie",
+    "subject": "Zapytanie: 80 sztuk XYZ-300",
+    "body": "Dzień dobry,\n\nprosimy o wycenę jak w temacie.\n\nPozdrawiam\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 80,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Ilość i kod są tylko w temacie wiadomości.",
+    "tags": [
+      "quantity_variant",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "ilosc-x",
+    "subject": "Zamówienie",
+    "body": "Dzień dobry,\n\nzamawiamy 10 x ABC-100.\n\nPozdrawiam\nEwa Nowak\nBiuro Max",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 10,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„10 x ABC-100” = 10 sztuk.",
+    "tags": [
+      "quantity_variant",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "kod-male-litery",
+    "subject": "zapytanie",
+    "body": "Dzień dobry,\n\nczy macie abc-100 w ilości 120 szt.?\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 120,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Kod napisany małymi literami; sprawdzenie magazynu porównuje kody bez względu na wielkość liter, więc ABC-100 jest poprawnym odczytem.",
+    "tags": [
+      "quantity_variant",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "ilosc-liczba-w-kodzie",
+    "subject": "XYZ-300 w ilości 300 szt.",
+    "body": "Dzień dobry,\n\nprosimy o ofertę, kod i ilość w temacie.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 300,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Liczba 300 występuje w kodzie XYZ-300 i jako ilość; ilość to 300 szt., kod XYZ-300.",
+    "tags": [
+      "quantity_variant",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "zamiennik-bez-zamiennikow",
+    "subject": "ABC-200",
+    "body": "Dzień dobry,\n\nprosimy o 16 szt. ABC-200, bez zamienników.\n\nPozdrawiam\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+    "received_at": "2026-11-06T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 16,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": false,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Bez zamienników” = zamiennik niedozwolony.",
+    "tags": [
+      "substitute_stated",
+      "customer_signature",
+      "deadline_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "zamiennik-nie-akceptujemy",
+    "subject": "ABC-100 – zamówienie",
+    "body": "Dzień dobry,\n\nzamawiamy 33 szt. ABC-100. Nie akceptujemy innych modeli.\n\nZ poważaniem\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 33,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": false,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Nie akceptujemy innych modeli” = zamiennik niedozwolony.",
+    "tags": [
+      "substitute_stated",
+      "customer_signature",
+      "deadline_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "zamiennik-podobny-model",
+    "subject": "XYZ-300",
+    "body": "Dzień dobry,\n\nszukamy 28 szt. XYZ-300. Jeśli nie macie pełnej ilości, możemy wziąć podobny model o zbliżonych parametrach.\n\nPozdrawiam\nAnna Wrona\nBiuro Max",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 28,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": true,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Możemy wziąć podobny model” = zamiennik dozwolony.",
+    "tags": [
+      "substitute_stated",
+      "customer_signature",
+      "deadline_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "zamiennik-rowniez-zamiennik",
+    "subject": "Zapytanie ABC-200",
+    "body": "Dzień dobry,\n\nprosimy o 44 szt. ABC-200, dopuszczamy także zamiennik.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 44,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": true,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Dopuszczamy także zamiennik” = zamiennik dozwolony.",
+    "tags": [
+      "substitute_stated",
+      "customer_signature",
+      "deadline_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "zamiennik-tylko-oryginal",
+    "subject": "ABC-100 oryginał",
+    "body": "Dzień dobry,\n\npotrzebujemy 50 szt. ABC-100, wyłącznie oryginał.\n\nZ poważaniem\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 50,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": false,
+        "flagged": false
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "„Wyłącznie oryginał” = zamiennik niedozwolony.",
+    "tags": [
+      "substitute_stated",
+      "customer_signature",
+      "deadline_absent",
+      "price_absent"
+    ]
+  },
+  {
+    "id": "cena-rabat-przecinek",
+    "subject": "XYZ-300 – rabat",
+    "body": "Dzień dobry,\n\nprosimy o 300 szt. XYZ-300. Oczekujemy rabatu 7,5% od ceny katalogowej.\n\nPozdrawiam\nTomasz Lewandowski\nHurtownia Delta",
+    "received_at": "2026-11-06T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Hurtownia Delta",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 300,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "discount_percent",
+        "value": "7.5",
+        "flagged": false
+      }
+    },
+    "rationale": "Rabat 7,5% (przecinek dziesiętny) = discount_percent 7.5.",
+    "tags": [
+      "price_discount",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent"
+    ]
+  },
+  {
+    "id": "cena-rabat-pelny",
+    "subject": "Prośba o rabat",
+    "body": "Dzień dobry,\n\nprzy zamówieniu 500 szt. ABC-100 prosimy o rabat 25%.\n\nPozdrawiam\nMarek Nowak\nACME Sp. z o.o.",
+    "received_at": "2026-11-02T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "ACME",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 500,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "discount_percent",
+        "value": "25",
+        "flagged": false
+      }
+    },
+    "rationale": "Rabat 25% = discount_percent 25.",
+    "tags": [
+      "price_discount",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent"
+    ]
+  },
+  {
+    "id": "cena-docelowa-za-sztuke",
+    "subject": "Zapytanie ABC-200",
+    "body": "Dzień dobry,\n\nzamówimy 100 szt. ABC-200, jeśli cena nie przekroczy 45 zł za sztukę.\n\nZ poważaniem\nKatarzyna Maj\nNova Tech Sp. z o.o.",
+    "received_at": "2026-11-03T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Nova Tech",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-200",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 100,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "target_price",
+        "value": "45",
+        "flagged": false
+      }
+    },
+    "rationale": "Górna granica 45 zł za sztukę = cena docelowa target_price 45 (za sztukę, nie za całość).",
+    "tags": [
+      "price_target",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent"
+    ]
+  },
+  {
+    "id": "cena-najlepsza",
+    "subject": "Najlepsza cena XYZ-300",
+    "body": "Dzień dobry,\n\nproszę o najlepszą cenę na 75 szt. XYZ-300.\n\nPozdrawiam\nAnna Wrona\nBiuro Max",
+    "received_at": "2026-11-04T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Biuro Max",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "XYZ-300",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 75,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "best_price",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Prośba o najlepszą cenę = best_price bez wartości.",
+    "tags": [
+      "price_best",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent"
+    ]
+  },
+  {
+    "id": "cena-brak-pytanie-o-cene",
+    "subject": "ABC-100",
+    "body": "Dzień dobry,\n\nile kosztuje 24 szt. ABC-100?\n\nPozdrawiam\nPiotr Zawadzki\nSklep Domowy Ela",
+    "received_at": "2026-11-05T09:00:00+01:00",
+    "expected": {
+      "customer": {
+        "value": "Sklep Domowy Ela",
+        "flagged": false
+      },
+      "product_code": {
+        "value": "ABC-100",
+        "flagged": false
+      },
+      "quantity": {
+        "value": 24,
+        "flagged": false
+      },
+      "deadline": {
+        "value": null,
+        "weekday": null,
+        "flagged": false
+      },
+      "substitute_allowed": {
+        "value": null,
+        "flagged": true
+      },
+      "price": {
+        "kind": "none",
+        "value": null,
+        "flagged": false
+      }
+    },
+    "rationale": "Zwykłe pytanie o cenę nie zawiera ani rabatu, ani ceny docelowej, ani prośby o najlepszą cenę, więc price = none.",
+    "tags": [
+      "price_absent",
+      "customer_signature",
+      "deadline_absent",
+      "substitute_absent"
+    ]
+  }
+]

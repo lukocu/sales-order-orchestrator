@@ -682,6 +682,18 @@ comparable, no baseline or bad usage). After a deliberate model or provider chan
 `--allow-model-change`. Procedure, how to read the sections and when to refresh
 the baseline: `context/foundation/test-plan.md` §6.3.
 
+Parser field eval: measures how well the parser reads each of the six fields on 42 hand-labelled
+Polish phrasings and lists every field that is wrong without being marked uncertain. No database,
+local only (CI has no LLM key), and it is a measurement, not a gate. Needs an LLM provider:
+
+```sh
+docker compose run --rm backend uv run python -m app.eval.fields --repeats 3
+```
+
+The report goes to `backend/eval_reports/fields/`. Run it after changing the parser prompt,
+`app/parsing/{analyze,deadline}.py` or the model. How to add a case and read the report:
+`context/foundation/test-plan.md` §6.2.
+
 ## Deploy
 
 Production runs at zero cost: [Render](https://render.com) free web service (Docker) and a
