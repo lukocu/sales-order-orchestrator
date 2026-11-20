@@ -1,10 +1,10 @@
 ---
 change_id: testing-eval-regression-gate
 title: Eval regression gate against baseline
-status: impl_reviewed
+status: archived
 created: 2026-11-20
 updated: 2026-11-20
-archived_at: null
+archived_at: 2026-11-20T20:33:42Z
 ---
 
 ## Notes
