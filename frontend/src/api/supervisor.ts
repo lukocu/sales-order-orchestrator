@@ -11,6 +11,7 @@ import { requestJson } from './client'
 export type SupervisorQueueItem = {
   id: number
   sender_name: string
+  customer?: string | null
   subject: string
   received_at: string
   submitted_at: string
@@ -59,6 +60,7 @@ function isQueueItem(value: unknown): value is SupervisorQueueItem {
   return (
     typeof value.id === 'number' &&
     typeof value.sender_name === 'string' &&
+    (value.customer === undefined || value.customer === null || typeof value.customer === 'string') &&
     typeof value.subject === 'string' &&
     typeof value.received_at === 'string' &&
     typeof value.submitted_at === 'string' &&

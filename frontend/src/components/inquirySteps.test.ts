@@ -4,7 +4,14 @@ import { ACME_ORCHESTRATION } from '../test/orchestrationFixtures'
 import { ACME_POLICY } from '../test/policyFixtures'
 import { ACME_RECOMMENDATION } from '../test/recommendationFixtures'
 import { ACME_DRAFT, DELTA_AWAITING } from '../test/replyDraftFixtures'
-import { inquirySteps, stepBackReason, type StepId, type StepState } from './inquirySteps'
+import {
+  inquirySteps,
+  parseStepId,
+  resolveLinkedStep,
+  stepBackReason,
+  type StepId,
+  type StepState,
+} from './inquirySteps'
 
 const FIELDS: ParsedFields = {
   customer: 'ACME',
@@ -170,6 +177,36 @@ describe('inquirySteps', () => {
     ],
   ])('%s', (_name, input, active, expected) => {
     expect(inquirySteps(input)).toEqual({ active, states: expected })
+  })
+})
+
+describe('parseStepId', () => {
+  it.each(['inquiry', 'variants', 'approval', 'reply'])('accepts %s', (value) => {
+    expect(parseStepId(value)).toBe(value)
+  })
+
+  it.each([undefined, '', 'Variants', 'warianty', 'run', 1])('rejects %s', (value) => {
+    expect(parseStepId(value)).toBeNull()
+  })
+})
+
+describe('resolveLinkedStep', () => {
+  const ready = inquirySteps(
+    analysis({ ...DRAFTED, draft: { ...ACME_DRAFT, status: 'ready_to_send' } }),
+  )
+  const atVariants = inquirySteps(analysis({ checks: EXCEPTION }))
+  const standard = inquirySteps(analysis({ checks: { ...EXCEPTION, outcome: 'standard' } }))
+
+  it.each<[string, string | undefined, ReturnType<typeof inquirySteps>, StepId, boolean]>([
+    ['a done step', 'variants', ready, 'variants', false],
+    ['the active step', 'reply', ready, 'reply', false],
+    ['no step', undefined, ready, 'reply', false],
+    ['an unknown value', 'bogus', ready, 'reply', true],
+    ['a locked step', 'reply', atVariants, 'variants', true],
+    ['a step that is not needed', 'approval', standard, 'inquiry', true],
+    ['a locked step before any analysis', 'variants', inquirySteps(null), 'inquiry', true],
+  ])('%s', (_name, requested, steps, step, fallback) => {
+    expect(resolveLinkedStep(requested, steps)).toEqual({ step, fallback })
   })
 })
 

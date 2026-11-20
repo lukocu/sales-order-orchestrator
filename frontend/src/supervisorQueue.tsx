@@ -69,8 +69,10 @@ export function SupervisorQueueProvider({
   )
 
   const remove = useCallback((inquiryId: number) => {
+    const wasLoading = request.current !== null
     generation.current += 1
     controller.current?.abort()
+    controller.current = null
     request.current = null
     setState((current) => {
       const queue = current.kind === 'ready' ? current.queue : current.kind === 'error' ? current.previous : null
@@ -78,7 +80,9 @@ export function SupervisorQueueProvider({
       const items = queue.items.filter((item) => item.id !== inquiryId)
       return { kind: 'ready', stale: false, queue: { items, total: items.length } }
     })
-  }, [])
+    // An aborted read would leave the count unloaded; start a fresh one.
+    if (wasLoading) void refresh(true)
+  }, [refresh])
 
   useEffect(() => {
     const userChanged = previousUser.current !== user.id
@@ -101,6 +105,9 @@ export function SupervisorQueueProvider({
       document.removeEventListener('visibilitychange', onVisibility)
       generation.current += 1
       controller.current?.abort()
+      // The aborted request would otherwise be shared with the next non-forced refresh.
+      controller.current = null
+      request.current = null
     }
   }, [refresh, user.id, user.role])
 

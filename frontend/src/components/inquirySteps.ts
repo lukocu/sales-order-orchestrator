@@ -53,6 +53,29 @@ export function inquirySteps(analysis: Analysis | null): InquirySteps {
   return { active, states }
 }
 
+// The step id named in an address (`?step=variants`), or null for anything else.
+export function parseStepId(value: unknown): StepId | null {
+  return STEP_ORDER.find((step) => step === value) ?? null
+}
+
+// A done or active step can be viewed; a locked or not needed one cannot.
+export function stepOpen(steps: InquirySteps, step: StepId): boolean {
+  const state = steps.states[step]
+  return state === 'done' || state === 'active'
+}
+
+// Where a link opens: the step it names if that step can be viewed, otherwise the active
+// step. `fallback` says the link named a step (or an unknown value) that cannot be opened; a
+// link without a step simply opens the active step.
+export function resolveLinkedStep(
+  requested: string | undefined,
+  steps: InquirySteps,
+): { step: StepId; fallback: boolean } {
+  const step = parseStepId(requested)
+  if (step !== null && stepOpen(steps, step)) return { step, fallback: false }
+  return { step: steps.active, fallback: requested !== undefined }
+}
+
 export type StepBackKey =
   | 'steps.back.draftRejected'
   | 'steps.back.analysisReplaced'

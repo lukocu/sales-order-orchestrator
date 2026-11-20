@@ -36,5 +36,5 @@ export function SupervisorReviewRoute({ inspectorOpen = false }: { inspectorOpen
   const { inquiryId: rawId } = useParams({ strict: false })
   const id = parseId(rawId)
   if (id === null) return <NotFound />
-  return <SupervisorOnly><SupervisorReview inquiryId={id} inspectorOpen={inspectorOpen} /></SupervisorOnly>
+  return <SupervisorOnly><SupervisorReview key={id} inquiryId={id} inspectorOpen={inspectorOpen} /></SupervisorOnly>
 }

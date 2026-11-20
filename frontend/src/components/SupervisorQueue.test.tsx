@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Analysis } from '../api/analysis'
 import type { SupervisorQueue as QueueData, SupervisorReview as ReviewData } from '../api/supervisor'
@@ -56,6 +56,7 @@ let signedIn = SUPERVISOR
 let queueCalls = 0
 let reviewCalls = 0
 let decisionCalls = 0
+let analysisCalls = 0
 let reviewResponses: ReviewData[] = []
 let queueFailsAfterInitial = false
 let decisionStatus = 409
@@ -88,6 +89,7 @@ beforeEach(() => {
   queueCalls = 0
   reviewCalls = 0
   decisionCalls = 0
+  analysisCalls = 0
   reviewResponses = [review()]
   queueFailsAfterInitial = false
   decisionStatus = 409
@@ -125,6 +127,10 @@ beforeEach(() => {
       reviewCalls += 1
       return json(200, response)
     }
+    if (path === '/api/inquiries/17/analysis' && method === 'GET') {
+      analysisCalls += 1
+      return json(200, emptyAnalysis)
+    }
     if (path === '/api/inquiries/17/draft/supervisor-decision' && method === 'POST') {
       decisionCalls += 1
       return decisionStatus === 200 ? json(200, emptyAnalysis) : json(decisionStatus, { detail: 'Draft changed' })
@@ -152,6 +158,39 @@ describe('Supervisor queue and review routes', () => {
     expect(await screen.findByText('Supervisor access required')).toBeInTheDocument()
     expect(queueCalls).toBe(0)
     expect(reviewCalls).toBe(0)
+  })
+
+  it('shows a salesperson the access message at the queue address without asking for the queue', async () => {
+    signedIn = SALES
+    const router = await renderWithRouter('/approvals')
+
+    expect(await screen.findByText('Supervisor access required')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/approvals')
+    expect(queueCalls).toBe(0)
+  })
+
+  it('does not read the analysis for a salesperson opening the review inspector directly', async () => {
+    signedIn = SALES
+    const router = await renderWithRouter('/approvals/17/run')
+
+    expect(await screen.findByText('Supervisor access required')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/approvals/17/run')
+    expect(screen.queryByRole('dialog', { name: 'Run inspector' })).not.toBeInTheDocument()
+    expect(reviewCalls).toBe(0)
+    expect(analysisCalls).toBe(0)
+  })
+
+  it('opens the review inspector for a supervisor and closes it back to the review', async () => {
+    const router = await renderWithRouter('/approvals/17/run')
+
+    const inspector = await screen.findByRole('dialog', { name: 'Run inspector' })
+    expect(analysisCalls).toBe(1)
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/approvals/17'))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Run inspector' })).not.toBeInTheDocument(),
+    )
   })
 
   it('allows rejection but hides approval for the supervisor’s own submission', async () => {
@@ -296,5 +335,31 @@ describe('Supervisor queue and review routes', () => {
     expect(screen.getByRole('heading', { name: 'Zamówienie ABC-100' })).toHaveFocus()
     await vi.waitFor(() => expect(screen.getByRole('link', { name: /To approve/ })).toHaveTextContent('0'))
     expect(decisionCalls).toBe(1)
+  })
+  it('re-reads the open review when the tab becomes visible and asks for a new look at a changed case', async () => {
+    reviewResponses = [review(), review('2026-11-12T00:00:00Z')]
+    await renderWithRouter('/approvals/17')
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Looks fine.' } })
+
+    act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+
+    expect(await screen.findByRole('button', { name: 'I reviewed the latest inquiry' })).toBeInTheDocument()
+    expect(reviewCalls).toBe(2)
+    expect(decisionCalls).toBe(0)
+    expect(screen.getByLabelText('Reason (required)')).toHaveValue('Looks fine.')
+  })
+
+  it('does not move focus when a decided case is opened directly', async () => {
+    reviewResponses = [{
+      ...review(),
+      draft_status: 'ready_to_send',
+      review_state: 'not_awaiting',
+      allowed_actions: [],
+    }]
+    await renderWithRouter('/approvals/17')
+
+    expect(await screen.findByText(/Decision complete: Ready to send/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Zamówienie ABC-100' })).not.toHaveFocus()
   })
 })

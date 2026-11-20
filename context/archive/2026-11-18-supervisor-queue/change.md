@@ -1,10 +1,10 @@
 ---
 change_id: supervisor-queue
 title: Supervisor queue
-status: complete
+status: archived
 created: 2026-11-18
-updated: 2026-11-18
-archived_at: null
+updated: 2026-11-20
+archived_at: 2026-11-20T11:49:22Z
 ---
 
 ## Notes
