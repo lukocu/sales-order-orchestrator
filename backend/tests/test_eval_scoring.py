@@ -17,7 +17,7 @@ from app.checks.schema import (
     StockCheck,
 )
 from app.checks.service import ChecksView
-from app.eval.cases import EvalCase
+from app.eval.cases import EvalCase, ExpectedDecision
 from app.eval.scoring import (
     ArmName,
     ArmRun,
@@ -25,6 +25,7 @@ from app.eval.scoring import (
     instability,
     observe,
     score,
+    score_against,
     summarize,
 )
 from app.orchestration.schema import OrchestrationError, OrchestrationStatus
@@ -486,6 +487,21 @@ def test_score_an_exception_label_against_another_checks_outcome() -> None:
         False,
         False,
     )
+
+
+def test_score_against_an_explicit_decision() -> None:
+    obs = observe(_full_view())  # substitute, no_approval_needed
+    other = ExpectedDecision(
+        checks_outcome="exception",
+        option_kind="other_source",
+        policy_outcome="no_approval_needed",
+    )
+    result = score_against(other, obs)
+    assert (result.option_hit, result.policy_hit, result.full_hit) == (False, True, False)
+    # `score` is the same comparison against the case's own label.
+    case = _case()
+    assert score_against(case.expected, obs) == score(case, obs)
+    assert score_against(ExpectedDecision(checks_outcome="standard"), obs).checks_hit is False
 
 
 # --- summarize --------------------------------------------------------------------------

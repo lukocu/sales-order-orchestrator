@@ -2,14 +2,16 @@
 
 Every case gets a temporary inquiry (subject prefixed with `[eval] `) and a shared setup
 outside the measurement: the rule-based extractor and fakes analyse it, then the golden
-fields are saved as the user's correction, which runs the checks. An exception case is then
-re-orchestrated once per repeat and arm (interleaved: workflow, orchestrator, workflow, ...)
-with the arm's planner, the shared recommender and the template drafter; a case without an
-exception never reaches the orchestration, so its single observation after the setup counts
-for both arms. The temporary inquiries and their trace runs are deleted in `finally`, and a
-run first deletes what an interrupted run left behind. A Postgres advisory lock held for the
-whole run keeps a second run (or the eval tests) from starting meanwhile, so that sweep never
-deletes the inquiries of a run in progress.
+fields are saved as the user's correction, which runs the checks. An adversarial case skips
+the golden fields: the configured extractor parses it (once per case), the parsed price
+fields are compared with its twin's, and a wrong parse is a scored miss, not a setup error.
+An exception case is then re-orchestrated once per repeat and arm (interleaved: workflow,
+orchestrator, workflow, ...) with the arm's planner, the shared recommender and the template
+drafter; a case without an exception never reaches the orchestration, so its single
+observation after the setup counts for both arms. The temporary inquiries and their trace
+runs are deleted in `finally`, and a run first deletes what an interrupted run left behind.
+A Postgres advisory lock held for the whole run keeps a second run (or the eval tests) from
+starting meanwhile, so that sweep never deletes the inquiries of a run in progress.
 """
 
 import hashlib
@@ -28,8 +30,10 @@ from sqlmodel import Session, col, select
 
 from app.auth.deps import AuthUser
 from app.draft.drafter import FakeDrafter
-from app.eval.cases import EvalCase, ExpectedDecision
+from app.eval.cases import CaseTag, EvalCase, ExpectedDecision
 from app.eval.scoring import (
+    FAILURE_PARSE_FAILED_PREFIX,
+    FAILURE_PARSE_MISMATCH_PREFIX,
     FAILURE_UNEXPECTED_PREFIX,
     ArmName,
     ArmRun,
@@ -39,7 +43,7 @@ from app.eval.scoring import (
 )
 from app.inquiries.models import Inquiry
 from app.orchestration.planning import Planner, RuleBasedPlanner
-from app.parsing.extractor import ExtractionError
+from app.parsing.extractor import ExtractionError, InquiryExtractor
 from app.parsing.fake import RuleBasedExtractor
 from app.parsing.service import (
     SUBJECT_TYPE,
@@ -69,11 +73,40 @@ class Arm:
     planner: Planner
 
 
+class ParseCheck(BaseModel):
+    """The parsed fields of an adversarial case against its twin's: the names that differ."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    differing: list[str]  # empty when the parse matches
+
+
+# Fields of an adversarial case that the parse is compared on.
+PARSE_CHECKED_FIELDS = (
+    "price_kind",
+    "price_value",
+    "quantity",
+    "product_code",
+    "substitute_allowed",
+)
+
+
+@dataclass(frozen=True)
+class _Setup:
+    """The result of a case's setup: a view to measure, a setup error, or a scored parse miss."""
+
+    view: AnalysisView | None = None
+    reason: str | None = None
+    parse_check: ParseCheck | None = None
+    miss: Observation | None = None  # a parse that failed or reached another checks outcome
+
+
 class EvalRun(BaseModel):
     """One pass of the set: metadata, cases that could not be set up and every arm run.
 
     A case without an exception has one run per arm, with the same observation, and is
-    listed in `not_orchestrated`.
+    listed in `not_orchestrated`; so is an adversarial case whose parse failed or reached
+    another checks outcome.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -82,12 +115,16 @@ class EvalRun(BaseModel):
     finished_at: datetime
     provider: str
     model: str | None  # None for the rule-based fakes
+    extractor: str  # parses the adversarial cases
     repeats: int
     planners: dict[ArmName, str]  # arm -> planner name
     recommender: str
     cases_sha256: str
     cases: list[str]  # case ids in run order
     expected: dict[str, ExpectedDecision]  # case id -> label
+    tags: dict[str, list[CaseTag]] = {}  # case id -> tags
+    adversarial_of: dict[str, str] = {}  # adversarial case id -> twin id
+    parse_checks: dict[str, ParseCheck] = {}  # adversarial case id -> parse against the twin
     not_orchestrated: list[str]  # case ids without an exception: no arm run differs
     setup_errors: list[tuple[str, str]]  # (case id, reason)
     runs: list[ArmRun]
@@ -104,6 +141,7 @@ def run_eval(
     arms: Sequence[Arm],
     recommender: Recommender,
     *,
+    extractor: InquiryExtractor,
     repeats: int,
     pause_seconds: float,
     user: AuthUser,
@@ -116,7 +154,8 @@ def run_eval(
     `pause_seconds` separates consecutive arm calls (free-tier rate limits). LLM failures, and
     any other error raised by an arm's call, end in an observation with `failure`, so the
     runs collected so far are kept; an error in a case's setup propagates after the cleanup.
-    Raises `EvalAlreadyRunning` when another run holds the run lock.
+    `extractor` parses the adversarial cases only. Raises `EvalAlreadyRunning` when another
+    run holds the run lock.
     """
     if repeats < 1:
         raise ValueError("repeats must be at least 1")
@@ -126,6 +165,7 @@ def run_eval(
             cases,
             arms,
             recommender,
+            extractor=extractor,
             repeats=repeats,
             pause_seconds=pause_seconds,
             user=user,
@@ -158,6 +198,7 @@ def _run_locked(
     arms: Sequence[Arm],
     recommender: Recommender,
     *,
+    extractor: InquiryExtractor,
     repeats: int,
     pause_seconds: float,
     user: AuthUser,
@@ -168,6 +209,7 @@ def _run_locked(
     started_at = datetime.now(UTC)
     setup_errors: list[tuple[str, str]] = []
     not_orchestrated: list[str] = []
+    parse_checks: dict[str, ParseCheck] = {}
     runs: list[ArmRun] = []
     created: list[int] = []
 
@@ -181,29 +223,32 @@ def _run_locked(
             inquiry_id = _insert_inquiry(engine, case)
             created.append(inquiry_id)
             logger.info("case %d/%d · setup · %s", index, len(cases), case.id)
-            view, reason = _set_up(engine, case, inquiry_id, user)
-            if reason is not None:
+            setup = _set_up(engine, case, inquiry_id, user, extractor)
+            if setup.parse_check is not None:
+                parse_checks[case.id] = setup.parse_check
+            if setup.reason is not None:
                 logger.warning(
-                    "case %d/%d · setup error · %s: %s", index, len(cases), case.id, reason
+                    "case %d/%d · setup error · %s: %s", index, len(cases), case.id, setup.reason
                 )
-                setup_errors.append((case.id, reason))
+                setup_errors.append((case.id, setup.reason))
                 continue
+            if setup.miss is not None:
+                logger.warning(
+                    "case %d/%d · parse miss · %s: %s",
+                    index,
+                    len(cases),
+                    case.id,
+                    setup.miss.failure,
+                )
+                not_orchestrated.append(case.id)
+                runs.extend(_shared_runs(case, arms, setup.miss))
+                continue
+            view = setup.view
             assert view is not None
 
             if case.expected.checks_outcome != "exception":
                 not_orchestrated.append(case.id)
-                observation = observe(view)
-                result = score(case, observation)
-                for arm in arms:
-                    runs.append(
-                        ArmRun(
-                            case_id=case.id,
-                            arm=arm.name,
-                            repeat=1,
-                            observation=observation,
-                            score=result,
-                        )
-                    )
+                runs.extend(_shared_runs(case, arms, observe(view)))
                 continue
 
             first_call = True
@@ -250,12 +295,18 @@ def _run_locked(
         finished_at=datetime.now(UTC),
         provider=provider,
         model=model,
+        extractor=extractor.name,
         repeats=repeats,
         planners={arm.name: arm.planner.name for arm in arms},
         recommender=recommender.name,
         cases_sha256=cases_version,
         cases=[case.id for case in cases],
         expected={case.id: case.expected for case in cases},
+        tags={case.id: case.tags for case in cases},
+        adversarial_of={
+            case.id: case.adversarial_of for case in cases if case.adversarial_of is not None
+        },
+        parse_checks=parse_checks,
         not_orchestrated=not_orchestrated,
         setup_errors=setup_errors,
         runs=runs,
@@ -278,10 +329,88 @@ def _unexpected(error: Exception) -> Observation:
     )
 
 
+def _shared_runs(case: EvalCase, arms: Sequence[Arm], observation: Observation) -> list[ArmRun]:
+    """One run per arm with the same observation, for a case the arms cannot tell apart."""
+    result = score(case, observation)
+    return [
+        ArmRun(case_id=case.id, arm=arm.name, repeat=1, observation=observation, score=result)
+        for arm in arms
+    ]
+
+
+def _parse_miss(failure: str) -> Observation:
+    """An adversarial case that could not be parsed: no checks, no decision."""
+    return Observation(
+        checks_outcome=None,
+        option_kind=None,
+        policy_outcome=None,
+        band=None,
+        failure=failure,
+        cost_usd=Decimal(0),
+        cost_complete=False,
+        duration_ms=0,
+        input_tokens=0,
+        output_tokens=0,
+    )
+
+
+def _set_up_adversarial(
+    engine: Engine,
+    case: EvalCase,
+    inquiry_id: int,
+    user: AuthUser,
+    extractor: InquiryExtractor,
+) -> _Setup:
+    """Parse the case once with `extractor`; a failed or diverging parse is a scored miss."""
+    try:
+        view = analyze_inquiry(
+            engine,
+            extractor,
+            inquiry_id,
+            user,
+            RuleBasedPlanner(),
+            FakeRecommender(),
+            FakeDrafter(),
+        )
+    except ExtractionError as error:
+        return _Setup(miss=_parse_miss(FAILURE_PARSE_FAILED_PREFIX + type(error).__name__))
+    parse_check = ParseCheck(
+        differing=[
+            name
+            for name in PARSE_CHECKED_FIELDS
+            if getattr(view.fields, name) != getattr(case.fields, name)
+        ]
+    )
+    outcome = None if view.checks is None else view.checks.outcome
+    if outcome != case.expected.checks_outcome:
+        miss = observe(view).model_copy(
+            update={
+                "failure": FAILURE_PARSE_MISMATCH_PREFIX + str(outcome),
+                "failure_detail": None,
+                # The checks outcome is wrong, so no decision of the orchestration counts.
+                "option_kind": None,
+                "policy_outcome": None,
+                "band": None,
+            }
+        )
+        return _Setup(parse_check=parse_check, miss=miss)
+    return _Setup(view=view, parse_check=parse_check)
+
+
 def _set_up(
-    engine: Engine, case: EvalCase, inquiry_id: int, user: AuthUser
-) -> tuple[AnalysisView | None, str | None]:
-    """The view after the golden fields are saved, or the reason the setup failed."""
+    engine: Engine,
+    case: EvalCase,
+    inquiry_id: int,
+    user: AuthUser,
+    extractor: InquiryExtractor,
+) -> _Setup:
+    """The view to measure, or why the case cannot be measured.
+
+    An adversarial case is parsed by `extractor`; any other case starts from its golden
+    fields, saved as the user's correction.
+    """
+    if case.adversarial_of is not None:
+        return _set_up_adversarial(engine, case, inquiry_id, user, extractor)
     try:
         analyzed = analyze_inquiry(
             engine,
@@ -304,11 +433,11 @@ def _set_up(
             drafter=FakeDrafter(),
         )
     except (ExtractionError, AnalysisChanged) as error:
-        return None, type(error).__name__
+        return _Setup(reason=type(error).__name__)
     outcome = None if view.checks is None else view.checks.outcome
     if outcome != case.expected.checks_outcome:
-        return None, f"checks outcome {outcome}, expected {case.expected.checks_outcome}"
-    return view, None
+        return _Setup(reason=f"checks outcome {outcome}, expected {case.expected.checks_outcome}")
+    return _Setup(view=view)
 
 
 def _insert_inquiry(engine: Engine, case: EvalCase) -> int:
