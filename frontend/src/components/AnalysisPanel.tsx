@@ -1035,16 +1035,16 @@ function AnalysisPanel({ inquiryId, body, awaitingSupervisor = false, user, onUn
           </p>
         )}
       </div>
+      {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
+      {load.kind === 'error' && (
+        <div role="alert" className="analysis__problem">
+          <p className="error">{errorMessage(load.error, t)}</p>
+          <Button type="button" variant="outline" onClick={reload}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      )}
       <fieldset disabled={awaitingSupervisor} className="grid min-w-0 gap-3 border-0 p-0">
-        {load.kind === 'loading' && <p className="muted">{t('analysis.loading')}</p>}
-        {load.kind === 'error' && (
-          <div role="alert" className="analysis__problem">
-            <p className="error">{errorMessage(load.error, t)}</p>
-            <Button type="button" variant="outline" onClick={reload}>
-              {t('common.retry')}
-            </Button>
-          </div>
-        )}
         {analyzeError && (
           <div role="alert" className="analysis__problem">
             <p className="error">{errorMessage(analyzeError, t)}</p>

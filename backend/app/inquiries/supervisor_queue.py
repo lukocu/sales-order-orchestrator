@@ -35,6 +35,7 @@ class AttentionRule(BaseModel):
 class QueueItem(BaseModel):
     id: int
     sender_name: str
+    customer: str | None = None
     subject: str
     received_at: datetime
     submitted_at: datetime
@@ -159,6 +160,19 @@ def _policy(
         return None
 
 
+def _project(
+    session: Session, draft: InquiryDraft, analysis: InquiryAnalysis | None
+) -> tuple[DraftResult | None, PolicyResult | None, ReviewState]:
+    """Read one pending draft; data that cannot be interpreted leaves it visible as unavailable."""
+    try:
+        result = _validated_result(draft)
+        policy = _policy(session, analysis, draft, result)
+        return result, policy, _review_state(session, draft, analysis, result, policy)
+    except Exception:
+        logger.exception("Review projection of inquiry %s failed", draft.inquiry_id)
+        return None, None, "unavailable"
+
+
 def get_queue(session: Session) -> QueueView:
     """Return one row per raw pending draft, including stale/unreadable submissions."""
     drafts = list(
@@ -205,9 +219,8 @@ def get_queue(session: Session) -> QueueView:
         if inquiry is None:
             continue
         analysis = analyses.get(draft.inquiry_id)
-        result = _validated_result(draft)
-        policy = _policy(session, analysis, draft, result)
-        state = _review_state(session, draft, analysis, result, policy)
+        _result, policy, state = _project(session, draft, analysis)
+        customer = _customer(analysis, draft.inquiry_id)
         submission = submissions.get((draft.inquiry_id, draft.recommended_at))
         submitted_at = draft.updated_at if submission is None else submission.decided_at
         submitted_by = None if submission is None else submission.decided_by
@@ -224,6 +237,7 @@ def get_queue(session: Session) -> QueueView:
             QueueItem(
                 id=draft.inquiry_id,
                 sender_name=inquiry.sender_name,
+                customer=customer,
                 subject=inquiry.subject,
                 received_at=inquiry.received_at,
                 submitted_at=submitted_at,
@@ -235,6 +249,13 @@ def get_queue(session: Session) -> QueueView:
         )
     items.sort(key=lambda item: (item.submitted_at, item.id))
     return QueueView(items=items, total=len(items))
+
+
+def _customer(analysis: InquiryAnalysis | None, inquiry_id: int) -> str | None:
+    if analysis is None:
+        return None
+    fields = _json_model(analysis.fields, ParsedFields, inquiry_id)
+    return None if fields is None else fields.customer
 
 
 def _history(session: Session, inquiry_id: int, current_at: datetime | None) -> list[DecisionView]:
@@ -278,13 +299,13 @@ def get_review(session: Session, inquiry_id: int, viewer_id: int) -> ReviewView 
     analysis = session.exec(
         select(InquiryAnalysis).where(col(InquiryAnalysis.inquiry_id) == inquiry_id)
     ).first()
-    result = None if draft is None else _validated_result(draft)
-    policy = None if draft is None else _policy(session, analysis, draft, result)
-    state: ReviewState
-    if draft is None or draft.status != "awaiting_supervisor":
-        state = "not_awaiting"
-    else:
-        state = _review_state(session, draft, analysis, result, policy)
+    result: DraftResult | None = None
+    policy: PolicyResult | None = None
+    state: ReviewState = "not_awaiting"
+    if draft is not None:
+        result, policy, projected = _project(session, draft, analysis)
+        if draft.status == "awaiting_supervisor":
+            state = projected
     submitted_at: datetime | None = None
     submitted_by: int | None = None
     if draft is not None:

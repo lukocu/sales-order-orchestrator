@@ -290,3 +290,36 @@ def test_review_after_decision_and_invalid_identifier(
     assert len(decisions_after) == decision_count
     assert auth_client.get("/api/supervisor/reviews/2147483648").status_code == 422
     assert auth_client.get("/api/supervisor/reviews/2147483647").status_code == 404
+
+
+def test_queue_names_the_customer_and_survives_a_row_that_cannot_be_read(
+    auth_client: TestClient,
+    supervisor: User,
+    make_inquiry: InquiryFactory,
+    use_extractor: ExtractorSetter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inquiry = _delta(make_inquiry)
+    _awaiting(auth_client, inquiry)
+    _login(auth_client, supervisor)
+
+    item = next(
+        entry
+        for entry in auth_client.get("/api/supervisor/queue").json()["items"]
+        if entry["id"] == inquiry.id
+    )
+    assert item["customer"]
+
+    def broken(*_args: object, **_kwargs: object) -> None:
+        raise KeyError("malformed")
+
+    monkeypatch.setattr("app.inquiries.supervisor_queue._policy", broken)
+
+    response = auth_client.get("/api/supervisor/queue")
+    assert response.status_code == 200
+    unreadable = next(entry for entry in response.json()["items"] if entry["id"] == inquiry.id)
+    assert unreadable["review_state"] == "unavailable"
+    assert unreadable["attention_rules"] == []
+    review = auth_client.get(f"/api/supervisor/reviews/{inquiry.id}")
+    assert review.status_code == 200
+    assert review.json()["allowed_actions"] == ["reject"]

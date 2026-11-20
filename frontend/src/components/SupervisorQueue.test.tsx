@@ -336,4 +336,30 @@ describe('Supervisor queue and review routes', () => {
     await vi.waitFor(() => expect(screen.getByRole('link', { name: /To approve/ })).toHaveTextContent('0'))
     expect(decisionCalls).toBe(1)
   })
+  it('re-reads the open review when the tab becomes visible and asks for a new look at a changed case', async () => {
+    reviewResponses = [review(), review('2026-11-12T00:00:00Z')]
+    await renderWithRouter('/approvals/17')
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve' }))
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'Looks fine.' } })
+
+    act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+
+    expect(await screen.findByRole('button', { name: 'I reviewed the latest inquiry' })).toBeInTheDocument()
+    expect(reviewCalls).toBe(2)
+    expect(decisionCalls).toBe(0)
+    expect(screen.getByLabelText('Reason (required)')).toHaveValue('Looks fine.')
+  })
+
+  it('does not move focus when a decided case is opened directly', async () => {
+    reviewResponses = [{
+      ...review(),
+      draft_status: 'ready_to_send',
+      review_state: 'not_awaiting',
+      allowed_actions: [],
+    }]
+    await renderWithRouter('/approvals/17')
+
+    expect(await screen.findByText(/Decision complete: Ready to send/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Zamówienie ABC-100' })).not.toHaveFocus()
+  })
 })
